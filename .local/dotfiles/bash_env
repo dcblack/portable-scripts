@@ -7,13 +7,13 @@ export FAVS LOCAL APPS LESS CXX CC CMAKE_VERSION CMAKE_BUILD
 FAVS="${HOME}"/Favorites
 mkdir -p "${FAVS}"
 # Locations
-export LOCAL="${HOME}/.local"
-export APPS="${LOCAL}/apps"
+LOCAL="${HOME}/.local"
+APPS="${LOCAL}/apps"
 # Affect applications
-export LESS="-afrMRXj4x4"
-export CMAKE_VERSION="3.19"
-export CMAKE_BUILD="7"
+LESS="-afrMRXj4x4"
+CMAKE_VERSION="3.19"
+CMAKE_BUILD="7"
 # Change following if have and prefer clang
-export CC="gcc"
-export CXX="g++"
+CC="gcc"
+CXX="g++"
 

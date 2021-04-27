@@ -14,4 +14,13 @@ for script in bash_debug bash_env bash_aliases bash_functions bash_paths; do
   fi
 done
 
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi
+
+export SAGE_ATLAS_LIB=/usr/lib/   # do not build ATLAS
+export SHELL=/bin/bash
 # The end

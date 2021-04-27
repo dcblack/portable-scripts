@@ -13,7 +13,7 @@ ifndef SYSTEMC_HOME
   ifdef SYSTEMC
     SYSTEMC_HOME := ${SYSTEMC}
   else
-    SYSTEMC_HOME := /apps/systemc
+    SYSTEMC_HOME := $(firstword $(wildcard $(addsuffix apps/systemc,${HOME}/.local/ ${HOME}/ /)))
   endif
 endif
 ifeq "$(words $(wildcard ${SYSTEMC_HOME}/include))" "0"
@@ -26,6 +26,9 @@ ifndef MODULE
 endif
 
 # Tool-chain options
+ifndef CPPSTD
+  CPPSTD := 17
+endif
 ifndef CXX
   CXX  := g++  
 endif
@@ -35,15 +38,16 @@ endif
 ifndef OPT
   OPT  := -O0
 endif
+OPT += -std=c++${CPPSTD}
 DEBUG  := -g
 ## Build with maximum gcc warning level
-CFLAGS := --pedantic -Wall -Wextra
+CFLAGS := --pedantic -Wall -Wextra -Wno-unused-parameter
 CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
 CFLAGS += ${DEBUG} ${OPT} ${EXTRACFLAGS}
 
 # For autotools installations
 TARGET_ARCH=linux64
--source $(dir THIS_MAKEFILE)/Makefile.arch
+-include $(dir THIS_MAKEFILE)/Makefile.arch
 
 # Refer to the include/ and (appropriate) lib/ directories
 SYSDIR  := ${SYSTEMC_HOME}/include
@@ -63,6 +67,8 @@ LIBS   :=  -lstdc++ -lm ${EXTRA_LIBS} -lsystemc
 EXE    := ${MODULE}.x
 
 .PHONY: all run clean 
+
+all: run
 
 ${EXE}: ${OBJS}
 ifdef VERBOSE
@@ -91,7 +97,7 @@ endif
 	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 	rm -f $*.d
 
-all: ${EXE}
+run: ${EXE}
 
 ifdef VERBOSE
 	@echo "# Executing $<"

@@ -49,6 +49,11 @@ function GetBuildOpts() {
       fi
       shift
       ;;
+    --clang)
+      CC=clang
+      CXX=clang++
+      shift
+      ;;
     --clean|-clean)
       CLEAN=1;
       export CLEAN
@@ -69,6 +74,11 @@ function GetBuildOpts() {
       export DEBUG
       shift;
       ;;
+    --gcc)
+      CC=gcc
+      CXX=g++
+      shift
+      ;;
     -i|--install=*|--apps=)
       if [[ "$1" != '-i' ]]; then
         APPS="${1//*=}"
@@ -76,7 +86,7 @@ function GetBuildOpts() {
         APPS="$2"
         shift
       else
-        Die "Need directory argument for --install"
+        Die "Need directory argument for $1"
       fi
       shift;
       export APPS
@@ -88,7 +98,7 @@ function GetBuildOpts() {
         SRC="$2"
         shift
       else
-        Die "Need directory argument for --src"
+        Die "Need directory argument for $1"
       fi
       export SRC
       shift;
@@ -105,7 +115,7 @@ function GetBuildOpts() {
         SUFFIX="$2"
         shift
       else
-        Die "Need directory argument for --src"
+        Die "Need argument for $1"
       fi
       shift;
       ;;
@@ -141,8 +151,10 @@ function GetBuildOpts() {
   if [[ "${SRC}" != '' && -d "${SRC}" ]]; then
     echo "Using SRC=${SRC}"
   fi
-  if [[ "${APPS}" != '' ]]; then
+  if [[ "${APPS}" == '/apps' ]]; then
     SRC="${APPS}/src"
+  elif [[ "${APPS}" != '' ]]; then
+    SRC="$(dirname "${APPS}")/src"
   elif [[ "${HOME}" == "$(pwd)" ]]; then
     SRC="${HOME}/.local/src"
   else

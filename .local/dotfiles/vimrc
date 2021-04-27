@@ -79,7 +79,7 @@
 :  echo "INFO: Created ".$HOME."/".$bak
 :  sleep 1
 :endif
-:set spell
+:set nospell
 :set spelllang=en_us
 :set cmdheight=2
 "Default:set statusline=

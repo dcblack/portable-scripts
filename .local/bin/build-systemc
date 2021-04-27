@@ -24,8 +24,10 @@
 #|OPTIONS
 #|-------
 #|  --cc=C_COMPILER | CC=C_COMPILER
+#|  --clang
 #|  --cxx=CPP_COMPILER | CXX=CPP_COMPILER
 #|  --debug # developer use
+#|  --gcc
 #|  --install=DIR | -i DIR
 #|  --src=DIR | -s DIR
 #|  --std=N | -std=N
@@ -47,12 +49,14 @@ GetBuildOpts "$0" "$@"
 # Environment variables - MODIFY TO SUITE YOUR NEEDS
 SYSTEMC_HOME="${APPS}/systemc" # <----- THIS IS WHERE INSTALLED VERSION GOES
 CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
+BUILD=build-"$(basename "${CC}")"
 
 export SYSTEMC_HOME
 export CMAKE_INSTALL_PREFIX CMAKE_CXX_STANDARD
-export CXX CC
+export BUILD CXX CC
 
 if [[ "${DEBUG}" == 1 ]]; then
+  echo "BUILD=${BUILD}"
   echo "CC=${CC}"
 # echo "CLEAN=${CLEAN}"
   echo "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
