@@ -1,0 +1,41 @@
+#!make -f
+
+################################################################################
+# Determine architecture info
+################################################################################
+PLATFORM:=$(shell uname -s)
+MACHINE:=$(shell uname -m)
+RELEASE:=$(shell uname -r)
+OS_FOUND:=${PLATFORM}-${MACHINE}
+ifndef HOST_ARCH
+  ifeq "${PLATFORM}" "SunOS"
+    HOST_ARCH := gccsparcOS5
+  endif
+  ifeq "${PLATFORM}" "Linux"
+   ifeq "${MACHINE}" "x86_64"
+    HOST_ARCH := linux64
+   else
+    HOST_ARCH := linux
+   endif
+  endif
+  ifeq "${PLATFORM}" "CYGWIN_NT-5.1"
+    HOST_ARCH := cygwin
+  endif
+  ifeq "${PLATFORM}" "Darwin"
+    ifeq "${MACHINE}" "i386"
+      ifneq "$(shell perl -le '$$a=qq{@ARGV};$$a=~s/[.].*//;print $$a;' ${RELEASE})" "9"
+        HOST_ARCH := macosx64
+      else
+        HOST_ARCH := macosx386
+      endif
+    else
+      ifeq "${MACHINE}" "x86_64"
+        HOST_ARCH := macosx64
+      else
+        HOST_ARCH := macosx386
+      endif
+    endif
+  endif
+endif
+
+TARGET_ARCH:=${HOST_ARCH}

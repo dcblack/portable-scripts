@@ -4,6 +4,10 @@
 #
 # This version is beefed up slightly.
 
+# -*- make -*- vim:syntax=make:fdm=marker:fmr=<<<,>>>:tw=80:sw=2:et
+# Find path to THIS file
+THIS_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
+
 ## Variable that points to SystemC-2.3 installation path
 ifndef SYSTEMC_HOME
   ifdef SYSTEMC
@@ -37,10 +41,13 @@ CFLAGS := --pedantic -Wall -Wextra
 CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
 CFLAGS += ${DEBUG} ${OPT} ${EXTRACFLAGS}
 
+# For autotools installations
+TARGET_ARCH=linux64
+-source $(dir THIS_MAKEFILE)/Makefile.arch
 
 # Refer to the include/ and (appropriate) lib/ directories
 SYSDIR  := ${SYSTEMC_HOME}/include
-LIBDIRS := $(wildcard ${SYSTEMC_HOME}/lib*)
+LIBDIRS := $(wildcard ${SYSTEMC_HOME}/lib ${SYSTEMC_HOME}/lib-${TARGET_ARCH})
 ifeq "$(words ${LIBDIRS})" "1"
   LIBDIR  := $(firstword ${LIBDIRS})
 else
@@ -57,7 +64,7 @@ EXE    := ${MODULE}.x
 
 .PHONY: all run clean 
 
-${EXE}: ${OBJS} ${LIBDIR}/libsystemc.a 
+${EXE}: ${OBJS}
 ifdef VERBOSE
 	@echo "# Linking $?"
 endif
@@ -86,11 +93,10 @@ endif
 
 all: ${EXE}
 
-run: ${EXE}
 ifdef VERBOSE
 	@echo "# Executing $<"
 endif
-	time env LD_LIBRARY_PATH=${SYSTEMC_HOME}/lib-linux64:$$LD_LIBRARY_PATH ./${EXE}
+	time env LD_LIBRARY_PATH=${LIBDIR}:$$LD_LIBRARY_PATH ./${EXE}
 
 clean:
 	-rm -f ${OBJS} *~ ${EXE} *.vcd *.wif *.isdb *.dmp *.P *.log
