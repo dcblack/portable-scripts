@@ -1,0 +1,90 @@
+#!/usr/bin/perl
+#$Info: Calculate and display the next filename(s) in a series. $
+#$Syntax: next FILELNAME(S)
+
+use 5.012;
+use strict;
+use warnings;
+
+our %OPT;
+our $sep='-';
+our $limit = 3;
+$limit = $ENV{'KEEP'} if exists $ENV{'KEEP'} and $ENV{'KEEP'} =~ m{^\d+$};
+our ($pre, $post);
+
+sub numerically {
+    $a =~ m{^$pre([[:digit:]]+)$post$};
+    my $A = $1;
+    $b =~ m{^$pre([[:digit:]]+)$post$};
+    my $B = $1;
+    return $A<=>$B;
+}
+
+sub largest {
+    my $n;
+    ($pre,$n,$post) = @_;
+    my $dir = '.';
+    if ($pre =~ m{.*/}) {
+        $dir = $&;
+        $pre = $';
+        $dir =~ s{/+$}{};
+    }#endif
+    opendir(my $dh, $dir) or die "Can't opendir $dir: $!";
+    my @filenames = readdir $dh;
+    my @found;
+    closedir $dh; 
+    for my $f (@filenames) {
+        next unless $f =~ m{^$pre([[:digit:]]+)$post$};
+        push @found,$f;
+        $n = $1 if $1 > $n;
+    }#endfor
+    if (exists $OPT{-rm} and $limit > 0 and scalar(@found)>($limit-1)) {
+        @found = sort numerically @found;
+        my $remove = scalar(@found)-$limit+1;
+        for my $f (splice @found, 0, $remove) {
+            unlink $f;
+        }#endfor
+    }#endif
+    return $n;
+}
+
+while (@ARGV) {
+    my $arg = shift @ARGV;
+    if ($arg =~ m{^-{1,2}}) {
+        my $opt = $';
+        if ($opt eq '-sep') {
+            $sep = shift @ARGV;
+        } elsif ($opt eq 'rm') {
+            $OPT{-rm} = 1;
+        } elsif ($opt =~ m{^l(imit)?$}) {
+            if ($ARGV =~ m{^\d+$}) {
+                $limit = shift @ARGV;
+            } else {
+                warn "-limit option requires numeric value -- ignored!\n";
+            }#endif
+        } elsif ($opt =~ m{^\d+$}) {
+            $limit = $opt;
+        } else {
+            warn "Unknown option '$arg' -- ignored!\n";
+        }#endif
+    } else {
+        my $f = $arg;
+        $f =~ s{/+$}{}; # Remove trailing directory separators if any
+        my $pass = 0;
+        while( -f $f or $pass == 0 ) {
+            $pass++;
+            if ($f =~ m{([^[:digit:]]+)([[:digit:]]+)}) {
+                my ($pre,$n,$post) = ($1,$2,$');
+                # Make sure this is the last one
+                $n = &largest($pre,$n,$post);
+                $n++;
+                $f =~ s{(.*)([[:digit:]]+)}{$1$n};
+            } elsif ($f =~ m{(.+)([.][^.]+)$}) { # No digits, but has .extn
+                $f = $1."${sep}1".$2;
+            } else { # No digits nor extension - use last alpha
+                $f .= "${sep}1";
+            }
+        }#endwhile
+        printf("%s\n",$f);
+    }#endif
+}#endwhile

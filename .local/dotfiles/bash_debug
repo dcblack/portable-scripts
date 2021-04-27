@@ -1,0 +1,11 @@
+#!/bin/bash
+
+export BASH_DEBUG=1
+export BASH_LOG=""
+function REPORT_DEBUG() {
+  if [[ "${BASH_DEBUG}" != 1 ]]; then return; fi
+  if [[ "${BASH_LOG}" != "" ]]; then
+    printf "DEBUG: %s\n" "$*" >>"${BASH_LOG}"
+  fi
+  printf "DEBUG: %s\n" "$*"
+}

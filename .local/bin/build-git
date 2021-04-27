@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+# Install the latest or specified version of cmake
+
+echo "ERROR: Not yet complete" 1>&2
+exit 1
+
+#-------------------------------------------------------------------------------
+# Defaults
+#-------------------------------------------------------------------------------
+CLEAN=0
+DEBUG=0
+# Following for the non-git approach where you need to specify the version
+MAJVERS=3
+MINVERS=19
+DOTVERS=7
+
+#-------------------------------------------------------------------------------
+# Scan command-line for options
+#-------------------------------------------------------------------------------
+if [[ "$TYPE" == "" ]]; then
+  TYPE=-git # use -git or -wget or -curl
+fi
+
+while [[ $# != 0 ]]; do
+  case "$1" in
+  -h|-help)
+    perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' $0;
+#|
+#|NAME
+#|----
+#|
+#|  $0 - build and install cmake from source
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [-clean] [-debug] -git|-wget|-curl
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#|  Downloads, unpacks, builds and installs the latest or specified version of cmake.
+#|
+    exit 0;
+    ;;
+  -git|-wget|-curl)
+    TYPE="$1";
+    shift;
+    ;;
+  -d|-debug|--debug)
+    DEBUG=1;
+    CLEAN=0;
+    shift;
+    ;;
+  --clean|-clean)
+    CLEAN=1;
+    shift;
+    ;;
+  *)
+    echo "ERROR: Unkhown option $1";
+    exit 1;
+    ;;
+  esac
+done
+
+cd $HOME
+mkdir -p .local/src
+cd .local/src
+export CMAKE_INSTALL_PREFIX="$HOME/.local"
+
+sudo yum install dh-autoreconf curl-devel expat-devel gettext-devel openssl-devel perl-devel zlib-devel
+sudo yum install asciidoc xmlto docbook2X
+
+if [[ "$TYPE" == "-git" ]]; then
+ 
+  echo "Cloning git"
+  git clone git://git.kernel.org/pub/scm/git/git.git && cd git
+  echo "Building git"
+  make prefix=$CMAKE_INSTALL_PREFIX all doc info
+
+else
+  VERSION=$MAJVERS.$MINVERS.$DOTVERS
+  FILE="cmake-$VERSION.tar.gz"
+  URL="https://cmake.org/files/LatestRelease/$FILE"
+  echo "Fetching cmake"
+  # Assumed to be under latest; otherwise, use v$MAJOR.$MINOR
+  if [[ "$TYPE" == "-wget" ]]; then
+    echo "% wget $URL"
+    wget "$URL" || exit 1
+  else
+    echo "% curl -output $FILE $URL"
+    curl -output $FILE $URL || exit 1
+  fi
+  echo "Expanding cmake tarball"
+  echo "% tar zxvf cmake-$VERSION.tar.gz"
+  tar zxvf cmake-$VERSION.tar.gz || exit 1
+  echo "% cd cmake-$VERSION"
+  cd cmake-$VERSION
+  echo "Configuring cmake"
+  echo "% ./bootstrap --prefix=$HOME/.local"
+  ./bootstrap --prefix=$HOME/.local || exit 1
+  echo "Building  cmake"
+  echo "% make -j$(nproc)"
+  make -j$(nproc) || exit 1
+  echo "Installing  cmake"
+  echo "% make install"
+  make install
+fi
+
+cd
+cmake --version
+

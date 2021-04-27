@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -o vi
+
+export FAVS LOCAL APPS LESS CXX CC CMAKE_VERSION CMAKE_BUILD 
+# Favorites
+FAVS="${HOME}"/Favorites
+mkdir -p "${FAVS}"
+# Locations
+export LOCAL="${HOME}/.local"
+export APPS="${LOCAL}/apps"
+# Affect applications
+export LESS="-afrMRXj4x4"
+export CMAKE_VERSION="3.19"
+export CMAKE_BUILD="7"
+# Change following if have and prefer clang
+export CC="gcc"
+export CXX="g++"
+

@@ -1,0 +1,9 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if $running_under_some_shell;
+
+# @(#)$Info: set_icon - change the title name of the current window $
+
+$esc = chr(27);
+$bel = chr(7);
+print "${esc}]2;@ARGV${bel}";

@@ -1,0 +1,103 @@
+#!make -f
+#
+# Makefile for SystemC courses
+#
+# This version is beefed up slightly.
+
+## Variable that points to SystemC-2.3 installation path
+ifndef SYSTEMC_HOME
+  ifdef SYSTEMC
+    SYSTEMC_HOME := ${SYSTEMC}
+  else
+    SYSTEMC_HOME := /apps/systemc
+  endif
+endif
+ifeq "$(words $(wildcard ${SYSTEMC_HOME}/include))" "0"
+  $(info Using SYSTEMC_HOME = ${SYSTEMC_HOME})
+  $(error SYSTEMC_HOME does not refer to a valid directory!)
+endif
+ifndef MODULE
+  $(warning Makefile should specify MODULE - using 'run')
+  MODULE := run
+endif
+
+# Tool-chain options
+ifndef CXX
+  CXX  := g++  
+endif
+ifndef CC
+  CC   := gcc
+endif
+ifndef OPT
+  OPT  := -O0
+endif
+DEBUG  := -g
+## Build with maximum gcc warning level
+CFLAGS := --pedantic -Wall -Wextra
+CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
+CFLAGS += ${DEBUG} ${OPT} ${EXTRACFLAGS}
+
+
+# Refer to the include/ and (appropriate) lib/ directories
+SYSDIR  := ${SYSTEMC_HOME}/include
+LIBDIRS := $(wildcard ${SYSTEMC_HOME}/lib*)
+ifeq "$(words ${LIBDIRS})" "1"
+  LIBDIR  := $(firstword ${LIBDIRS})
+else
+  $(info Using SYSTEMC_HOME = ${SYSTEMC_HOME})
+  $(error Unable to determine systemc library directory - possibly bad SYSTEMC_HOME reference or SystemC installation.)
+endif
+
+INCOPTS := -I. -I.. -I${SYSDIR}
+LIBOPTS := -L. -L.. -L${LIBDIR}
+
+LIBS   :=  -lstdc++ -lm ${EXTRA_LIBS} -lsystemc
+
+EXE    := ${MODULE}.x
+
+.PHONY: all run clean 
+
+${EXE}: ${OBJS} ${LIBDIR}/libsystemc.a 
+ifdef VERBOSE
+	@echo "# Linking $?"
+endif
+	${CXX} ${CFLAGS} ${INCOPTS} ${LIBOPTS} -o $@ ${OBJS} ${LIBS} 2>&1 | c++filt
+
+## based on http://www.paulandlesley.org/gmake/autodep.html
+%.o : %.cpp
+ifdef VERBOSE
+	@echo "# Compiling $<"
+endif
+	${CXX} ${CFLAGS} ${INCOPTS} -c -MMD -o $@ $<
+	@cp $*.d $*.P; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+	rm -f $*.d
+
+%.o : %.c
+ifdef VERBOSE
+	@echo "# Compiling C $<"
+endif
+	${CXX} ${CFLAGS} ${INCOPTS} -c -MMD -o $@ $<
+	@cp $*.d $*.P; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+	rm -f $*.d
+
+all: ${EXE}
+
+run: ${EXE}
+ifdef VERBOSE
+	@echo "# Executing $<"
+endif
+	time env LD_LIBRARY_PATH=${SYSTEMC_HOME}/lib-linux64:$$LD_LIBRARY_PATH ./${EXE}
+
+clean:
+	-rm -f ${OBJS} *~ ${EXE} *.vcd *.wif *.isdb *.dmp *.P *.log
+
+#help:
+
+
+-include $(SRCS:.cpp=.P)
+
+# vim:syntax=make

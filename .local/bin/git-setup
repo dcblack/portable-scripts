@@ -1,0 +1,102 @@
+#!/bin/bash
+
+#-------------------------------------------------------------------------------
+function get-name() {
+  local yourname=""
+  while [[ "${yourname}" == "" ]]; do
+    read -r -p 'Your full name: '
+    if [[ "${REPLY}" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
+      yourname="${REPLY}"
+    elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
+      return
+    else
+      echo "ERROR: Improperly formatted name" 1>&2
+    fi
+  done
+  echo "${yourname}"
+}
+
+#-------------------------------------------------------------------------------
+function get-email() {
+  local email=""
+  while [[ "${email}" == "" ]]; do
+    read -r -p 'Your email address: '
+    if [[ "${REPLY}" =~ [-.a-zA-Z0-9]+@[-.a-zA-Z0-9]+[.][a-zA-Z]{3} ]]; then
+      email="${REPLY}"
+    elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
+      return
+    else
+      echo "ERROR: Improperly formatted e-mail address" 1>&2
+    fi
+  done
+  echo "${email}"
+}
+
+function choose() { # QUESTION CHOICES...
+  if [[ $# -lt 3 ]]; then
+    echo "Error: Must have a question and at least two choices." 1>&2
+    exit 1
+  fi
+  local question choices
+  question="$1"
+  shift
+  choices="${*// /|/}"
+  ANS=""
+  
+  while [[ "${ANS}" == "" ]]; do
+    read -r -p "${question}\nChoose action: (${choices}): "
+    if [[ "${REPLY}" =~ ${choices} ]]; then
+      ANS="${REPLY}"
+    fi
+  done
+  if [[ "${ANS}" =~ quit|abort ]]; then exit 0; fi
+  echo "${ANS}"
+}
+
+#-------------------------------------------------------------------------------
+# Main
+#-------------------------------------------------------------------------------
+local GITCFG
+GITCFG="${HOME}/.gitconfig"
+if [[ -f "${GITCFG}" ]]; then
+  choose "${GITCFG} already exists." continue skip abort
+  test "${ANS}" = continue && mv "${GITCFG}"{,"$(date +%F-%T|sed -e s/:/-/g)"}
+fi
+
+if [[ ! -f "${GITCFG}" ]]; then
+
+  YOURNAME=$(get-name)
+  EMAIL=$(get-email)
+  if [[ "${YOURNAME}" == "" || "${EMAIL}" == "" ]]; then
+    echo "Aborting"
+    exit
+  fi
+
+  git config --global user.name "${YOURNAME}"
+  git config --global user.email "${EMAIL}"
+  git config --global core.editor 'gvim -f'
+
+  # Useful aliases
+  git config --global alias.changes  'status -s -uno'
+  git config --global alias.changed  'ls-files -m'
+  git config --global alias.tags     'tag -l'
+  git config --global alias.unstage  'reset HEAD'
+  git config --global alias.untrack  'rm --cached'
+  git config --global alias.hash     'hash-object'
+  git config --global alias.branches 'log --pretty=format:'%h %s' --graph'
+  git config --global alias.ignored  'ls-files -i'
+  git config --global alias.co       'checkout'
+
+fi
+
+for COURSE in syscfund tlm-2; do
+  if [[ -d "${HOME}/${COURSE}" ]]; then
+    cd "${HOME}/${COURSE}" || echo "Unable to change into ${HOME}/${COURSE}" 1>&2 && exit 1
+    git init .
+    git add .
+    git commit -m 'initial'
+  fi
+done
+
+echo "Git set up"
+#-------------------------------------------------------------------------------

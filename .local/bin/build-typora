@@ -1,0 +1,28 @@
+#!/bin/bash
+
+cd $HOME/.local
+TYPE=centos
+uname -a | grep ubuntu && TYPE=ubuntu
+echo "TYPE=$TYPE"
+exit
+wget https://typora.io/linux/Typora-linux-x64.tar.gz
+tar xf Typora-linux-x64.tar.gz
+
+if [[ $TYPE == ubuntu ]]; then
+  wget -qO - https://typora.io/linux/public-key.asc | sudo apt-key add -
+  # add Typora's repository
+  sudo add-apt-repository 'deb https://typora.io/linux ./'
+  sudo apt-get update
+  # install typora
+  sudo apt-get install typora
+elif [[ $TYPE == centos ]]; then
+  if [[ ! -d /snap ]]; then
+    sudo yum install epel-release
+    sudo yum install snapd
+    sudo systemctl enable --now snapd.socket
+    sudo ln -s /var/lib/snapd/snap /snap
+    logout
+  else
+    sudo snap install typora
+  fi
+fi

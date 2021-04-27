@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#-------------------------------------------------------------------------------
+# Make things more visible in the output
+
+CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
+
+function Ruler() {
+  perl -le 'printf qq{\n%80.80s\n},"@ARGV"x80' "$*"
+}
+
+# Ensure that error messages are clearly seen
+function Die() {
+  Ruler '!'
+  echo "${CRED}Fatal: $*${NONE}" 1>&2
+  exit 1
+}
+
+function Info() {
+  Ruler '-'
+  echo "${CGRN}Info: ${CBLU}$*${NONE}"
+}
+
+#-------------------------------------------------------------------------------
+SRC="${HOME}/.local/src"
+mkdir -p "${SRC}"
+cd "${SRC}" || Die "Unable to enter source directory ${SRC}"
+echo "Fetching ninja"
+git clone git://github.com/ninja-build/ninja.git || Die "Unable to clone"
+cd ninja || Die "Unable to enter repo"
+echo "Configuring ninja"
+cmake
+cmake -Bbuild-cmake -H.
+cmake --build build-cmake
+build-cmake/ninja_test
+rsync -av build-cmake/ninja "${HOME}/.local/bin/"

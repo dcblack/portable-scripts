@@ -1,0 +1,186 @@
+"vim
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" Last updated: 2021-Mar-22 Mon 05:32AM dcblack
+"
+" http://www.vim.org
+" ftp://ftp.us.vim.org/pub/vim/
+"
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"
+" Index: SETTINGS MAPS FUNCTIONS MENUS
+"
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"  source "$VIM/vimrc"
+"  source "$HOME/.vimrc"
+"  source ".../vim/vim57/syntax/syntax.vim"
+"  source ".../vim/vim57/syntax/synload.vim"
+"  source "$VIMRUNTIME/filetype.vim"
+"  source "$HOME/.vim/filetypes.vim"
+"  source "$VIMRUNTIME/filetype.vim"
+"  source ".../vim/vim57/syntax/syntax.vim"
+"  source "$HOME/.vimrc"
+"  source ".vimrc"
+"  source ".exrc"
+"  read "$HOME/.viminfo"
+"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:if has("win32")
+:  let $VIMHOME=$HOME."/vimfiles/"
+:else
+:  let $VIMHOME=$HOME."/.vim/"
+:endif
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"Prepend a string to a colon separated path variable and return it
+"unless the string already existant within the path variable.
+:function! Prepend(var,str) 
+:  let myvar = a:var 
+:  let myexp = "\<" . a:str . "\>"
+:  if ! match(a:var,myexp,1)
+:    let myvar = a:str . ":" . a:var
+:  endif
+:  return myvar
+:endfunction
+"
+"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+"#######################################################################
+" SETTINGS
+"#######################################################################
+:set nocompatible	" Use Vim defaults (much better!)
+:let TxtBrowser_Dict_Url='http://dict.com/text'
+:let TxtBrowser_Search_Engine='http://www.google.com'
+:set cryptmethod=blowfish2
+:let $bak=".bak"
+:let $und=".undo"
+
+:set guioptions+=agimrLtTb
+:let is_bash=1
+"inoremap  <Left>
+"set t_kb=<Left>
+"set t_kD=
+:set autoindent         " always set autoindenting on
+:set backspace=2	" allow backspacing over everything in insert mode
+:set backup
+:set writebackup
+:set undodir=./$und,$HOME/$und,$HOME/bak,.,/tmp
+:set undofile
+:if !filewritable(expand("$HOME/$und"))
+:  call mkdir($HOME."/".$und,"p",0700)
+:  echo "INFO: Created ".$HOME."/".$und
+:  sleep 1
+:endif
+:set backupdir=./$bak,$HOME/$bak,$HOME/bak,.,/tmp
+:set backupext=~
+:set backupskip=/tmp/*
+:set cpoptions+=W
+"set patchmode=.org
+:if !filewritable(expand("$HOME/$bak"))
+:  call mkdir($HOME."/".$bak,"p",0700)
+:  echo "INFO: Created ".$HOME."/".$bak
+:  sleep 1
+:endif
+:set spell
+:set spelllang=en_us
+:set cmdheight=2
+"Default:set statusline=
+"Normal:set statusline=%<%f\ %h%m%r%=%-14.(%l,%c%V%)\ %P
+:set statusline=%<%f%h%m%r%=%b\ 0x%B\ \ %l,%c%V\ %P
+:set diffopt=filler,iwhite
+"isfname: Characters included in file/path-names
+"    default:@,48-57,/,.,-,_,+,,,#,$,%,~,=
+:set isfname=@,48-57,/,.,-,_,+,$,~
+" Error format is used to find errors in output of make files.
+"set errorformat=(%t%n)\ %f,\ line\ \ *%l\:\ %m
+"set errorformat="%t%*[A-Z] %f, %l:%m"
+"gmake w/ GCC
+"set errorformat=%f:%l:\ %m,%Dgmake[%*\\d]:\ Entering\ directory\ `%f',%Dgmake[%*\\d]:\ Leaving\ directory\ `%f'
+"GCC
+:set errorformat=%f:%l:\ %m
+:set fileformats=unix,mac,dos
+"set foldmethod=manual
+:set history=150
+:set hlsearch
+:set incsearch
+:set noignorecase
+:set report=2
+:set ruler
+:set showtabline=2
+:set scrolloff=2
+:set shell=$SHELL
+:set number
+:set listchars=tab:>-,trail:-,nbsp:+,extends:>,precedes:<
+:set nolist
+:set showcmd
+:set showmatch
+:set showmode
+:set linebreak
+:set sidescroll=5
+:set splitbelow
+:set suffixes=.bak.o.swp.db.bin.sea.sit.tar.Z.cpt.z.exe.dmp.gz.taz
+:set expandtab
+:set shiftwidth=2
+:set softtabstop=2
+:set tabstop=8
+:set tags=tags\ ../tags
+:set textwidth=0
+:set undolevels=1000
+:set nowrap
+:set wildmenu
+:set menuitems=42
+:set wildignore+=*.o,*.so,*.a,*.x,*.exe,*.P,.d
+:set winheight=10
+:set wrapmargin=-200
+:set wrapscan
+:set viminfo=!,@100,'50,f1,<100,s10,n~/.viminfo
+
+:let g:netrw_rsync_cmd = "rsync -e ssh -a"
+"let g:netrw_browser_viewer = "brave"
+:let g:perl_compiler_force_warnings = 0
+:let perl_include_pod = 1
+"let perl_want_scope_in_variables = 1
+"let perl_extended_vars = 1
+"let g:TagsMenu_useAutoCommand="FALSE"
+"let g:xml_syntax_folding = 1
+"let perl_fold=1
+:let g:markdown_fenced_languages=['c', 'cpp', 'html', 'python', 'bash=sh', 'vim']
+:let g:perl_synwrite_au = 1
+:let g:session_autoload = 1
+:let g:session_autosave = 1
+:let g:session_default_to_last = 1
+
+" 0OQ@ 1l|i!/\ 5S$ 2Z 8&$ a@ _-=>+(*•.:;,
+" Decent fonts (best to worst)
+" CousineForPowerline:h14
+" DejaVuSansMonoPowerline:h14
+" DroidSansMonoSlashedForPowerline:h14
+" AnonymicePowerline:h14
+" MesloLGSForPowerline-Regular:h14
+" RobotoMonoForPowerline-Thin:h14
+" SourceCodeProForPowerline-ExtraLight:h14
+" Andale\ Mono:h14
+" LiberationMonoPowerline:h14
+
+:set guifont=
+
+"#######################################
+" Keystroke mappings for vim
+"#######################################
+
+"-------------------------------------------------------------------------------
+" Pane navigation aids
+" Goto next window
+:nmap gw <C-W>w
+" Goto previous window
+:nmap gW <C-W>p
+" Goto next tab
+:nmap gt :tabnext<CR>
+" Goto previous tab
+:nmap gT :tabprevious<CR>
+"-------------------------------------------------------------------------------
+" CTRL-y = execute buffer 'a' (allows quick recording/replay)
+:nmap <C-Y> @a
+"-------------------------------------------------------------------------------
+" Conveniences
+:cmap bs buffers
+:cmap cs colorscheme
+:syntax on

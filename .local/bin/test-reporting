@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# A script to test the reporting.bash functions and provide an example of usage
+
+clear
+
+REPORTING_BASH="$(dirname "$0")/reporting.bash"
+if [[ -f "${REPORTING_BASH}" ]]; then
+  # shellcheck source reporting.bash
+  source "${REPORTING_BASH}" "$0"
+else
+  echo "Error: Missing ${REPORTING_BASH}" 1>&2; exit 1
+fi
+
+echo xx "Testing Log; Echo; Info; Do; Ruler" xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Log "This is logged only"
+Echo -n "Testing "
+Echo " Echo"
+Info "Testing Info"
+Do "echo Testing Do"
+Info "Testing Ruler +; / Message; - Message"
+Do Ruler +
+Do Ruler / Hello there
+Do Ruler Hello there
+
+Ruler -cyn x "Testing Pass; Fail; PassFail"
+if Pass; then echo Pass; else echo Fail; fi
+Do pwd && echo pwd passed
+Do Fail 1 && echo Fail failed || echo Fail passed
+Do Pass 1 && echo Pass passed || echo Pass failed
+Do Fail 2; PassFail
+Do Pass 2; PassFail
+
+Ruler -cyn x "Testing Require"
+# shellcheck source=get-build-opts.bash
+Require get-build-opts.bash
+GetBuildOpts "$0" "$@"
+
+Ruler -cyn x "Testing errors and warnings"
+Error First Error 1
+Error Second Error 2
+Warn Warn about possible issues
+Error Final Error 2
+Ruler -red x "Testing Summary; Die"
+Summary
+( Die Fatally; echo "Should not see this" )
+Info "The end"

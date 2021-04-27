@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# This script runs all the tool build/install scripts
+#
+echo 2>&1 "Status: Currently INCOMPLETE and UNTESTED!"
+
+cd
+build-cmake
+build-ninja
+build-ag
+build-clang
+build-systemc
+build-vim
+git-setup

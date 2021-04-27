@@ -1,0 +1,13 @@
+#!/bin/bash
+
+function SetupPaths() {
+# Setup for quicker navigation (e.g., `cd ex1`)
+for f in "${@}"; do
+  COURSE="$(find 2>/dev/null "${HOME}" -t d "${f}")"
+  COURSE="${f}"
+done
+CDPATH="${FAVS}:${HOME}/${COURSE}:${HOME}"
+export CDPATH
+}
+
+SetupPaths syscfund tlm-2 training

@@ -1,0 +1,205 @@
+#!/bin/sh
+#
+# coursetar
+# ========
+#
+# UNIX shell (not C-shell!) script to create a tar file containing all the
+# user created and answer files from a vhdl or verilog course. See below for
+# the types of file which are tarred. Finally, the script compresses the tar
+# file.
+#
+# APF 2001-03-13  Created
+# MJS 2001-03-15  VHDL and Verilog; relative paths; silent; "finished"
+# SD  2001-11-29  Perl modification. Archive all files to perl.zip.Z and exit.
+# MJS 2002-05-27  Rewrite the bit that works out the course name; add SystemC
+# MJS 2002-07-19  Linux-ize
+# APF 2002-08-08  Added e specman course
+# IJP 2003-08-08  Added more files for e specman course
+# MJS 2003-11-28  Fixed to work on George (and everywhere else!)
+# MJS 2003-11-28  Added CompC++
+# MJS 2003-12-05  Tidy up
+# IJP 2004-01-15  Added extra find options for e course to prune the erm files!
+# APF 2004-03-11  Added PSL
+# DIL 2005-10-20  Added Expert SystemC courses
+# MJS 2006-05-18  Added new files for Comp Verilog: .hex and .mem; also
+#                 .bat for VHDL-for-FPGA, .pm for Perl
+# MJS 2006-07-25  Added new file extension for SystemC with PSE: .hpp
+# MJS 2006-11-02  Added new file extensions for SystemVerilog: .sv, .c
+#                 also start* and run* scripts and *README*.
+# APF 2006-11-23  Put $USER into tar file name so it is unique per user
+# MJS 2007-05-14  Added new file extension for SystemVerilog: .ca
+# APF 2008-03-20  Use gzip instead of compress
+# MJS 2008-03-31  Added new user - ovm
+#
+
+# Make sure the correct programs are used. The locations depend on the
+# OS that's running
+
+OS=`uname`
+
+if [ "${OS}" = "SunOS" ]; then
+	FIND=/bin/find
+	FINDOPTS=
+	TAR=/bin/tar
+	TAROPTS=-I
+	COMPRESS=/bin/compress
+	GREP=/usr/xpg4/bin/grep
+	ID=/usr/xpg4/bin/id
+elif [ "$OS" = "Linux" ]; then
+	FIND=/usr/bin/find
+	FINDOPTS=-noleaf
+	TAR=/bin/tar
+	TAROPTS=-T
+	COMPRESS=/usr/bin/gzip
+	GREP=/bin/grep
+	ID=/usr/bin/id
+else
+	echo Unsupported OS: $OS. Exiting ...
+	exit 1;
+fi
+
+# create a temporary file in which to list the files to be tarred
+TMPFILE=$HOME/tmpfilelist.tmp
+
+# The name of the resulting tar file is derived from the name of the course
+# as follows:
+#
+# Course									Username		tar file name
+# ------									--------		-------------
+# Expert Verilog Verification		evlogv		verilog.tar
+# Expert Verilog Design				evlogd		verilog.tar
+# Expert Verilog						everilog		verilog.tar
+# Essential Perl						perl			perl.tar
+# Comprehensive Verilog				verilog		verilog.tar
+# Comprehensive VHDL					vhdl			vhdl.tar
+# Comprehensive VHDL (BAE SYSTEMS) 	vhdlbae	vhdl.tar
+# Altera TechClass					tca			vhdl.tar
+# Xilinx TechClass					tcx			vhdl.tar
+# (Test user)							u				-
+# Expert VHDL Verification			evhdv			vhdl.tar
+# Expert VHDL Design					evhdd			vhdl.tar
+# Expert VHDL							evhdl			vhdl.tar
+# VHD-AMS Workshop					ams			vhdl.tar
+# Comprehensive SystemC				sc				systemc.tar
+# Expert SystemC Modelling       escm        systemc.tar
+# Expert SystemC Verification    escv        systemc.tar
+# Expert SystemC                 esc         systemc.tar
+# Essential Tcl/Tk					tcltk			tcltk.tar
+# Comprehensive e               	e				e.tar
+# Comprehensive C++					cpp			cpp.tar
+# PSL										psl			psl.tar
+# Comprehensive SystemVerilog		sv		      systemverilog.tar
+# OVM Adopter Class		ovm		      ovm.tar
+
+# This amazing line runs "id" to get the user name and then uses a Perl
+# one-liner to strip off the trailing numbers. So, if the username is
+# vhdl8, COURSEUSER gets set to "vhdl"
+
+COURSEUSER=`$ID -u -n | perl -e '<STDIN> =~ /[a-z]+/i and print $&'`
+
+# What sort of course is this? This determines the tar file name
+
+case $COURSEUSER in
+
+  evhdv | evhdd | evhdl | ams | vhdl | vhdlbae | tca| tcx)
+    COURSE=vhdl;;
+
+  evlogv | evlogd | everilog | verilog)
+    COURSE=verilog;;
+
+  perl)
+    COURSE=perl;;
+
+  sc | esc | escm | escv )
+    COURSE=systemc;;
+
+  tcltk)
+    COURSE=tcltk;;
+
+  e)
+    FINDOPTS="$FINDOPTS -name *eRM* -prune -type f -o"
+    COURSE=e;;
+
+  cpp)
+    COURSE=cpp;;
+	 
+  psl)
+    COURSE=psl;;
+	 
+  sv)
+    COURSE=systemverilog;;
+	 
+  ovm)
+    COURSE=ovm;;
+		
+  *)
+    echo $0: Unrecognised User - tar file will be called course.tar
+    COURSE=course;;
+esac
+
+# change to user's home directory, so that relative paths are used
+# in the tar file
+
+cd $HOME
+
+# search for each type of file in turn and append them to 
+# tmpfilelist.tmp
+
+$FIND . $FINDOPTS -name '*.vhd'    > $TMPFILE
+$FIND . $FINDOPTS -name '*.v'     >> $TMPFILE
+$FIND . $FINDOPTS -name '*.out'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.setup' >> $TMPFILE
+$FIND . $FINDOPTS -name '*.scr'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.bat'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.txt'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.ucf'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.acf'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.cmd'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.do'    >> $TMPFILE
+$FIND . $FINDOPTS -name '*.setup' >> $TMPFILE
+$FIND . $FINDOPTS -name '*.hex'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.mem'   >> $TMPFILE
+
+# Added for SystemVerilog
+$FIND . $FINDOPTS -name '*.sv'    >> $TMPFILE
+$FIND . $FINDOPTS -name '*.c'     >> $TMPFILE
+$FIND . $FINDOPTS -name '*.mca'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.f'     >> $TMPFILE
+$FIND . $FINDOPTS -name 'start*'  >> $TMPFILE
+$FIND . $FINDOPTS -name 'run*'    >> $TMPFILE
+$FIND . $FINDOPTS -name '*README*'>> $TMPFILE
+
+# Added for SystemC
+$FIND . $FINDOPTS -name 'Makefile*'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.cpp'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.h'     >> $TMPFILE
+$FIND . $FINDOPTS -name '*.hpp'   >> $TMPFILE
+
+# Added for Perl and Tcl/Tk
+$FIND . $FINDOPTS -name '*.pl'    >> $TMPFILE
+$FIND . $FINDOPTS -name '*.pm'    >> $TMPFILE
+$FIND . $FINDOPTS -name '*.tcl'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.rpt'   >> $TMPFILE
+$FIND . $FINDOPTS -name '*.tbl'   >> $TMPFILE
+
+# Added for e
+$FIND . $FINDOPTS -name '*.e' 	  >> $TMPFILE
+$FIND . $FINDOPTS -name '*.sh' 	  >> $TMPFILE
+$FIND . $FINDOPTS -name '*.csh'	  >> $TMPFILE
+$FIND . $FINDOPTS -name '*.ini'	  >> $TMPFILE
+$FIND . $FINDOPTS -name 'cds.lib' >> $TMPFILE
+$FIND . $FINDOPTS -name 'hdl.var' >> $TMPFILE
+$FIND . $FINDOPTS -name '*start*'  >> $TMPFILE
+$FIND . $FINDOPTS -name 'makefile' >> $TMPFILE
+
+# Added for psl
+$FIND . $FINDOPTS -name '*.psl' 	  >> $TMPFILE
+
+# Create and compress the tar file
+
+$TAR -cf ${USER}_${COURSE}.tar ${TAROPTS} $TMPFILE
+$COMPRESS ${USER}_${COURSE}.tar
+
+# Say we've finished
+
+echo ${USER}_${COURSE}.tar.gz has been created 

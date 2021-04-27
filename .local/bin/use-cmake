@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# source this file: . use-cmake
+
+export NEW_LD_LIBRARY_PATH=/usr/local/lib64:/usr/NX/lib
+export NEW_SYSTEMC_HOME=/home/courseleader1/.local/apps/systemc
+
+if [[ "${SYSTEMC_HOME}" =~ ^/home ]]; then
+  export LD_LIBRARY_PATH="${OLD_LD_LIBRARY_PATH}"
+  export SYSTEMC_HOME="${OLD_SYSTEMC_HOME}"
+else
+  export OLD_LD_LIBRARY_PATH="${LD_LIBRARY_PATH}"
+  export OLD_SYSTEMC_HOME="${SYSTEMC_HOME}"
+  export LD_LIBRARY_PATH="${NEW_LD_LIBRARY_PATH}"
+  export SYSTEMC_HOME="${NEW_SYSTEMC_HOME}"
+fi
+export LD_LIBRARY_PATH
+export SYSTEMC_HOME
+echo "Using SYSTEMC_HOME=${SYSTEMC_HOME}"
+

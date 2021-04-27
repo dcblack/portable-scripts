@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# FILE: .bash_profile
+
+# Get the aliases and functions
+if [ -f "${HOME}/.bashrc" ]; then
+  source "${HOME}/.bashrc"
+fi
+
+# User specific environment and startup programs
+
+if [[ -d "${HOME}/bin" ]]; then
+  mkdir -p   "${HOME}/bin"
+  chmod g+s  "${HOME}/bin"
+  chmod a+rx "${HOME}/bin"
+fi
+
+if [[ "${HOME}" == "${LEAD}" && ! -d "${LEAD}/.local/bin" ]]; then
+  # Leader needs to have accessible .local
+  chmod g+s  "${LEAD}/.local"
+  mkdir -p   "${LEAD}/.local/bin" "${LEAD}/.local/dotfiles"
+  chmod a+rx "${LEAD}/.local/bin" "${LEAD}/.local/dotfiles"
+  chmod a+x  "${LEAD}"
+fi
+
+if [[ -n "${LEAD}" ]]; then
+  prepend_path PATH "${LEAD}/.local/bin"
+  prepend_path PATH "${HOME}/bin" # Allow user overrides
+  MANPATH=${HOME}/man:"${LEAD}/.local/man:${LEAD}/.local/share/man:/usr/local/share/man:/usr/share/man"
+fi
+export MANPATH

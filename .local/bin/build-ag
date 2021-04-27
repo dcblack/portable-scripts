@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# Script to build/install Silver searcher, the fastest file searching tool on the planet!
+TOOL="Silver searcher (ag)"
+REPORTING_BASH="$(dirname "$0")/reporting.bash"
+if [[ -f "${REPORTING_BASH}" ]]; then
+  source "${REPORTING_BASH}" "$0"
+else
+  echo "Error: Missing ${REPORTING_BASH}" 1>&2; exit 1
+fi
+
+LOCAL="${HOME}/.local"
+cd "${LOCAL}/src" || Die "Unable to enter source directory"
+git clone https://github.com/ggreer/the_silver_searcher.git || Die "Unable to clone"
+cd the_silver_searcher || Die "Unable to enter repo"
+Info "Configuring silver searcher"
+./build.sh --prefix="${LOCAL}" || Die "Unable to build"
+Info "Installing silver searcher (ag)"
+make install
+Summary "Installed. Use 'ag --help' for more information."

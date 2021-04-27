@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+
+LEADER=courseleader1
+cd
+
+# Parse command-line options
+let ERRORS=0
+DEBUG=0
+FORCE=0
+while [[ $# != 0 ]]
+do
+  case "$1" in
+  -h|-help)
+    perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' $0;
+#|
+#|NAME
+#|----
+#|
+#|  $0 - setup to use scripts of the course leader
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [-force] [-debug]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#|  {:TBS:}
+#|
+    exit 0;
+    ;;
+  -d|-debug|--debug)
+    DEBUG=1
+    ;;
+  -f|-force|--force)
+    FORCE=1
+    ;;
+  *)
+    let ERRORS++
+    echo "ERROR: Unknown option '$1'" 1>&2
+    ;;
+  esac
+done
+if [[ $ERRORS != 0 ]]; then
+  echo "Please fix above errors and retry" 1>&2
+  exit
+fi
+
+DOTFILES=.bash_profile .bashrc .bash_functions .bash_aliases .vim .vimrc
+if [[ $LEADER == $USER ]]; then
+  chmod a+x $HOME # make home accessible (but not readable to outsiders)
+  chmod a+rx $DOTFILES # make explicit files readable
+  DOTDIRS=$HOME/.vim $HOME/.local
+  chmod -R a+r $DOTDIRS # ensure resources are readable
+  find $DOTDIRS -type d -exec chmod g+rx {} ';'
+else
+  for f in $DOTFILES; do
+    if [[ -r $f-orig ]]; then
+      # Don't overwrite preexisting originals
+      let ERRORS++
+      echo "ERROR: Cowardly refusing to update $f because $f-orig previously exists" 1>&2
+    elif [[ -r $f ]]; then
+      # Backup originals and copy in replacements
+      mv $f $f-orig
+      rsync auv $f ./
+    else
+      # Files that have no preexisting version are simply copied
+      rsync auv $f ./
+    fi
+  done
+  echo "Now logout or source .bash_profile"
+fi

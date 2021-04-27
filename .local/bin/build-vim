@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# Build Vim from github clone and installs under ~/clone.
+
+source reporting.bash "$0"
+
+SRC="${HOME}/.local/src"
+mkdir -p "${SRC}" || Die "Unable to create ${SRC}"
+cd "${HOME}/.local/src" || Die "Unable to enter source directory ${SRC}"
+git clone https://github.com/vim/vim.git || Die "Unable to fetch repo"
+cd ./vim || Die "Unable to enter repo"
+./configure --prefix ${HOME}/.local
+make
+make install
+cat <<'EOF'
+-------------------------------------------------------------------------------
+* Built Vim under $HOME/.local/src/vim.
+* Installed Vim under $HOME/.local.
+* To use, prepend $HOME/.local/bin to your path appropriately.
+* For bash modify `.bashrc` by adding: `PATH="$HOME/.local/bin:$PATH"`
+* When satisfied, you may:
+
+  1. Clean-up the build directly with `cd $HOME/.local/src/vim && make clean`
+  - OR -
+  2. Remove Vim entirely with `rm -fr $HOME/.local/src/vim`
+
+* To share with others: `chmod a+x $HOME && chmod a+rx $HOME/.local`, and let
+  them know to add to `$HOME/.local/bin` to their paths.
+-------------------------------------------------------------------------------
+
+EOF

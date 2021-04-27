@@ -1,0 +1,181 @@
+#!/bin/sh
+ 
+# Copyright (C) 2013, Giorgos Keramidas <gkeramidas@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+ 
+# Dump an executable form of all the mate-terminal keys associated with
+# colors.  Running the resulting script should restore all color-related
+# state of the terminal to whatever it was at the time the script was
+# created.
+#
+# Inspired by:
+# The setup scripts of solarized theme for gnome-terminal from:
+# https://github.com/sigurdga/gnome-terminal-colors-solarized
+ 
+# ----- startup code ---------------------------------------------------
+ 
+# Save the original program invocation name, and the real path of the
+# startup directory, for later use.
+progdir=$( cd $(dirname "$0") ; /bin/pwd -P )
+progname=$( basename "$0" )
+ 
+# ----- misc functions -------------------------------------------------
+ 
+#
+# err exitval message
+#   Display message to stderr and to the logfile, if any, and then
+#   exit with exitval as the return code of the script.
+#
+err()
+{
+    exitval=$1
+    shift
+ 
+    log "$0: ERROR: $*"
+    exit $exitval
+}
+ 
+#
+# warn message
+#   Display message to stderr and the log file.
+#
+warn()
+{
+    log "$0: WARNING: $*"
+}
+ 
+#
+# info message
+#   Display informational message to stderr and to the logfile.
+#
+info()
+{
+    log "$0: INFO: $*"
+}
+ 
+#
+# debug message
+#   Output message to stderr if debug_output_enabled is set to
+#   'yes', 'true' or '1'.  Please AVOID calling any shell subroutine
+#   that may recursively call debug().
+#
+debug()
+{
+    case ${debug_enabled} in
+    [Yy][Ee][Ss]|[Tt][Rr][Uu][Ee]|[Oo][Nn]|1)
+        log "$0: DEBUG: $*"
+        ;;
+    esac
+}
+ 
+#
+# log message
+#   Print a log message to standard error.  If ${LOGFILE} is set
+#   Output message to "${LOGFILE}" if it is set and is writable.
+#
+log()
+{
+    __timestamp="`date -u '+%Y-%m-%d %H:%M:%S'`"
+    __msg="${__timestamp} [${progname}] -- $*"
+    echo >&2 "${__msg}" 2>&1
+    if [ -n "${LOGFILE}" ]; then
+        echo "${__msg}" >> "${LOGFILE}"
+    fi
+}
+ 
+# ----- main script body ------------------------------------------------
+ 
+# The gconf-compatible tool to use for reading and writing gconf keys
+# for the MATE desktop, and the application name under /apps/ to
+# configure.  These are provisionaly set to work for the MATE desktop,
+# but they can also be tweaked to work for GNOME 2.X by setting:
+#
+#   conftool='gconftool-2'
+#   appname='gnome-terminal'
+ 
+conftool='mateconftool-2'
+appname='mate-terminal'
+ 
+# Basic command-line sanity checking.
+if test $# -ne 0 && test $# -ne 1 ; then
+    echo >&2 "usage: ${progname} [ PROFILE ]"
+    exit 1
+fi
+ 
+# The name of the profile we are dumping can be passed as a command line
+# argument, or auto-detected by peeking at:
+# '/apps/${appname}/global/default_profile'
+if test $# -eq 1 ; then
+    profile="$1"
+else
+    key="/apps/${appname}/global/default_profile"
+    profile=$( ${conftool} --get "${key}" 2>/dev/null )
+    if test $? -ne 0 ; then
+        debug "Cannot read configuration key: ${key}"
+        err 1 "Cannot detect default profile name."
+    fi
+    unset key
+fi
+ 
+# Verify that the profile we are looking for really exists, by trying to
+# read at least one key from it:
+# '/apps/${appname}/profiles/${profile}/foreground_color'
+key="/apps/${appname}/profiles/${profile}/foreground_color"
+${conftool} --get "${key}" > /dev/null 2>&1
+if test $? -ne 0 ; then
+    debug "Cannot read configuration key: ${key}"
+    err 1 "Profile ${profile} cannot be found."
+fi
+unset key
+ 
+# dumpkey TYPE KEY
+#   Dump a configuration key to standard output, as a shell command that
+#   will _set_ it to its current value, using the associated type.
+dumpkey()
+{
+    if test $# -ne 2 || test -z "$1" || test -z "$2" ; then
+        debug "dumpkey() requires exactly 2 non-empty arguments,"
+        debug "but it was invoked with:"
+        debug "    \"$1\""
+        debug "    \"$2\""
+        return 1
+    fi
+    __type="$1"
+    __key="$2"
+ 
+    __value=$( ${conftool} --get "${__key}" )
+    if test $? -ne 0 ; then
+        err 1 "Cannot read key \"${__key}\""
+    fi
+    echo "${conftool} --set --type \"${__type}\""                       \
+        "\"${__key}\" \"${__value}\""
+}
+ 
+dumpkey "string" "/apps/${appname}/profiles/${profile}/background_color"
+dumpkey "string" "/apps/${appname}/profiles/${profile}/bold_color"
+dumpkey "bool"   "/apps/${appname}/profiles/${profile}/bold_color_same_as_fg"
+dumpkey "string" "/apps/${appname}/profiles/${profile}/foreground_color"
+dumpkey "string" "/apps/${appname}/profiles/${profile}/palette"
+
+# TAF!

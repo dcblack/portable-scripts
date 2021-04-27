@@ -1,0 +1,219 @@
+#!/bin/bash
+
+#-------------------------------------------------------------------------------
+# Personal habits
+#-------------------------------------------------------------------------------
+function lx() { # Display last N files (default 30) sorted by modification time
+  N=-30
+  if [[ "$1" =~ ^-[0-9]+ ]]; then
+    N=$1
+    shift
+  fi
+  /bin/ls -lt "$@" | head $N
+}
+
+function h() { # Display most recent N history lines
+  local N=-20
+  if [[ "$1" =~ ^-[0-9]+ ]]; then
+    N=$1
+    shift
+  fi
+  history | tail $N
+}
+
+function hellocolors() {
+  echo "${BOLD}${BBLK}${CRED}Hello ${CGRN}world:${NONE}"
+  echo "    ${UNDR}${BOLD}RAW PLN BLD${NONE}"
+  echo "  - ${CBLK}blk ${BWHT}${CBLK}blk ${BOLD}BLK${NONE}"
+  echo "  - ${CRED}red ${BWHT}${CRED}red ${BOLD}RED${NONE}"
+  echo "  - ${CGRN}grn ${BBLK}${CGRN}grn ${BOLD}GRN${NONE}"
+  echo "  - ${CYLW}ylw ${BBLK}${CYLW}ylw ${BOLD}YLW${NONE}"
+  echo "  - ${CBLU}blu ${BWHT}${CBLU}blu ${BOLD}BLU${NONE}"
+  echo "  - ${CMAG}mag ${BWHT}${CMAG}mag ${BOLD}MAG${NONE}"
+  echo "  - ${CCYN}cyn ${BBLK}${CCYN}cyn ${BOLD}CYN${NONE}"
+  echo "  - ${CWHT}wht ${BBLK}${CWHT}wht ${BOLD}WHT${NONE}"
+}
+
+#-------------------------------------------------------------------------------
+# Useful
+#-------------------------------------------------------------------------------
+function realpath() {
+  perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
+
+function firstreal() {
+  perl -le '@_=split($;,join($;,@ARGV));for(@_){next unless -e $_;print $_;exit 0;}' "$@"
+}
+
+function has_path() {
+  # USAGE: has_path VAR PATH
+  arg="$(realpath '$2')"
+  if [[ "$arg" == "" ]]; then return 1; fi
+  perl -M'Cwd(abs_path)' -le '$v=$ARGV[0];$p=$ARGV[1];for$d(split(":",$ENV{$v})){next if !-d $d;exit 0 if$p eq abs_path($d);}exit 1' "$1" "$arg"
+}
+
+function prepend_path() { # only if 2nd arg does not exist in first
+  # USAGE: prepend_path VAR PATH
+  arg="$(realpath '$2')"
+  has_path "$1" "$2" || \
+    eval $(perl -le 'print qq{$ARGV[0]="$ARGV[1]:$ENV{$ARGV[0]}"; export $ARGV[0]}' "$1" "$arg")
+}
+
+function append_path() { # only if 2nd arg does not exist in first
+  # USAGE: append_path VAR PATH
+  var="$1"
+  arg="$(realpath '$2')"; shift
+  has_path "$1" "$2" || \
+    eval $(perl -le 'print qq{$ARGV[0]="$ENV{$ARGV[0]}:$ARGV[1]"; export $ARGV[0]}' "$var" "$arg")
+}
+
+function unique_path() {
+  # USAGE: unique_path VAR
+  eval $(perl -M'Cwd(abs_path)' -e '$v=$ARGV[0];for$d(split(qr":",$ENV{$v})){next if !-d $d;$e=abs_path($d);if(!exists$e{$e}){$e{$e}=1;push(@e,$e);}};printf qq{%s="%s"\n},$v,join(":",@e)' "$1")
+}
+
+function remove_path() {
+  # USAGE: remove_path VAR PATH
+  eval $(perl -M'Cwd(abs_path)' -e '$v=$ARGV[0];$p=abs_path($ARGV[1]);for(split(qr":",$ENV{$v})){$e=abs_path($_);if($p ne $e){$push(@e,$e);}};print "$v=",join(":",@e)' "$1" "$2")
+}
+
+function add_prefix() {
+  local prefix="$1"
+  shift
+  for element in "$@"; do
+    echo "$prefix$element"
+  done
+}
+
+function add_suffix() {
+  local suffix="$1"
+  shift
+  for element in "$@"; do
+    echo "$element$suffix"
+  done
+}
+
+function use-cmake() {
+  source ~$LEAD/.local/bin/use-cmake
+}
+
+function go() {
+  # Begin parsing options
+  #-----------------------------------------------------------------------------
+  local GO_VERBOSE=0
+  local GO_FAVS="$HOME/favs"
+  if [[ $# != 0 ]]; then
+    while [[ "$1" =~ ^-. ]]; do
+      if [[ $GO_DEBUG == 1 ]]; then echo "DEBUG: $1"; fi
+      case "$1" in
+      -h | -help | --help) cat 1>&2 <<EOT
+Synopsis
+--------
+
+  go - slightly more flexible alternative to change directory 'cd' command (uses cd internally).
+
+Syntax
+------
+
+  go -help
+  go -list
+  go {dir_or_file}...
+
+Description
+-----------
+
+  For each argument, go uses case-insensitive globbing to
+  locate that element.
+
+  If it finds a directory, then *go* moves to that directory
+  (cd) and processes the next argument.
+
+  If the result is a path to a non-directory element, then
+  it goes to the directory containing that element.
+
+Examples
+--------
+
+  go tlm-? answers EX01
+  go /home/$USER/syscfund/ex01/ex01.cpp
+
+EOT
+        return
+        ;;
+      -v | --verbose )
+        GO_VERBOSE=1
+        ;;
+      -l | -list )
+        /bin/ls "$GO_FAVS"
+        return
+        ;;
+      -[1-9])
+        ;;
+      * ) 
+        echo 1>&2 "ERROR: Unknown option $1"
+        return
+        ;;
+      esac
+      shift
+    done
+  fi
+  # End parsing options
+  #-----------------------------------------------------------------------------
+  local working_script='setup.profile'
+
+  # Last working directly
+  local prev_lwd="$lwd"
+  export lwd="$(realpath .)"
+  if [[ $# == 0 ]]; then
+    cd
+  else
+    while [[ $# != 0 ]]; do
+      if [[ "$1" == '-' ]]; then
+        cd -
+      else
+        arg="$(echo $1)"
+        alt="$(perl -le '@d=glob(qq{$1});print shift @d')"
+        # ToDo: add case-insensitivity
+        cd "$arg" 1>/dev/null \
+        || cd "$alt" 1>/dev/null \
+        || break
+      fi
+      shift
+    done
+  fi
+  # New working directory
+  local next_wd="$(realpath .)"
+  cd "$lwd" 2>/dev/null 1>/dev/null
+  cd "$next_wd"
+
+  if [[ "$next_wd" == "$prev_lwd" ]]; then
+    lwd="$prev_lwd"
+  else
+    export cwd="$next_wd"
+  fi
+#  echo "<$next_wd>"
+
+  # Last working script
+  test "$nws" != "" && export lws="$nws"
+
+  # Deal with new working script if it exists
+  export nws="$(firstreal $(add_suffix /$working_script . .. ../.. ../../..))"
+  if [[ "$nws" != "" ]]; then
+    nws="$(realpath '$nws')"
+    if [[ "$lws" != "" && "$lws" != "$nws" && -x "$lws" && ! -d "$lws" ]]; then
+      test "$VERBOSE" == 1 && echo "Removing $nws"
+      export action='rm'
+      source "$lws"
+      unset action
+    fi
+    if [[ -x "$nws" && ! -d "$nws" ]]; then
+      test "$VERBOSE" == 1 && echo "Adding $nws"
+      export action='add'
+      source "$nws"
+      unset action
+    fi
+  fi
+  set_title $(pwd)
+  set_icon $(basename $(pwd))
+}
+

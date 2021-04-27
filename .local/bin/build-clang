@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Derived from https://llvm.org/docs/CMake.html
+
+ROOT=$HOME/.local
+mkdir -p $ROOT/src
+cd $ROOT/src
+git clone https://github.com/llvm/llvm-project.git
+cd llvm-project
+cmake -S llvm -B build -G Ninja
+cmake -DCMAKE_INSTALL_PREFIX=$ROOT -P cmake_install.cmake -S llvm
+cd build
+cmake --build .
+cmake --build . --target install

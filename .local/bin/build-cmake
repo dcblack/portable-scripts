@@ -1,0 +1,201 @@
+#!/bin/bash
+#
+# Install the latest or specified version of cmake
+
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#|  $0 - build and install cmake from source
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [-clean] [-debug] [-git|-wget|-curl] [-install=DIR] [-src=SRCDIR]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#|  Downloads, unpacks, builds and installs the latest or specified version of cmake.
+#|
+
+#-------------------------------------------------------------------------------
+# Make things more visible in the output
+
+REPORTING_BASH="$(dirname "$0")/reporting.bash"
+if [[ -f "${REPORTING_BASH}" ]]; then
+  # shellcheck source reporting.bash
+  source "${REPORTING_BASH}" "$0"
+else
+  echo "Error: Missing ${REPORTING_BASH}" 1>&2; exit 1
+fi
+
+# Defaults
+#-------------------------------------------------------------------------------
+CLEAN=0
+DEBUG=0
+NPROC=4 # Cores to use when building
+# Following for the non-git approach where you need to specify the version
+MAJVERS=3
+MINVERS=19
+DOTVERS=7
+if [[ "${TYPE}" == "" ]]; then
+  TYPE=-wget # use -git or -wget or -curl
+fi
+
+#-------------------------------------------------------------------------------
+# Scan command-line for options
+#-------------------------------------------------------------------------------
+while [[ $# != 0 ]]; do
+  case "$1" in
+  -h|-help)
+    perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' "$0";
+    exit 0;
+    ;;
+  -git|-wget|-curl)
+    TYPE="$1";
+    shift;
+    ;;
+  -d|-debug|--debug)
+    DEBUG=1;
+    shift;
+    ;;
+  --clean|-clean)
+    CLEAN=1;
+    shift;
+    ;;
+  -i|--install=*)
+    if [[ "$1" != '-i' ]]; then
+      CMAKE_INSTALL_PREFIX="${1//*=/}"
+    elif [[ $# -gt 1 && -d "$2" ]]; then
+      CMAKE_INSTALL_PREFIX="$2"
+      shift
+    else
+      Die "Need directory argument for --install"
+    fi
+    shift;
+    ;;
+  -s|--src=*)
+    if [[ "$1" != '-s' ]]; then
+      SRC="${1//*=/}"
+    elif [[ $# -gt 1 && -d "$2" ]]; then
+      SRC="$2"
+      shift
+    else
+      Die "Need directory argument for --src"
+    fi
+    shift;
+    ;;
+  *)
+    Die "ERROR: Unkhown option $1";
+    ;;
+  esac
+done
+
+if [[ "${DEBUG}" == 1 ]]; then
+  echo "DEBUG=${DEBUG}"
+  echo "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
+  echo "MAJVERS=${MAJVERS}"
+  echo "MINVERS=${MINVERS}"
+  echo "DOTVERS=${DOTVERS}"
+  echo "NPROC=${NPROC}"
+fi
+
+#-------------------------------------------------------------------------------
+Info "Setup source directory"
+if [[ -n ${SRC} && -d "${SRC}" ]]; then
+  echo "Using SRC=${SRC}"
+fi
+if [[ -v APPS ]]; then
+  SRC="${APPS}/src"
+elif [[ "${HOME}" == "$(pwd)" ]]; then
+  SRC="${HOME}/.local/src"
+else
+  SRC="$(pwd)/src"
+fi
+mkdir -p "${SRC}" || Die "Failed to find/create ${SRC} directory"
+
+#-------------------------------------------------------------------------------
+# Determine installation directory
+if [[ ! -v CMAKE_INSTALL_PREFIX ]]; then
+  CMAKE_INSTALL_PREFIX="$(dirname "${SRC}")"
+fi
+export CMAKE_INSTALL_PREFIX
+
+cd "${SRC}" || Die "Unable to enter ${SRC}"
+test "${CLEAN}" == 1 && rm -fr cmake*
+
+
+if [[ "${TYPE}" == "-git" ]]; then
+###############################################################################
+#
+#   ####                                                                         
+#  #    #      #                                                                 
+#  #       #   #                                                                 
+#  #  ###     ###                                                                
+#  #    # ##   #                                                                 
+#  #    #  #   # #                                                               
+#   ####  ###   #                                                                
+#
+###############################################################################
+ 
+  echo "Cloning cmake"
+  git clone https://gitlab.kitware.com/cmake/cmake.git  || Die "Failed to clone"
+  cd cmake || Die "Unable to enter repo"
+
+else
+###############################################################################
+#
+#  #     #                     |     ####                               
+#  #  #  #               #     |    #    #               ##             
+#  #  #  #  ###          #     |    #                     #             
+#  #  #  # #   #  ###   ###    |    #      #    # # ###   #             
+#  #  #  #  #### #####   #     |    #      #    # ##      #             
+#  #  #  #     # #       # #   |    #    # #    # #       #             
+#   ## ##   ###   ###     #    |     ####   ##### #      ###            
+#
+###############################################################################
+  FULL_VERS=${MAJVERS}.${MINVERS}.${DOTVERS}
+  CMAKE_TARBALL="cmake-${FULL_VERS}.tar.gz"
+  URL="https://cmake.org/files/LatestRelease/${CMAKE_TARBALL}"
+  echo "Fetching cmake"
+  # Assumed to be under latest; otherwise, use v$MAJOR.$MINOR
+  if [[ "${TYPE}" == "-wget" ]]; then
+    echo "% wget ${URL}"
+    wget "${URL}" || Die "Failed to download cmake ${URL}"
+  else
+    echo "% curl -output ${CMAKE_TARBALL} ${URL}"
+    curl -output "${CMAKE_TARBALL}" "${URL}" || Die "Failed to download from ${URL}"
+  fi
+  echo "Expanding cmake tarball"
+  echo "% tar zxvf cmake-${FULL_VERS}.tar.gz"
+  tar zxvf "cmake-${FULL_VERS}.tar.gz" || Die "Failed to extract cmake-${FULL_VERS}.tar.gz"
+  echo "% cd cmake-${FULL_VERS}"
+  cd "cmake-${FULL_VERS}" || Die "Unable to enter source directory"
+fi
+
+Info "Building cmake"
+mkdir cmake-build || Die "Unable to create build directory"
+cd cmake-build || Die "Unable to enter build directory"
+../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Die "Failed to bootstrap"
+echo "% make -j${NPROC}"
+make -j"${NPROC}" || Die "Failed to make"
+Info "Installing  cmake"
+echo "% make install"
+make install
+
+cd "${SRC}" || Die "Unable to enter source directory"
+if [[ "${CLEAN}" == 1 ]]; then
+  Info "Clean up"
+  rm -fr cmake*
+fi
+
+cd || Die "Unable to return to home"
+cmake --version
+
+Info "Finished installing cmake"
+
+# vim:nospell

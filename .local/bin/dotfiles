@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [[ $# != 1 ]]; then
+  echo "Syntax: $(basename $0) install|uninstall" 1>&2
+  exit 1
+fi
+
+cd "${HOME}"
+case "$1" in
+install)
+  mkdir -p .local/saved
+  for f in .local/dotfiles/*; do
+    t="${f//?local?dotfiles?/}"
+    if [[ -r ".${t}" ]]; then
+      mv ".${t}" .local/saved/
+    fi
+    ln -s "${HOME}/${f}" ".${t}"
+  done
+  ;;
+uninstall)
+  for f in .local/dotfiles/*; do
+    t="${f//?local?dotfiles?/}"
+    if test -L ".${t}"; then
+      rm ".${t}"
+      mv ".local/saved/.${t}"
+    fi
+    ln -s "${HOME}/${f}" ".${t}"
+  done
+  ;;
+*)
+  ;;
+esac
