@@ -1,18 +1,35 @@
 #!/bin/bash
 
+if [[ "$1" == "-n" ]]; then
+  NOTREALLY=1
+  shift
+fi
 if [[ $# != 1 ]]; then
-  echo "Syntax: $(basename $0) install|uninstall" 1>&2
+  echo "Syntax: $(basename $0) [-n] install|uninstall" 1>&2
+  exit 1
+fi
+if [[ ! -d .local/dotfiles ]]; then
+  echo "Error: Missing correct .local/. Is HOME defined correctly?" 1>&2
   exit 1
 fi
 
-cd "${HOME}"
+cd "${HOME}" || exit
 case "$1" in
 install)
   mkdir -p .local/saved
   for f in .local/dotfiles/*; do
     t="${f//?local?dotfiles?/}"
     if [[ -r ".${t}" ]]; then
+      if [[ "${NOTREALLY}" == 1 ]]; then
+        echo "Would have replaced .${t}"
+        continue
+      fi
       mv ".${t}" .local/saved/
+      echo "Moved original .${t} into .local/saved/ and replaced with ${f}"
+    fi
+    if [[ "${NOTREALLY}" == 1 ]]; then
+      echo "Would have added .${t} from ${f}"
+      continue
     fi
     ln -s "${HOME}/${f}" ".${t}"
   done
@@ -20,11 +37,16 @@ install)
 uninstall)
   for f in .local/dotfiles/*; do
     t="${f//?local?dotfiles?/}"
-    if test -L ".${t}"; then
+    # Only remove if saved exists and home version is a link
+    if [[ -L ".${t}" && -f ".local/saved/.${t}" ]]; then
+      if [[ "${NOTREALLY}" == 1 ]]; then
+        echo "Would have restored .${t} from .local/saved/.${t}"
+        continue
+      fi
       rm ".${t}"
-      mv ".local/saved/.${t}"
+      mv ".local/saved/.${t} ."
+      echo "Restored .${t} from .local/saved/"
     fi
-    ln -s "${HOME}/${f}" ".${t}"
   done
   ;;
 *)
