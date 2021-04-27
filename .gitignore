@@ -1,11 +1,58 @@
+# Lines that start with '#' are comments.
+# For a project mostly in C, the following would be a good set of
+# exclude patterns (uncomment them if you want to use them):
+
+# OS noise
+thumb.db
+.DS_Store
+.serverauth*
+
+# Other version control systems
+.svn
+.hg
+CVS
+RCS
+
+# CMake junk
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+# Temporaries
+*#*
+*~*
+*~
+.*.sw[op]
+tmp*
+*.tmp
+
+# Intermediates and targets
+*.x
+*.o
+*.d
+*.a
+*.log
+bmake.*
+
+.hide
+
+# Backups
+*-bak
+*.bak
+*.pid
+*-old
+*.old
+
+# xcode noise
+build/*
+*.pbxuser
+*.mode1v3
+
+# TAF!
