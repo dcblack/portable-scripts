@@ -1,0 +1,19 @@
+# $Id: .newrc,v 1.1 2006/05/11 12:30:48 dcblack Exp $
+#
+#DOCUMENTATION
+#: This template creates 2 files for a : simple SystemC module.
+#: 
+#:    {:NAME:}.hpp  <--- header file for SystemC design
+#:    {:NAME:}.cpp  <--- implementation file of above
+#: 
+#: Additonal parameters internal to the files are:
+#: 
+#:    PROJECT = short name of the project
+#:    SHORT_DESCRIPTION = a one line description
+#:    LONG_DESCRIPTION = should be replaced with the
+#:                       appropriate multi-line text
+#:    OTHER_INITIALIZATIONS = code goes here
+#:    YOUR_CODE_HERE = code goes here
+#:    FUNCTION = name of a function
+#
+#EOF

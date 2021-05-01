@@ -1,0 +1,2545 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if 0;#running_under_some_shell;
+
+# vim600:tw=72:syntax=perl:fmr=<<<,>>>
+#
+# @(#)$Info: new - create a new set of skeleton files from templates $
+# @(#)$Copyright: (C) 2003-2007 ESLX Inc. $
+# @(#)$Copyright: (C) 2009-2010 XtremeEDA Corporation. $
+# @(#)$Copyright: (C) 2012-2018 David C Black. $
+
+# @(#)$Licensing: Apache License, Version 2.0 $
+# @(#)$Email: <dcblack@mac.com>. $
+# @(#)$Id: newscript,v 1.10 2018/12/22 11:13:33 dcblack Exp $
+
+# NOTE: This file is both the executable and a perl module for external use.
+#       Simply, rename or provide an appropriate symbolic link, NewScript.pm, if
+#       you need to use the module aspect.
+
+# Do NOT modify the following line. It is needed for the dual functionality aspect
+package NewScript; #MAGIC42
+
+require 5.0; #<<<1
+use warnings;
+use strict;
+use File::Find ();
+#use File::Path qw(make_path remove_tree);
+use File::Path qw(mkpath rmtree);
+use Sys::Hostname;
+use Cwd qw(getcwd realpath);
+our $orig_dir = &getcwd();
+use FindBin qw($RealBin $RealScript);
+our @if;
+our @for; # LIFO stack for current for-loop list-name
+our %for; # contains for-loop contents indexed by list-name
+our $optional;
+our $revn = '1.10'; #< manually update
+
+# Setup package for export #{{{
+use Exporter   ();
+our ($VERSION,@ISA,@EXPORT,@EXPORT_OK,%EXPORT_TAGS,@EXPORTS);
+$VERSION = do { my @r = (qq{Revision: $revn } =~ /\d+/g); sprintf "%d."."% 02d" x $#r, @r }; # must be all one line, for MakeMaker
+@ISA         = qw(Exporter);
+@EXPORT      = qw(&save_existing &prefix &recurse_placeholder
+                  &recurse_placeholder &help &addargs &readargs
+                 );
+my %export_map = (
+  'all'   => [ qw(&save_existing &prefix &recurse_placeholder
+                  &recurse_placeholder &help &addargs &readargs
+                 ),
+             ],
+);#%export_map
+my %export_ok;
+for my $xtag (keys %export_map) {
+  $EXPORT_TAGS{$xtag} = [];
+  for my $word (@{$export_map{$xtag}}) {
+    next if $word =~ m/^:\w+/;
+    push @{$EXPORT_TAGS{$xtag}},$word;
+    $export_ok{$word}=1;
+  }#endfor
+}#endfor
+for my $xtag (keys %export_map) {
+  for my $word (@{$export_map{$xtag}}) {
+    next unless $word =~ m/^:(\w+)/;
+    push @{$EXPORT_TAGS{$xtag}},@{$EXPORT_TAGS{$1}};
+  }#endfor
+}#endfor
+@EXPORT_OK = sort keys %export_ok;
+# Tags (from above) that we allow to be exported
+for my $xtag (keys %export_map) {
+  &Exporter::export_ok_tags($xtag);
+}#endfor
+
+#---------------------------------------------------------------------------}}}
+
+# for the convenience of &wanted calls, including -eval statements:
+use vars qw/*name *dir *prune/;
+*name   = *File::Find::name;
+*dir    = *File::Find::dir;
+*prune  = *File::Find::prune;
+
+our $auth = 'David C Black <dcblack@mac.com>';
+our $tool = $RealScript;
+our $TOOL = uc $tool;
+our $user = getlogin || (getpwuid($<))[0] || "Intruder!";
+our $timestamp = scalar localtime;
+
+# Defaults #<<<1
+our $rc = ".newrc";
+our $rt = ".newt";
+our $tool_var = "${TOOL}RC";
+our $TARGET_FH;
+our @IGNORE = ( # files to ignore
+  qr{^[.]{1,2}$},   # ignore . and ..
+  qr{\..*\.sw\w$},  # ignore vim temporaries
+  qr{[~]\d*$},      # ignore editor backups
+  qr{[.]DS_Store$}, # ignore stupid mac directory index files
+  qr{\bCVS\b},      # ignore CVS
+  qr{\bRCS\b},      # ignore RCS
+  qr{^\.svn\b},     # ignore subversion
+  qr{/\.svn\b},     # ignore subversion
+  qr{^\.git\b},     # ignore git
+  qr{/\.hg\b},      # ignore mercurial
+);
+{
+  my $rc_re = "^$rc\$";
+  $rc_re =~ s/\./[.]/;
+  push @IGNORE,$rc_re;
+  my $rt_re = "^$rt\$";
+  $rt_re =~ s/\./[.]/;
+  push @IGNORE,$rt_re;
+}
+use vars qw(*OPT);
+our
+( @template_list
+, $kind_regex
+, $kind
+, @name
+, $name
+, %REPL # placeholder => replacement text
+, %USED # placeholder => number of times replacement occurred/used
+, %DFND # placeholder => source of definitions
+, %FS
+, %CMND_LN # placeholder => defined via command-line (as opposed to defaults or from file)
+, @PRECIOUS # placeholders that are builtin and may not be redefined
+, @REQUIRE # expression that must be satisfied before allowing use of template
+, @WARN
+, %ALIAS
+, %SAILA # reverse mapping
+, %DEFAULT
+, %OPTIONAL
+, @PERL
+, %DS
+, %DUPL
+);
+our $recurse  = 5;
+our $errors   = 0;
+our $CMND_LN  = 1;
+our $name_lhe = q/lx/;
+our $name_rhe = q/xr/;
+our $name_ifs = q/xx/;
+our $file_lhe = q/{:/;
+our $file_rhe = q/:}/;
+our $file_ifs = q/:/;
+push @template_list,split(':',$ENV{TEMPLATEPATH}) if exists $ENV{TEMPLATEPATH};
+
+# Predefined/builtin (not allowed to override) #<<<1
+@PRECIOUS = qw(
+  ALWAYS
+  NEW_ARGV
+  Author
+  Date
+  DATE
+  FDIR
+  FILE
+  Header
+  HOST
+  Id
+  Locker
+  Log
+  LX
+  XR
+  MDY2
+  Name
+  NAME
+  NEVER
+  NEW_VERSION
+  PATH
+  RCSfile
+  RDIR
+  Revision
+  Source
+  State
+  TDIR
+  TIME
+  TIMESTAMP
+  KIND
+  USER
+  YEAR
+);
+
+###############################################################################
+# SUBROUTINES #<<<1
+
+###############################################################################
+sub System { #<<<2
+  my $cmd = "@_";
+  printf STDERR "%s\n",$cmd  unless exists $OPT{-quiet};
+  return system($cmd) unless exists $OPT{-notreally};
+}
+
+###############################################################################
+# Constants for reporting #<<<2
+our $openlog =  0;
+our $logfile = 'new.log';
+our $fatal_count = 0;
+our $error_count = 0;
+our $warn_count  = 0;
+
+###############################################################################
+sub REPORT_INFO { # print INFO message to stdout & log if open <<<2
+  # USAGE: &REPORT_INFO(MESSAGE...); # use sprintf within if needed
+  my @msgs = @_;
+  for my $msg (@msgs) {
+    next unless defined $msg;
+    chomp $msg;
+    my $fmtd;
+    $fmtd = 'INFO: ' unless $msg =~ m{^INFO: };
+    $fmtd .= sprintf("%s\n",$msg);
+#   if ($openlog) {
+#     print STDLOG $fmtd;
+#   } else {
+#     push @BUFLOG,$fmtd;
+#   }#endif
+    print STDOUT $fmtd unless $OPT{-quiet};
+  }#endfor
+}#endsub REPORT_INFO
+
+###############################################################################
+sub REPORT_DEBUG { # print DEBUG message to stdout & log if open <<<2
+  # USAGE: &REPORT_DEBUG(__LINE__,MESSAGE...); # use sprintf within if needed
+  return unless defined $OPT{-debug};
+  my $lno = '';
+  $lno = shift @_ if $_[0] =~ m{^\d+$};
+  my @msgs = @_;
+  for my $msg (@msgs) {
+    next unless defined $msg;
+    chomp $msg;
+    my $fmtd;
+    $fmtd = "DEBUG: " unless $msg =~ m{^DEBUG: };
+    $fmtd =~ s{:}{($lno):} if $lno ne '';
+    $fmtd .= sprintf("%s\n",$msg);
+#   if ($openlog) {
+#     print STDLOG $fmtd;
+#   } else {
+#     push @BUFLOG,$fmtd;
+#   }#endif
+    print STDOUT $fmtd unless $OPT{-quiet};
+  }#endfor
+}#endsub REPORT_INFO
+
+###############################################################################
+sub REPORT_WARNING { # print WARNING message to stdout & log if open <<<2
+  # USAGE: &REPORT_WARNING(MESSAGE[,TAG]); # use sprintf within if needed
+  my $msg = shift @_;
+  chomp $msg;
+  my $tag = '';
+  $tag = shift @_ if scalar @_ > 0;
+  my $fmtd = sprintf("WARNING%s: %s\n",$tag,$msg);
+# if ($openlog) {
+#   print STDLOG $fmtd;
+# } else {
+#   push @BUFLOG,$fmtd;
+# }#endif
+  print STDOUT $fmtd;
+  ++$warn_count;
+}#endsub REPORT_WARNING
+
+###############################################################################
+sub REPORT_ERROR { # print ERROR message to stdout & log if open <<<2
+  # USAGE: &REPORT_ERROR(MESSAGE[,TAG]); # use sprintf within if needed
+  my $msg = shift @_;
+  chomp $msg;
+  my $tag = '';
+  $tag = shift @_ if scalar @_ > 0;
+  my $fmtd = sprintf("ERROR%s: %s\n",$tag,$msg);
+# if ($openlog) {
+#   print STDLOG $fmtd;
+# } else {
+#   push @BUFLOG,$fmtd;
+# }#endif
+  print STDOUT $fmtd;
+  ++$error_count;
+}#endsub REPORT_ERROR
+
+###############################################################################
+our %PATHSEEN;
+our $searching=0;
+sub path { # Return full path given the current directory & a file relative to it <<<2
+  ++$searching;
+  my ($pathdir);
+  my $owd = &getcwd();
+  my ($cwd,$file,$follow) = ('','',0);
+  for my $arg (@_) {
+    if ($arg eq '-follow') {
+      $follow=1;
+    } elsif ($file eq '') {
+      $file = $arg;
+    } elsif ($cwd eq '') {
+      $cwd  = $file;
+      $file = $arg;
+    } else {
+      &REPORT_ERROR("Extra argument passed to &HLDW::path()");
+    }#endif
+  }#endfor
+  $cwd = '' if $file =~ m{^/};
+  $file =~ s{/(\./)+}{/}g; # remove crap (e.g. a/./b/././c becomes a/b/c)
+  $file =~ s{//+}{/}g; # remove extra slashes (e.g. a/////b becomes a/b)
+  $file =~ s{/(\.?)$}{}; # remove trailing / or /.
+  &Confess("Empty filename '$file'!?") unless $file =~ m/\S/;
+  unless ($file =~ m{.*/}) {
+    # Simple filename
+    chdir $cwd if $cwd ne '';
+    $pathdir = &getcwd();
+    if ($follow and -l $file and not exists $PATHSEEN{$cwd,$file}) {
+      $PATHSEEN{$cwd,$file}=1;
+      ($cwd,$file) = &path($cwd,readlink($file),"-follow");
+    }#endif
+    %PATHSEEN = () unless --$searching;
+    chdir $owd;
+    return wantarray ? ($cwd,$file) : "$cwd/$file";
+  }#endunless
+  # Has some directory path elements
+  ($pathdir,$file) = ($&,$'); # separate the directory from the filename
+  chdir $cwd if defined $cwd and $cwd ne '' and -d $cwd;
+  if (! -d $pathdir) {
+    &REPORT_ERROR("Unable to locate $pathdir!?");
+    chdir $owd;
+    if ($follow and -l $file and not exists $PATHSEEN{$pathdir,$file}) {
+      $PATHSEEN{$pathdir,$file}=1;
+      ($pathdir,$file) = &path($pathdir,readlink($file),"-follow");
+    }#endif
+    %PATHSEEN = () unless --$searching;
+    return wantarray ? ($pathdir,$file) : "$pathdir/$file";
+  }#endif
+  chdir $pathdir;
+  $pathdir = &getcwd();
+  &REPORT_ERROR("Unable to read file '$file' $!!?") unless -r $file;
+  chdir $owd;
+  if ($follow and -l $file and not exists $PATHSEEN{$pathdir,$file}) {
+    $PATHSEEN{$pathdir,$file}=1;
+    ($pathdir,$file) = &path($pathdir,readlink($file),"-follow");
+  }#endif
+  %PATHSEEN = () unless --$searching;
+  return wantarray ? ($pathdir,$file) : "$pathdir/$file";
+}#endsub path
+
+###############################################################################
+#sub everything #<<<2
+our @FOUND;
+sub everything { # used with File::Find
+  my ($dev,$ino,$mode,$nlink,$uid,$gid);
+  if (($dev,$ino,$mode,$nlink,$uid,$gid) = lstat($_)) {
+    push @FOUND,"$dir/$_";
+  }#endif
+}#endsub everything
+
+sub counted { # used with File::Find
+  return # skip revision control & .newrc files
+    if "$dir/$_" =~ m{(CVS|RCS|\.svn|\.SYNC|\.git|\.hg|\.newrc)\b};
+  my ($dev,$ino,$mode,$nlink,$uid,$gid);
+  if (($dev,$ino,$mode,$nlink,$uid,$gid) = lstat($_)) {
+    push @FOUND,"$dir/$_";
+  }#endif
+}#endsub counted
+
+sub newrc { # used with File::Find
+  return # skip  unless .newrc (but not inside revision control area
+    if $_ ne $rc or "$dir/$_" =~ m{(\bCVS|\bRCS|\.svn|\.SYNC|\.git|\.hg)\b};
+  my ($dev,$ino,$mode,$nlink,$uid,$gid);
+  if (($dev,$ino,$mode,$nlink,$uid,$gid) = lstat($_)) {
+    push @FOUND,"$dir";
+  }#endif
+}#endsub newrc
+
+###############################################################################
+# List brief syntax and all matching template subdirectories.
+###############################################################################
+sub Synopsis { #<<<2
+  my $PAGER = 'more';
+  $PAGER = $ENV{'PAGER'} if exists $ENV{'PAGER'};
+  my $MORE_FH;
+  open $MORE_FH,q{|-},"$PAGER";
+
+  printf $MORE_FH <<"EOT" unless $OPT{-quiet};
+###############################################################################
+EOT
+  printf $MORE_FH <<"EOT" unless scalar @_ or exists $OPT{-ls} or exists $OPT{-list};
+NAME:
+  $tool - create a new set of skeleton files from templates
+SYNOPSIS:
+  $tool --help ### detailed help/manpage (NOT this text)
+  $tool ########## display list of available KIND(s) aka templates
+  $tool KIND ##### display info about KIND
+  $tool [OPTIONS] {PLACEHOLDER=VALUE}... KIND NAME
+
+  Where KIND is one of:
+
+EOT
+  die "FATAL: Missing TEMPLATEPATH!?\n" unless @template_list;
+  my $dirpatts = 0;
+  my $filpatts = 0;
+  for my $re (@_) {
+    next if $re =~ m{^-};
+    $re =~ s{[\.]}{\\.}g;
+    $re =~ s{[\*]}{.*}g;
+    $re =~ s{[\?]}{.}g;
+    if ($re =~ m{/$}) {
+      ++$dirpatts;
+    } else {
+      ++$filpatts;
+    }#endif
+  }#endfor
+  push @_,'.*' if $dirpatts and not $filpatts;
+  my %found;
+  my $once;
+  my $cols = 0;
+  my $bullet;
+  TEMPLATEDIR: for my $dir (@template_list) {
+    $dir = realpath $dir;
+    next unless -d $dir and -r $dir;
+    if ($dirpatts) { # Allow pattern matching for listing
+      my $matches = 0;
+      for my $re (@_) {
+        next if $re =~ m{^-}; # In case an option snuck in
+        next unless $re =~ m{/$};
+        next unless "$dir/" =~ m{$re};
+        $matches = 1;
+      }#endfor
+      next TEMPLATEDIR unless $matches;
+    }#endif
+    $once = 0;
+    my $DIR_FH;
+    opendir $DIR_FH,$dir;
+    my @templates = sort grep(!m{^[\.]},readdir($DIR_FH));
+    TEMPLATE: for my $template (@templates) {
+      next TEMPLATE if $template =~ m{^(CVS|RCS|\.svn|\.SYNC|\.git|\.hg)$};
+      if ($filpatts) { # Allow pattern matching for listing
+        my $matches = 0;
+        for my $re (@_) {
+          next if $re =~ m{^-}; # In case an option snuck in
+          next if $re =~ m{/};
+          next unless $template =~ m{$re};
+          $matches = 1;
+        }#endfor
+        next TEMPLATE unless $matches;
+      }#endif
+      if (exists $found{$template}) {
+        ++$found{$template};
+        #next TEMPLATE;
+      } else {
+        $found{$template} = 1;
+      }#endif
+      my $template_path = "$dir/$template";
+      next unless -d $template_path and -r "$template_path/.newrc";
+      my $short_desc = '';
+      @FOUND = ();
+      File::Find::find({wanted => \&counted, follow => 1}, $template_path);
+      my ($dc,$fc) = (-1,0);
+      for my $p (sort @FOUND) {
+        #print "DEBUG: $p\n";
+        if (-d $p) { $dc++; } else { $fc++; }
+      }#endfor
+      $short_desc = ' (';
+      $short_desc .= sprintf "%d/",$dc if $dc > 0;
+      $short_desc .= sprintf "%d",$fc if $fc > 0;
+      $short_desc .= ')';
+      if (-r "$template_path/.newrc") {
+        my $TMPLRC_FH;
+        open    $TMPLRC_FH,q{<},"$template_path/.newrc";
+        while (<$TMPLRC_FH>) {
+          chomp; chomp;
+          next unless m{^#! };
+          $short_desc .= ' = '.$';
+          last;
+        }#endwhile
+        close   $TMPLRC_FH;
+      }#endif
+      if (not $once) {
+        printf $MORE_FH "\n" if $cols != 0;
+        printf $MORE_FH "  ----- %s -----\n",$dir unless $OPT{-quiet} and $OPT{-ls};
+        $once = 1;
+        $cols = 0;
+      }#endif
+      if (exists $OPT{-ls}) {
+        $bullet = ($found{$template} == 1) ? ' ' : '!';
+        if ($OPT{-quiet}) {
+          printf $MORE_FH "%s\n",$template;
+        } else {
+          printf $MORE_FH " %s%-16.16s",$bullet,$template;
+          if (++$cols == 4) {
+            printf $MORE_FH "\n";
+            $cols = 0;
+          }#endif
+        }#endif
+      } else {
+        $bullet = ($found{$template} == 1) ? '*' : '!';
+        printf $MORE_FH "  %s %s%s\n",$bullet,$template,$short_desc;
+      }#endif
+    }#endfor $template
+  }#endfor
+  printf $MORE_FH "\n" if $cols != 0;
+  printf $MORE_FH <<"EOT" unless scalar @_ or exists $OPT{-ls} or exists $OPT{-list} or exists $OPT{-quiet};
+
+For more information on a KIND, try the syntax:
+
+  $tool KIND
+
+EOT
+  printf $MORE_FH <<"EOT" unless exists $OPT{-quiet};
+###############################################################################
+EOT
+  close $MORE_FH;
+  exit 0 if exists $OPT{-ls} or exists $OPT{-list} or exists $OPT{-quiet};
+  exit 1;
+}#endsub Synopsis
+
+###############################################################################
+sub INFO { #<<<2
+  my $kind = shift(@_);
+  my $kind_regex = '';
+  if ($kind =~ m{/}) {
+    ($kind_regex,$kind) = ($`,$');
+  }#endif
+  my $success = 0;
+  my $PAGER = 'more';
+  my $once;
+  $PAGER = $ENV{'PAGER'} if exists $ENV{'PAGER'};
+  my $MORE_FH;
+  open $MORE_FH,q{|-},"$PAGER";
+  DIR: for my $rootdir (@template_list) {
+    next if $kind_regex ne '' and $rootdir !~ m{\b$kind_regex\b}; # KIND_REGEX
+    next unless -d $rootdir and -r $rootdir;
+    $once = 0;
+    my $DIR_FH;
+    opendir $DIR_FH,$rootdir;
+    my @templates = sort grep(!m{^[\.]},readdir($DIR_FH));
+    for my $template (@templates) {
+      next unless $template eq $kind;
+      my $template_dir = &path("$rootdir/$template");
+      next unless -d $template_dir;
+      if (exists $OPT{-path} and $OPT{-path}) {
+        printf "%s/.\n",$template_dir;
+        $success = 1;
+      } elsif (-r "$template_dir/$rc" and -T "$template_dir/$rc") {
+        my $TMPL_FH;
+        open $TMPL_FH,q{<},"$template_dir/$rc"
+          or die "FATAL: Unable to read $template_dir/$rc!?\n";
+        my @TEXT;
+        if (not $once) {
+          $once = 1;
+          push @TEXT,"----- $rootdir -----\n";
+        }#endif
+        push @TEXT,"  $template:\n";
+        my $has_pod = 0;
+        my $has_markdown = 0;
+        while (<$TMPL_FH>) {
+          chomp; chomp;
+          if (m{^=pod\s*$}) {
+            $has_pod = 1;
+            last;
+          }#endif
+          if (m{^=markdown\s*}) {
+            $has_markdown = 1;
+            next;
+          }#endif
+          if ($has_markdown) {
+            last if m{^=cut\s*$};
+            push @TEXT,"$_\n";
+            next;
+          }
+          next unless m{^#: };
+          push @TEXT, "  | $'\n";
+        }#endwhile
+        close $TMPL_FH;
+        if ($has_pod) {
+          system("perldoc $template_dir/$rc");
+        } elsif ($has_markdown) {
+          my $LESS_FH;
+          close $MORE_FH;
+          open $LESS_FH,q{|-},"less";
+          printf $LESS_FH "%s",join('',@TEXT),"\n";
+          close $LESS_FH;
+          open $MORE_FH,q{|-},"$PAGER";
+        } else {
+          printf $MORE_FH "%s",join('',@TEXT),"\n";
+        }#endif
+        $success = 1;
+      } else {
+        printf $MORE_FH "WARNING: Missing '%s/%s'\n",$template_dir,$rc;
+      }#endif
+      last DIR;
+    }#endfor
+  }#endfor
+  printf $MORE_FH "Sorry, $kind does not appear to name a valid template.\n" unless $success;
+  close $MORE_FH;
+  exit 1;
+}#endsub INFO
+
+###############################################################################
+sub PARAMETERS { #<<<2
+  my $kind = shift(@_);
+  my $success = 0;
+  my %PH;
+  DIR: for my $rootdir (@template_list) {
+    next unless -d $rootdir and -r $rootdir;
+    @FOUND = ();
+    File::Find::find({wanted => \&newrc, follow => 1}, $rootdir);
+    my @templates = @FOUND;
+    for my $template (@templates) {
+      next unless $template =~ m{\b$kind$};
+      next unless -d $template;
+      @FOUND = ();
+      File::Find::find({wanted => \&everything, follow => 1}, $template);
+      my @files = @FOUND;
+      PFILE: for my $i (0..$#files) {
+        my $template = $files[$i];
+        next PFILE if grep($template =~ $_,@IGNORE);
+        $template =~ s{/$}{};
+        for (my $tmp = $template; $tmp =~ s/lx(\w+?)xr//;) {
+          my $ph = $1;
+          next if grep($ph eq $_,@PRECIOUS);
+          if (exists $PH{$ph}) {
+            $PH{$ph}++;
+          } else {
+            $PH{$ph} = 1;
+          }#endif
+        }#endfor
+        next if -d $template;
+        my $TMP_FH;
+        open $TMP_FH,q{<},"$template"
+          or die "FATAL: Unable to read $template!?\n";
+        my ($lhe,$rhe,$ifs) = ($file_lhe,$file_rhe,$file_ifs);
+        while (my $line = <$TMP_FH>) {
+          my $phre = qr{${lhe}([<]?[\$]?\w[-. \|[:word:]]*?[>]?)${rhe}};
+          while ($line =~ s/$phre//) {
+            my $ph = $1;
+            next if grep($ph eq $_,@PRECIOUS);
+            if (exists $PH{$ph}) {
+              $PH{$ph}++;
+            } else {
+              $PH{$ph} = 1;
+            }#endif
+          }#endwhile
+        }#endwhile <$TMP_FH>
+        close $TMP_FH;
+      }#endfor
+    }#endfor
+  }#endfor
+  if( exists $OPT{-quiet} ) {
+    printf "%s=\n",join("=\n",sort keys %PH);
+  } else {
+    printf "Parameters for $kind:\n  %s=\n",join("=\n  ",sort keys %PH);
+  }#endif
+  exit 1;
+}#endsub PARAMETERS
+
+###############################################################################
+sub TEST { #<<<2
+  # if .newt exists do it; otherwise, attempt a plain vanilla extraction
+  my $kind = shift(@_);
+  my $kind_regex = '';
+  if ($kind =~ m{/}) {
+    ($kind_regex,$kind) = ($`,$');
+  }#endif
+  my $success = 0;
+  my $once;
+  RDIR: for my $rootdir (@template_list) {
+    next if $kind_regex ne '' and $rootdir !~ m{\b$kind_regex\b}; # KIND_REGEX
+    next unless -d $rootdir and -r $rootdir;
+    $once = 0;
+    my $DIR_FH;
+    opendir $DIR_FH,$rootdir;
+    my @templates = sort grep(!m{^[\.]},readdir($DIR_FH));
+    for my $template (@templates) {
+      next unless $template eq $kind;
+      my $template_dir = &path("$rootdir/$template");
+      next unless -d $template_dir;
+      if (-r "$template_dir/$rt" and -T "$template_dir/$rt") {
+        # Custom test
+        if (-x "$template_dir/$rt") {
+          system("$template_dir/$rt");
+        } else {
+          printf "WARNING: Missing executable permissions on '%s' -- skipping","$template_dir/$rt";
+        }#endif
+      } else {
+        # Attempt vanilla extract
+        my $owd = &getcwd();
+        my $twd = "/tmp/test-$kind-$$";
+        if (mkpath($twd,{verbose=>1}) and chdir($twd)) {
+          my $tcmd = sprintf("new %s test-%s\n",$kind,$kind);
+          printf "TEST%% %s\n",$tcmd;
+          my $status = system($tcmd);
+          if ($status == 0) {
+            printf "TEST PASSED\n";
+            system("env PS1='TEST ' bash -r -i");
+            chdir "..";
+            rmtree($twd,{verbose=>1});
+          } else {
+            printf "TEST FAILED %d in %s\n",$status,$twd;
+          }#endif
+        }#endif
+        chdir $owd;
+      }#endif
+      last RDIR;
+    }#endfor
+    closedir $DIR_FH;
+  }#endfor
+  exit 0;
+}#endsub TEST
+
+###############################################################################
+sub save_existing { #<<<2
+  # Rename existing filenames to prepare for new
+  for my $target (@_) {
+    my $i;
+    if (-e $target) {
+      $i = 1;
+      while (-e "$target-old$i") {
+        ++$i;
+      }#endif
+      &System("mv $target $target-old$i");
+    }#endif
+  }#endfor
+}#endsub save_existing
+
+###############################################################################
+sub envsub { #<<<2
+  my ($text) = @_;
+  while ($text =~ s{\$(\w+)}{$;$1}) {
+    my $var = $1;
+    next unless exists $ENV{$var};
+    my $val = $ENV{$var};
+    $text =~ s{$;$var}{$val};
+  }#endwhile
+  $text =~ s{$;}{\$}g;
+  return $text;
+}#endsub envsub
+
+###############################################################################
+#sub prefix { #<<<2
+our %warned;
+sub prefix {
+  my ($fn,$text) = @_;
+  return $text if $fn eq '';
+  if ($fn eq 'new') {
+    $text =~ s/:/ /g;
+    $text = qx{new - $text};
+    chomp $text;
+  } elsif ($fn eq 'qx') {
+    $text =~ s/:/ /g;
+    my $qx = '$'.qq{text = qx{$text};};
+    REPORT_DEBUG(__LINE__,"qx: eval $qx");
+    eval $qx;
+    chomp $text;
+    REPORT_DEBUG(__LINE__,"qx: text=$text");
+  } elsif ($fn eq 'ap') {
+    $text =~ s{[.]app/$}{};
+    $text =~ s{.*/}{};
+  } elsif ($fn eq 'sp') {
+    $text =~ s{^\s+}{};
+    $text =~ s{\s+$}{};
+    $text =~ s{\s+}{\n$&};
+  } elsif ($fn eq 'base') {
+    $text =~ s{[.][^.]+$}{};
+  } elsif ($fn eq 'strip') {
+    $text =~ s{[.][^.]+$}{};
+    $text =~ s{_}{ }g;
+  } elsif ($fn eq 'uc') {
+    $text = uc $text;
+  } elsif ($fn eq 'lc') {
+    $text = lc $text;
+  } elsif ($fn eq 'sc') {
+    $text = uc(substr($text,0,1)).lc(substr($text,1));
+  } elsif ($fn eq 'cc') {
+    $text = lc $text;
+    my $la = qr{([[:lower:]])([[:alpha:]])};
+    while ($text =~ m{\b$la}) {
+      my $cc = (uc $1).$2;
+      $text =~ s{\b$la}{$cc};
+    }#endwhile
+    while ($text =~ m{_$la}) {
+      my $cc = (uc $1).$2;
+      $text =~ s{_$la}{$cc};
+    }#endwhile
+  } elsif ($fn eq 'rw') {
+    my $wsep = qr{[-.,:;]};
+    my $nsep = qr{[^-.,:;]};
+    my @rwrd = split(m{$wsep},$text);
+    $text =~ s/$nsep/$;/g;
+    for(my $rw, reverse @rwrd) {
+      $text =~ s{$;}{$rw};
+    }
+  } elsif ($fn eq 'wc') {
+    $text = lc $text;
+    my $la = qr{([[:lower:]])([[:alpha:]])};
+    while ($text =~ m{\b$la}) {
+      my $wc = (uc $1).$2;
+      $text =~ s{\b$la}{$wc};
+    }#endwhile
+    while ($text =~ m{_$la}) {
+      my $wc = (uc $1).$2;
+      $text =~ s{_$la}{_$wc};
+    }#endwhile
+  } elsif ($fn eq 'sq') {
+    while ($text =~ s{(\l\w) (\l\w)}{}) {
+      my $repl = "$1_".uc($2);
+      $text =~ s{(\l\w) (\l\w)}{$repl};
+    }#endwhile
+    while ($text =~ s{[ /:\{\}\(\)]+}{_}) {}
+    $text =~ s{_[Ff]or_}{4}g;
+  } elsif ($fn eq 'comment') {
+      $text = '';
+  } elsif (not exists $warned{$fn}) {
+    warn "Unknown function '$fn' encountered.\n";
+    $warned{$fn} = 1;
+  }#endif
+  return $text;
+}#endsub prefix
+
+###############################################################################
+sub recurse_placeholder { #<<<2
+  my ($repl_count,$phld_count) = (0,0);
+  my ($repl_temp,$phld_temp,$previous);
+  my ($line,$lhe,$rhe,$ifs,$rfile) = @_;
+  if (not exists $OPT{-raw}) {
+    for my $repeat (1..$recurse) {
+      $previous = $line;
+      ($line,$repl_temp,$phld_temp) = replace_placeholder($line,$lhe,$rhe,$ifs,$rfile);
+      $repl_count += $repl_temp;
+      $phld_count += $phld_temp;
+      last if $line eq $previous;
+    }#endfor
+  }#endif
+  if (wantarray) {
+    return $line,$repl_count,$phld_count;
+  } else {
+    return $line;
+  }#endif
+}#endsub recurse_placeholder
+
+###############################################################################
+sub check_default { #<<<2
+  my ($ph,$lhe,$rhe,$lvl) = @_;
+  $lvl = 0 unless defined $lvl;
+  if ($lvl > 10) {
+    &REPORT_ERROR("Too much recursion while processing '$ph' in check_default!");
+    return;
+  }#endif
+  return unless exists $DEFAULT{$ph} and not exists $REPL{$ph};
+  my $phre = qr|$lhe(\w[- \|[:word:]]*)$rhe|x;
+  my $line = $DEFAULT{$ph};
+  if ($line =~ $phre) {
+    my $dph = $1;
+    &check_default($dph,$lhe,$rhe,$lvl+1);
+    return unless exists $REPL{$dph};
+    $line =~ s{$phre}{$REPL{$dph}};
+  }
+  $REPL{$ph} = $line;
+}#endsub check_default
+
+###############################################################################
+sub incr_USED {
+  my $ph = shift @_;
+  $ph =~ s{.*:}{}g;
+  REPORT_DEBUG(__LINE__,"Used $ph");
+  ++$USED{$ph};
+}#endsub incr_USED
+
+###############################################################################
+sub replace_placeholder { #<<<2
+  my ($repl_c,$phld_c) = (0,0);
+  my ($line,$lhe,$rhe,$ifs,$rfile) = @_;
+  #----------------------------------------------------------------------------
+  # Zap if inside false if-clause and not ending
+  #----------------------------------------------------------------------------
+  if (@if and $if[$#if] =~ m{$ifs[0!]$} and $line !~ m{$lhe(?:if|elsif|else|endif)$ifs}) {
+    $line = '';
+    goto SKIP;
+  }#endif
+  #----------------------------------------------------------------------------
+  # Quick return if no placeholders
+  #----------------------------------------------------------------------------
+  my $phre = qr{$lhe
+                 ([\<]?
+                 |[\?]?
+                 |[\$]?
+                 |\w[- \|[:word:]:=/.]*?
+                 |[\>\+\*]?
+                 )
+                $rhe
+               }x;
+# print STDERR "DEBUG: phre='$phre'\n";
+  goto SKIP unless $line =~ m{$phre};
+  #----------------------------------------------------------------------------
+  # Find all placeholders, placing them in @placeholder in order found,
+  # and replace them with identifiable tags $;0$;, $;1$;, etc...
+  #----------------------------------------------------------------------------
+  my @placeholder = ();
+  my @ph_default = ();
+  my $i = 0;
+  my $t = sprintf("$;%d$;",$i);
+  my $ph_default;
+  my $cmnt;
+  while ($line =~ s/$phre/$t/s) {
+    $cmnt = $1;
+    $ph_default = undef;
+    $cmnt =~ s{:#:.+}{}; # Remove comment portion
+    $ph_default = $1 if $cmnt =~ s{:=:(.*)}{};
+    push @placeholder,$cmnt;
+    push @ph_default,$ph_default;
+    $t = sprintf("$;%d$;",++$i);
+  }#endwhile
+  #----------------------------------------------------------------------------
+  # Perform the replacements
+  #----------------------------------------------------------------------------
+  my $ph;
+  my $fn;
+  my $fph;
+  for my $i (0..$#placeholder) {
+    $t = sprintf("$;%d$;",$i);
+    $fn = '';
+    $ph = $fph  = $placeholder[$i];
+    $ph_default = $ph_default[$i];
+    &check_default($ph,$lhe,$rhe);
+    if ($fph =~ m{$ifs}) {
+      ($fn,$ph) = ($`,$');
+    }#endif
+    # Check for aliases
+    if (exists $SAILA{$ph}) {
+      for my $candidate (@{$SAILA{$ph}}) {
+        &check_default($candidate,$lhe,$rhe);
+        next unless exists $REPL{$candidate};
+        $ph = $candidate;
+        last;
+      }
+    }
+    if ($fn eq 'set') {
+      # TBD
+    }#endif
+    if ($fn =~ m{^(if|elsif|else|endif)$}) {
+      #------------------------------------------------------------------------
+      # Handle if-clause
+      #------------------------------------------------------------------------
+      $line =~ s/$t//;
+      $line =~ s/^\s+//;
+      if ($line !~ m{^$}) {
+        printf "ERROR: {:if:-clause must be on a line by itself! Ignoring all other text.\n";
+        $line =~ s/^/{:ERROR:if-clause has other text:}/;
+        $errors++;
+      } else {
+        $line = '';
+      }#endif
+      my $truth;
+      if ($fn =~ m{^(if|elsif)}) {
+        if (substr($ph,0,1) eq '$') {
+          $truth = $ENV{substr($ph,1)} if exists $ENV{substr($ph,1)};
+        } elsif (defined $rfile and $rfile ne '' and exists $FS{$rfile}{$ph}) {
+          $truth = $FS{$rfile}{$ph};
+        } elsif (exists $REPL{$ph}) {
+          $truth = $REPL{$ph};
+        } elsif (exists $DUPL{$ph}) {
+          $truth = $DUPL{$ph};
+        }#endif
+      }#endif
+      &incr_USED($ph);
+      $truth = (defined $truth and $truth)?1:0;
+      $truth = '!' if $#if > 0 and $if[$#if-1] =~ m{:[0!]$}; # nested false
+      #------------------------------------------------------------------------
+      if ($fn eq 'if') {
+        $truth = '!' if $#if >= 0 and $if[$#if] =~ m{:[0!]$}; # nested false
+        push @if,$ph.':'.$truth;
+      #------------------------------------------------------------------------
+      } elsif ($fn eq 'elsif') {
+        if (not scalar @if) {
+          printf "ERROR: unexpected {:$fn:-clause! Template missing clause for $ph?\n";
+          $errors++;
+        } else {
+          $truth = '!' if $if[$#if] =~ m{:[1!]$};
+          $if[$#if] = $ph.':'.$truth;
+        }#endif
+      #------------------------------------------------------------------------
+      } elsif ($fn eq 'else') {
+        if (not scalar @if) {
+          printf "ERROR: unexpected {:$fn:-clause! Template missing clause for $ph?\n";
+          $errors++;
+        } elsif ($if[$#if] !~ m{^$ph:([01!])$}) {
+          printf "ERROR: unmatched {:$fn:-clause! Template missing/unbalanced for $ph?\n";
+          $errors++;
+        } else {
+          $truth = $1 ? 0 : 1 unless $truth eq '!';
+          $truth = '!' if $#if > 0 and $if[$#if-1] =~ m{:[0!]$}; # nested
+          $if[$#if] = $ph.':'.$truth;
+        }#endif
+      #------------------------------------------------------------------------
+      } else { # 'endif'
+        if (not scalar @if) {
+          printf "ERROR: unexpected {:$fn:-clause! Template missing clause for $ph?\n";
+          $errors++;
+        } elsif ($if[$#if] !~ m{^$ph:([01!])$}) {
+          printf "ERROR: unmatched {:$fn:-clause! Template missing/unbalanced for $ph?\n";
+          $errors++;
+        } else {
+          pop @if;
+        }#endif
+      #------------------------------------------------------------------------
+      }#endif
+      goto SKIP;
+    }#endif
+    &incr_USED($fph);
+    if (substr($ph,0,1) eq '<' or $fn eq 'include') {
+      #------------------------------------------------------------------------
+      # Include file <<<4
+      #------------------------------------------------------------------------
+      my $incfile = $ph;
+      $incfile =~ s/[<>]//g;
+      $optional = ($incfile =~ s/^[?]//);
+      $incfile = $ENV{substr($incfile,1)}
+        if substr($ph,0,1) eq '$' and exists $ENV{substr($incfile,1)};
+      $incfile = $REPL{$incfile}
+        if exists $REPL{$incfile} and not -r $incfile;
+      $incfile = $FS{$rfile}{$incfile}
+        if defined $rfile and $rfile ne '' and exists $FS{$rfile}{$incfile};
+      if (!-r $incfile) { # search $TEMPLATEPATH
+        for my $dir (@template_list) {
+          next unless -r "$dir/$incfile";
+          $incfile = "$dir/$incfile";
+          last;
+        }#endfor
+      }#endif
+      while(1) {
+        next if !-r $incfile;
+        my $INC;
+        if (open $INC,q{<},"$incfile") {
+          my $repl = join('',<$INC>);
+          close $INC;
+          my ($repl_temp,$phld_temp) = (0,0);
+          ($repl,$repl_temp,$phld_temp) = recurse_placeholder($repl,$lhe,$rhe,$ifs,'');
+          $line =~ s/$t/$repl/;
+          $repl_c += $repl_temp + 1;
+          last;
+        }#endif
+      } continue {
+        if ($optional) {
+          $line =~ s/$t//;
+        } else {
+          $ph =~ s/>/?>/;
+          my $repl = $lhe.$ph.$rhe;
+          $line =~ s/$t/$repl/;
+        }#endif
+        ++$phld_c;
+        last;
+      }#endwhile
+    } elsif (substr($ph,0,1) eq '$') {
+      #------------------------------------------------------------------------
+      # Simple environment variable replacement <<<4
+      #------------------------------------------------------------------------
+      if (exists $ENV{substr($ph,1)}) {
+        my $repl = $ENV{substr($ph,1)};
+        $repl = &prefix($fn,$repl);
+        $line =~ s/$t/$repl/;
+        ++$repl_c;
+      } else { # Leave untouched
+        my $repl = $lhe.'$'.$ph.$rhe;
+        $line =~ s/$t/$repl/;
+        ++$phld_c;
+      }#endif
+    } elsif (defined $rfile and $rfile ne '' and exists $FS{$rfile}{$ph}) {
+      #------------------------------------------------------------------------
+      # File specific placeholder <<<4
+      #------------------------------------------------------------------------
+      my $repl = $FS{$rfile}{$ph};
+      if ($ph =~ m{[+*]$} and ref $repl eq 'ARRAY') {
+        $repl = shift @$repl;
+      } elsif (ref $repl eq 'ARRAY') {
+        $repl = $repl->[0];
+      }#endif
+      $repl = &prefix($fn,$repl);
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } elsif (exists $REPL{$ph}) {
+      #------------------------------------------------------------------------
+      # Global placeholder <<<4
+      #------------------------------------------------------------------------
+      my $repl = $REPL{$ph};
+      if ($ph =~ m{[*+]$} and ref $repl eq 'ARRAY') {
+        $repl = shift @$repl;
+      } elsif (ref $repl eq 'ARRAY') {
+        $repl = $repl->[0];
+      }#endif
+      $repl = &prefix($fn,$repl);
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } elsif (exists $DUPL{$ph}) {
+      #------------------------------------------------------------------------
+      # Duplicated placeholder
+      #------------------------------------------------------------------------
+      my $repl = $DUPL{$ph};
+      $ph =~ s/^$fn:// if $fn ne '';
+      $repl = &prefix($fn,$repl);
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } elsif (defined $ph_default) {
+      $line =~ s/$t/$ph_default/;
+    } elsif ($ph =~ m/^[?]/ or $fn eq 'optional' and $ph) {
+      #------------------------------------------------------------------------
+      # Remove optional placeholders since not found
+      #------------------------------------------------------------------------
+      $line =~ s/$t//;
+      #++$repl_c;
+    } elsif ($fn eq 'new') {
+      $ph =~ s/^$fn:// if $fn ne '';
+      my $repl = &prefix($fn,$ph);
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } elsif ($fn eq 'qx') {
+      REPORT_DEBUG(__LINE__,"Found qx in $ph");
+      $ph =~ s/^$fn://;
+      my $repl = &prefix($fn,$ph);
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } elsif ($fn eq 'comment') {
+      $ph =~ s/^$fn:// if $fn ne '';
+      my $repl = '';
+      $line =~ s/$t/$repl/;
+    } elsif ($ph) {
+      #------------------------------------------------------------------------
+      # Leave placeholder since it wasn't found
+      #------------------------------------------------------------------------
+      $line =~ s/$t/{:$ph:}/;
+      #++$repl_c;
+    } else {
+      #------------------------------------------------------------------------
+      # Leave untouched
+      #------------------------------------------------------------------------
+      my $repl = $lhe.$ph.$rhe;
+      $line =~ s/$t/$repl/;
+      ++$phld_c;
+    }#endif
+  }#endfor $i
+  SKIP:
+  if (wantarray) {
+    return $line,$repl_c,$phld_c;
+  } else {
+    return $line;
+  }#endif
+}#endsub replace_placeholder
+
+###############################################################################
+sub help { #<<<2
+  my $MAN_FH;
+  open $MAN_FH,q{|-},"pod2man|nroff -man|less";
+  while (<DATA>) {
+    s/B<new>/B<$tool>/g;
+    s/NEWRC/$tool_var/;
+    print $MAN_FH $_;
+  }#endwhile
+  close $MAN_FH;
+  exit 0;
+}#endsub help
+
+###############################################################################
+sub addargs { # Parses command-line arguments <<<2
+  my @hold = ();
+  my $source = shift(@_);
+  return @hold unless @_;
+  ARG: while (@_) {
+    my $arg = shift(@_);
+    #--------------------------------------------------------------------------
+    # STDOUT
+    #--------------------------------------------------------------------------
+    if ($arg eq '-') {
+      $OPT{-out} = $arg;
+      $OPT{-quiet} = 1;
+      #open $TARGET_FH,q{>},'-' or die "Unable to open stdout!?\n";
+    #--------------------------------------------------------------------------
+    # Allow clobber
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--clobber'      or $arg eq '-c') {
+      $OPT{-clobber} = 1;
+    #--------------------------------------------------------------------------
+    # Directory target
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--dir'          or $arg eq '-d') {
+      $OPT{-dir} = shift(@_);
+    #--------------------------------------------------------------------------
+    # Display path to template
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--path'         or $arg eq '-P') {
+      $OPT{-path} = 1;
+    #--------------------------------------------------------------------------
+    # Edit
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^--edit}       or $arg eq '-e') {
+      $OPT{-edit} = 'default';
+      $OPT{-edit} = $' if $arg =~ m{^--edit=};
+      $OPT{-edit} = shift(@_) if $arg eq '-e' and scalar(@_) and $_[0] !~ m{^-};
+    #--------------------------------------------------------------------------
+    # Force override of requirements
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--force') {
+      $OPT{-force} = 1;
+    #--------------------------------------------------------------------------
+    # File specifies args
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--file'         or $arg eq '-f') {
+      $OPT{-file} = shift @_;
+    #--------------------------------------------------------------------------
+    # Hard links
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^-{1,2}hard(?:-)?(?:link(?:s)?)?$} or $arg eq '-H') {
+      $OPT{-hard} = 1;
+    #--------------------------------------------------------------------------
+    # Allow directory merge
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--merge'      or $arg eq '-m') {
+      $OPT{-merge} = 1;
+    #--------------------------------------------------------------------------
+    # Ignore global .newrc files -- still uses template specific files
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^-{1,2}norc$}) {
+      $OPT{-norc} = 1;
+    #--------------------------------------------------------------------------
+    # Read commands from file
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--read_commands'          or $arg eq '-rc') {
+      my $rcfile = shift(@_);
+      &readargs($rcfile);
+    #--------------------------------------------------------------------------
+    # Regular expression
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--re') {
+      die "FATAL: --re must specify two expressions, LHS_RE and RHS_RE.\n" unless scalar @_ >= 2;
+      $file_lhe = shift @_;
+      $file_rhe = shift @_;
+    #--------------------------------------------------------------------------
+    # Source of definitions (rarely used)
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^--source=}) {
+      $source = $';
+    #--------------------------------------------------------------------------
+    # Soft links
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--soft'         or $arg eq '-S') {
+      delete $OPT{-hard} if exists $OPT{-hard};
+    #--------------------------------------------------------------------------
+    # Version
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^-+version$}           or $arg eq '-V') {
+      print "Tool: $tool\nVersion: $revn\n";
+      exit 0;
+    #--------------------------------------------------------------------------
+    # Help!
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^-+help$}           or $arg eq '-h') {
+      help;
+    #--------------------------------------------------------------------------
+    # Not really
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--notreally'    or $arg eq '-n') {
+      $OPT{-notreally} = 1;
+    #--------------------------------------------------------------------------
+    # Output file for skeleton
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--out'          or $arg eq '-o') {
+      $OPT{-out} = shift(@_);
+      if ($OPT{-out} ne '-') {
+        open $TARGET_FH,q{>},"$OPT{-out}" or die "Unable to write $OPT{-out}!?\n";
+      }#endif
+    #--------------------------------------------------------------------------
+    # List possibilities (short)
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '-ls') {
+      $OPT{-ls} = 1;
+      &Synopsis(@hold,@_);
+      exit;
+    #--------------------------------------------------------------------------
+    # List possibilities
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--list'         or $arg eq '-l') {
+      $OPT{-list} = 1;
+      &Synopsis(@hold,@_);
+      exit;
+    #--------------------------------------------------------------------------
+    # Parameter display
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--placeholders' or $arg eq '-p') {
+    #--------------------------------------------------------------------------
+      $OPT{-placeholders} = 1;
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '-pq' or $arg eq '-qp') {
+    #--------------------------------------------------------------------------
+      $OPT{-placeholders} = 1;
+      $OPT{-quiet} = 1;
+    #--------------------------------------------------------------------------
+    # Quiet
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--quiet'        or $arg eq '-q') {
+      $OPT{-quiet} = 1;
+    #--------------------------------------------------------------------------
+    # Raw
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--raw') {
+      $OPT{-raw} = 1;
+    #--------------------------------------------------------------------------
+    # Test
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--test'         or $arg eq '-T') {
+      $OPT{-test} = 1;
+    #--------------------------------------------------------------------------
+    # Verbosity
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--verbose'      or $arg eq '-v') {
+      if (defined $OPT{-verbose}) {
+        ++$OPT{-verbose};
+      } else {
+        $OPT{-verbose} = 1;
+      }#endif
+    #--------------------------------------------------------------------------
+    # Requirements
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--require'      or $arg eq '-r') {
+      my $the_rqmt = shift(@_);
+      push @REQUIRE, $the_rqmt unless exists $OPT{-out} and $the_rqmt !~ m{=};
+    #--------------------------------------------------------------------------
+    # Warnings
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--warn'      or $arg eq '-w') {
+      my $the_rqmt = shift(@_);
+      push @WARN, $the_rqmt unless exists $OPT{-out} and $the_rqmt !~ m{=};
+    #--------------------------------------------------------------------------
+    # Alias
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--alias'        or $arg eq '-a') {
+      my $the_alias = shift(@_);
+      my ($alias_name,$alias_value) = split(m{=},$the_alias);
+      # Ensure alias doesn't map over built-in's
+        if (grep($alias_name eq $_,@PRECIOUS)) {
+          &REPORT_WARNING("Not allowed to overwrite $alias_name -- ignored\n");
+          next ARG;
+        }#endif
+      if (exists $ALIAS{$alias_name}) {
+        &REPORT_ERROR("Attempt to redefine alias $alias_name=$alias_value (already $ALIAS{$alias_value})");
+        next ARG;
+      }#endif
+      $ALIAS{$alias_name} = $alias_value;
+      if (exists $SAILA{$alias_name}) {
+        push @{$SAILA{$alias_value}},$alias_name;
+      } else {
+        $SAILA{$alias_value} = [ $alias_name ];
+      }
+      &REPORT_DEBUG(__LINE__,"Defined alias $the_alias");
+    #--------------------------------------------------------------------------
+    # Debug
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--debug') {
+      $OPT{-debug} = 1;
+      &REPORT_DEBUG(__LINE__,"Parsing command-line");
+    #--------------------------------------------------------------------------
+    # Default
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--default') {
+      my $the_default = shift(@_);
+      my ($dflt_name,$dflt_value) = split(m{=},$the_default);
+      $DEFAULT{$dflt_name} = $dflt_value;
+    #--------------------------------------------------------------------------
+    # Directories to search for templates
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--templatepath' or $arg eq '-t') {
+      @template_list = () if not defined $OPT{-templatepath};
+      push @template_list,split(':',shift(@_));
+      $OPT{-templatepath} = 1;
+#x  #--------------------------------------------------------------------------
+#x  # Duplicated definition
+#x  #--------------------------------------------------------------------------
+#x  } elsif ($arg =~ m{^([^-\s][^=]*[+])=}) { # Duplicate definition
+#x    my ($t,$r) = ($1,$');
+#x    $t = $ALIAS{$t} if exists $ALIAS{$t};
+#x    if ($t =~ m{:}) {
+#x      my ($f,$t) = ($`,$');
+#x      if (grep($t eq $_,@PRECIOUS)) {
+#x        warn "Not allowed to overwrite $t -- ignored\n";
+#x        next ARG;
+#x      }#endif
+#x      push @{$DS{$f}{$t}},$r;
+#x    } else {
+#x      if (grep($t eq $_,@PRECIOUS)) {
+#x        warn "Not allowed to overwrite $t -- ignored\n";
+#x        next ARG;
+#x      }#endif
+#x      push @{$DUPL{$t}},$r;
+#x    }#endif
+    #--------------------------------------------------------------------------
+    # Macro definition
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^([^-\s][^=]*)=}) { # Macro definition
+      my ($t,$r) = ($1,$');
+      if ($t =~ s{^[?]}{}) {
+        $OPTIONAL{$t} = 1;
+      }#endif
+      if ($t =~ m{:}) {
+        my ($f,$t) = ($`,$');
+        if (grep($t eq $_,@PRECIOUS)) {
+          warn "Not allowed to overwrite $t -- ignored\n";
+          next ARG;
+        }#endif
+        warn "Duplicate replacement $f:$t overwritten!?\n"
+          if exists $FS{$f}{$t} and (not $CMND_LN or ($CMND_LN == 0 and exists $CMND_LN{$t}{$f}));
+        $FS{$f}{$t} = $r unless exists $CMND_LN{$t}{$f} and $CMND_LN != 0;
+        $CMND_LN{$t}{$f} = 1 if $CMND_LN;
+      } else {
+        if (grep($t eq $_,@PRECIOUS)) {
+          warn "Not allowed to overwrite $t -- ignored\n";
+          next ARG;
+        }#endif
+        warn "Duplicate replacement $t overwritten!?\n"
+          if exists $REPL{$t}
+             and (not $CMND_LN or ($CMND_LN == 0 and exists $CMND_LN{$t}{$;}));
+        $REPL{$t} = $r unless exists $CMND_LN{$t} and $CMND_LN != 0;
+        $USED{$t} = 0;
+        $DFND{$t} = $source;
+        $CMND_LN{$t}{$;} = 1 if $CMND_LN == 0;
+      }#endif
+    #--------------------------------------------------------------------------
+    # Perl code
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^\{.*\}$}) {
+      push @PERL,$arg;
+    #--------------------------------------------------------------------------
+    # File to work on
+    #--------------------------------------------------------------------------
+    } else {
+      if ($arg =~ m{(.*)/}) {
+        ($OPT{-dir},$arg) = ($1,$');
+      }#endif
+      $arg =~ s{:}{/}g;
+      push @hold,$arg;
+    }#endif
+  }#endwhile
+  return @hold;
+}#endsub addargs
+
+###############################################################################
+sub readargs { # Parse .newrc files <<<2
+  my $file = shift(@_);
+  my @args = ();
+  my $rctype = 'newrc';
+  my $RC_FH;
+  &REPORT_DEBUG(__LINE__,"Parsing $file");
+  open $RC_FH,q{<},"$file"
+    or die "FATAL: Unable to read $file!?\n";
+  while (<$RC_FH>) {
+    chomp; chomp; # remove EOL
+    if ($rctype eq 'pod') {
+      $rctype = 'newrc' if m{^=cut\s*$};
+      next;
+    } elsif (m{^=pod\s*$}) {
+      $rctype = 'pod';
+      next;
+    } elsif (m{^...$}) {
+      $rctype = 'newrc';
+      next;
+    } elsif (m{^---$}) {
+      $rctype = 'yaml';
+      next;
+    }#endif
+    if ($rctype eq 'newrc') {
+      s/^\s+//; # remove leading space
+      s/\s+$//; # remove trailing space
+      s/^#.*// or s{^//.*}{}; # remove comments
+      if (m{^-}) {s/\s+/ /}; # condense first space
+      next unless m{\S}; # Anything left?
+      $_ = recurse_placeholder($_,$file_lhe,$file_rhe,$file_ifs);
+      if (m{^-} and m{ }) {
+        push @args,$`,$';
+      } elsif (m{^$(\w+)=}) {
+        $ENV{$1} = $';
+      } else {
+        push @args,$_;
+      }#endif
+    } elsif ($rctype eq 'yaml') {
+      # {:TODO:}
+    }#endif
+  }#endwhile
+  close $RC_FH;
+  ++$CMND_LN;
+  @args = &addargs($file,@args) if @args;
+  --$CMND_LN;
+  return @args;
+}#endsub readargs
+
+###############################################################################
+# Process global $rc files #<<<1
+for my $rcdir (split(m{ },qq(/etc $ENV{HOME} .))) {
+  last if "@ARGV" =~ m/-norc\b/ or exists $OPT{-norc};
+  next unless -r "$rcdir/$rc";
+  # Toss return value (no files to standardly include)
+  &readargs("$rcdir/$rc");
+}#endfor
+if (exists $ENV{$tool_var}) {
+  &addargs('Environment',split(m{\s+},$ENV{$tool_var}));
+}#endif
+
+###############################################################################
+# Main code #<<<1
+sub main { #{{{
+
+#------------------------------------------------------------------------------
+# Process command line arguments #<<<2
+#------------------------------------------------------------------------------
+our @ORIG = @ARGV;
+ARGV: {
+  $CMND_LN = 0;
+  @ARGV = &addargs('Command-line',@ARGV);
+  $CMND_LN = 1;
+  die "FATAL: Missing TEMPLATEPATH!?\n" unless @template_list or exists $OPT{-file};
+  &Synopsis(@ARGV) if scalar @ARGV == 0 # no arguments
+                   or "@ARGV" =~ m![\{\}\*\?\[\]\\]! or grep(m{/$},@ARGV);
+  &PARAMETERS($ARGV[0]) if @ARGV == 1 and exists $OPT{-placeholders};
+  &TEST($ARGV[0]) if @ARGV == 1 and exists $OPT{-test};
+  &INFO($ARGV[0]) if @ARGV == 1;
+  die "FATAL: Too many arguments?\n" if scalar @ARGV > 2;
+  die "FATAL: Missing required arguments!?\n" unless scalar @ARGV >= 2;
+  die "FATAL: Directory $OPT{-dir} doesn't exist!?\n" if defined $OPT{-dir} and not -d $OPT{-dir};
+  ($kind,@name) = @ARGV;
+  $kind_regex = '';
+  if ($kind =~ m{/}) {
+    ($kind_regex,$kind) = ($`,$');
+  }#endif
+  if (@PERL) {
+    for (@PERL) {
+      eval $_;
+    }#endif
+  }#endif
+}#end:ARGV
+
+NAMES: for my $name (@name) {
+
+  our $install_dir = '.';
+  if ($name =~ m{.*/}) {
+    ($install_dir,$name) = ($&,$');
+    chop $install_dir;
+  }#endif
+  if (defined $OPT{-dir}) {
+    if ($install_dir !~ m{^/}) {
+      $install_dir = $OPT{-dir}.'/'.$install_dir;
+    }#endif
+  }#endif
+  my @date = localtime time;
+  our $year = $date[5] + 1900;
+  our $mm = sprintf("%02d",$date[4]+1);
+  our $dd = sprintf("%02d",$date[3]);
+  our @das = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
+  our $weekday = $das[$date[6]];
+  our $wd = sprintf("%2.2s",$das[$date[6]]);
+  our $yda = sprintf("%03d",$date[7]);
+  our $yw = sprintf("%02d",int($date[7]/7)+1);
+  our $mdy2 = sprintf("%02d/%02d/%02d",$date[4]+1,$date[3],$date[5]%100);
+  our $mdy4 = sprintf("%02d/%02d/%04d",$date[4]+1,$date[3],$year);
+  our $yymmdd = sprintf("%02d%02d%02d",$year%100,$date[4]+1,$date[3]);
+  our $y4mmdd = sprintf("%04d%02d%02d",$year,$date[4]+1,$date[3]);
+  our @mos = qw(January February March April May June July August September October November December);
+  my ($hour,$minute) = ($date[2],$date[1]);
+  my $pm = ($hour > 11)?"PM":"AM";
+  our $mh = sprintf("%02d",$hour); # military hour
+  our $mn = sprintf("%02d",$minute);
+  $hour = $hour % 12;
+  $hour = 12 if $hour == 0;
+  our $hh = sprintf("%02d",$hour);
+  our $month = $mos[$date[4]];
+  our $mmm = substr($month,0,3);
+  our $ymdhm = sprintf("%04d %3.3s %02d %d:%02d %s",$year,$mmm,$date[3],$hour,$minute,$pm);
+  our $date = sprintf("%s %d, %d",$month,$date[3],$year);
+  our $time = sprintf("%d:%02d %s",$hour,$minute,$pm);
+
+  # Predefined
+  $REPL{'NAME'}        = $name;
+  $REPL{'KIND'}        = $kind;
+  $REPL{'DATE'}        = $date;
+  $REPL{'TIMESTAMP'}   = $timestamp;
+  $REPL{'TIME'}        = $time;
+  $REPL{'LX'}          = 'lx';
+  $REPL{'XR'}          = 'xr';
+  $REPL{'MDY2'}        = $mdy2;
+  $REPL{'MMDDY4'}      = $mdy4;
+  $REPL{'YYMMDD'}      = $yymmdd;
+  $REPL{'Y4MMDD'}      = $y4mmdd;
+  $REPL{'YMDHM'}       = $ymdhm;
+  $REPL{'YEAR'}        = $year;
+  $REPL{'YY'}          = $year % 100;
+  $REPL{'MM'}          = $mm;
+  $REPL{'MMM'}         = $mmm;
+  $REPL{'MONTH'}       = $month;
+  $REPL{'WD'}          = $wd;
+  $REPL{'WEEKDAY'}     = $weekday;
+  $REPL{'YD'}          = $yda;
+  $REPL{'YW'}          = $yw;
+  $REPL{'DD'}          = $dd;
+  $REPL{'DAY'}         = $date[3];
+  $REPL{'MH'}          = $mh;
+  $REPL{'HH'}          = $hh;
+  $REPL{'MN'}          = $mn;
+  $REPL{'PM'}          = $pm;
+  $REPL{'USER'}        = $user;
+  $REPL{'HOST'}        = hostname;
+  $REPL{'NEW_VERSION'} = $revn;
+  $REPL{'NEW_ARGV'}    = "$RealScript @ORIG";
+  $REPL{'ALWAYS'}      = '1';
+  $REPL{'NEVER'}       = '0';
+
+  # RCS keywords
+  $REPL{'Author'}   = '@(#)$'.'Author$';
+  $REPL{'Date'}     = '@(#)$'.'Date$';
+  $REPL{'Log'}      = '@(#)$'.'Log$';
+  $REPL{'RCSfile'}  = '@(#)$'.'RCSfile$';
+  $REPL{'Name'}     = '@(#)$'.'Name$';
+  $REPL{'File'}     = '@(#)$'.'File$';
+  $REPL{'Revision'} = '@(#)$'.'Revision$';
+  $REPL{'Source'}   = '@(#)$'.'Source$';
+  $REPL{'State'}    = '@(#)$'.'State$';
+  $REPL{'Id'}       = '@(#)$'.'Id$';
+  $REPL{'Header'}   = '@(#)$'.'Header$';
+  $REPL{'Locker'}   = '@(#)$'.'Locker$';
+
+  #------------------------------------------------------------------------------
+  # Search for type #<<<2
+  #------------------------------------------------------------------------------
+  our $template_dir = '';
+  if (!exists $OPT{-file}) {
+    for my $fdir (@template_list) {
+      next if $kind_regex ne '' and $fdir !~ m{\b$kind_regex\b}; # KIND_REGEX
+      next unless -d "$fdir/$kind";
+      $template_dir = "$fdir/$kind";
+      $template_dir =~ s{/+$}{};       # cleanup
+      $template_dir =~ s{/[.]?/+}{/}g; # cleanup
+      last;
+    }#endfor
+    die "FATAL: Unable to locate template $kind!?\n" unless $template_dir ne '';
+    $ENV{'TEMPLATE_ROOT_DIRECTORY'} = $template_dir;
+    if (-r "$template_dir/$rc") {
+      &readargs("$template_dir/$rc");
+    }#endif
+  }#endif
+
+  #------------------------------------------------------------------------------
+  # Apply template #<<<2
+  #------------------------------------------------------------------------------
+  our $target_dir = '';
+  $target_dir = $install_dir;
+  if (! -d $target_dir) {
+    &System("mkdir -p $target_dir");
+  }#endif
+  chdir $target_dir;
+  our $this_tdir = &getcwd();
+  #------------------------------------------------------------------------------
+  if (not exists $OPT{-force} and scalar(@REQUIRE) > 0) { # Check requirements <<<3
+  #------------------------------------------------------------------------------
+    for my $rqmt (@REQUIRE) {
+      if ($rqmt =~ m{^-e=}) { # File exists
+        my $file = $';
+        next if -e glob "$this_tdir/$file";
+        printf "ERROR: Target directory $this_tdir does not contain file $file\n";
+        $errors++;
+      } elsif ($rqmt =~ m{^-r=}) { # File readable
+        my $file = $';
+        next if -r glob "$this_tdir/$file";
+        printf "ERROR: Target directory $this_tdir does not contain readable file  $file\n";
+        $errors++;
+      } elsif ($rqmt =~ m{^(\w+)=}) { # Parameter
+        my ($phname,$phrqmt) = ($1,$');
+        my $phvalue;
+        if (exists $REPL{$phname}) {
+          $phvalue = $REPL{$phname};
+        } elsif (exists $SAILA{$phname}) { # check aliases
+          for my $an_alias (@{$SAILA{$phname}}) {
+            next unless exists $REPL{$an_alias};
+            if (defined $phvalue) {
+              &REPORT_ERROR("Duplicate alias values detected for $phname\n");
+            } else {
+              $phvalue = $REPL{$an_alias};
+            }#endif
+          }#endfor
+        }#endif
+        print "INFO: Matching /$phrqmt/\n" if exists $REPL{$phname} and exists $OPT{-verbose};
+        if( $phrqmt =~ m{^!} ) {
+          my $rqmt = $';
+          next if defined $phvalue and $phvalue !~ m{$rqmt}; # satisfied requirement
+        } else {
+          next if defined $phvalue and $phvalue =~ m{$phrqmt}; # satisfied requirement
+        }
+        $phvalue = '*UNDEFINED*' unless defined $phvalue;
+        print "ERROR: Placeholder $phname with value $phvalue does not match requirement $phrqmt\n";
+        $errors++;
+      } else { # only checking directory requirements here
+        next if $this_tdir =~ m{$rqmt};
+        printf "ERROR: Target directory '$this_tdir' does not match requirement m{$rqmt}\n";
+        $errors++;
+      }#endif
+    }#endfor
+    if ($errors) {
+      printf "FATAL: Please fix above %d problems and retry.\n",$errors;
+      exit 1;
+    }#endif
+  }#endif
+  #------------------------------------------------------------------------------
+  if (scalar(@WARN) > 0) { # Check for warnings <<<3
+  #------------------------------------------------------------------------------
+    for my $rqmt (@WARN) {
+      if ($rqmt =~ m{^-e=}) {
+        my $file = $';
+        next if -e glob "$this_tdir/$file";
+        printf "WARNING: Target directory $this_tdir does not contain file $file\n";
+      } elsif ($rqmt =~ m{^-r=}) {
+        my $file = $';
+        next if -r glob "$this_tdir/$file";
+        printf "WARNING: Target directory $this_tdir does not contain readable file  $file\n";
+      } elsif ($rqmt =~ m{^(\w+)=}) {
+        my ($phname,$phrqmt) = ($1,$');
+        if (exists $ALIAS{$phname}) {
+          &REPORT_DEBUG(__LINE__,"Using alias $phname");
+          $phname = $ALIAS{$phname};
+        }#endif
+        my $phvalue = '';
+        $phvalue = $REPL{$phname} if exists $REPL{$phname};
+        next if $phvalue =~ m{$phrqmt}; # satisfied requirement
+        printf "WARNING: Placeholder $phname does not match requirement $phrqmt\n";
+      } else { # only checking directory requirements here
+        next if $this_tdir =~ m{$rqmt};
+        printf "WARNING: Target directory $this_tdir does not match requirement $rqmt\n";
+      }#endif
+    }#endfor
+  }#endif
+  #------------------------------------------------------------------------------
+  if (exists $OPT{-file}) { # Traverse desired filesystems <<<3
+  #------------------------------------------------------------------------------
+    if (-r $OPT{-file}) {
+      @FOUND = ($OPT{-file});
+    } else {
+      my $path;
+      for my $rootdir (@template_list) {
+        $path = "$rootdir/$OPT{-file}";
+        $path =~ s{/+$}{};       # cleanup
+        $path =~ s{/[.]?/+}{/}g; # cleanup
+        next unless -r $path;
+        @FOUND = ($path);
+      }#endfor
+    }#endif
+  } else {
+    File::Find::find({wanted => \&everything, follow => 1}, $template_dir);
+  }#endif
+  die "Unable to find/read files for template!?\n" unless @FOUND;
+  my $used = 0;
+  FILE: for my $i (0..$#FOUND) {
+    my $template = $FOUND[$i];
+    my $target = $template;
+    $target =~ s{^$template_dir/}{};
+    next FILE if grep($target =~ m/$_/,@IGNORE);
+    ++$used;
+    $target = recurse_placeholder($target,$name_lhe,$name_rhe,$name_ifs,'');
+    {
+      $target =~ s{/$}{};
+      my $this_file = $target;
+      $this_file =~ s{.*/+}{}; # Remove trailing slash (/)
+      my $this_rdir = $target;
+      $this_rdir = '.' unless $target =~ m{/};
+      $this_rdir =~ s{/[^/]+$}{};
+      my $this_path = $this_tdir.'/'.$target;
+      $this_path =~ s{//+}{/}g;
+      $this_path =~ s{/\./}{/}g;
+      $REPL{'TDIR'} = $this_tdir;
+      $REPL{'RDIR'} = $this_rdir;
+      $REPL{'FDIR'} = $this_tdir.'/'.$this_rdir;
+      $REPL{'FDIR'} = $this_tdir if $this_rdir eq '.';
+      $REPL{'PATH'} = $this_path;
+      $REPL{'FILE'} = $this_file;
+    }
+    my $perm = (stat($template))[2];
+    my ($repl_total,$phld_total) = (0,0);
+    #----------------------------------------------------------------------------
+    if (-l $template and not exists $OPT{-hard}) { # Symbolic link #<<<3
+    #----------------------------------------------------------------------------
+      next if exists $OPT{-out}; # Should this be an error?
+      save_existing $target unless $OPT{-clobber};
+      my $thelink;
+      $thelink = recurse_placeholder($thelink,$name_lhe,$name_rhe,$name_ifs,'');
+      &System("ln -s $thelink $target");
+    #----------------------------------------------------------------------------
+    } elsif (-d $template) { # Directory #<<<3
+    #----------------------------------------------------------------------------
+      next if exists $OPT{-out}; # Should this be an error?
+      save_existing $target unless $OPT{-clobber} or $OPT{-merge};
+      &System("mkdir -p $target");
+      $perm |= oct(220); # Make sure it's writeable by the user
+      chmod $perm,$target;
+    #----------------------------------------------------------------------------
+    } else { # Plain file #<<<3
+    #----------------------------------------------------------------------------
+      ($repl_total,$phld_total) = (0,0);
+      if (!exists $OPT{-notreally} and !exists $OPT{-out}) {
+        save_existing $target unless $OPT{-clobber};
+        open $TARGET_FH,q{>},"$target"
+          or die "FATAL: Unable to write $target!?\n";
+      }#endif
+      print "# FILE $target\n" if $OPT{-out} and $used>1;
+      $perm = (stat($template))[2];
+      my $TEMPLATE_FH;
+      open $TEMPLATE_FH,q{<},"$template"
+        or die "FATAL: Unable to read $template!?\n";
+      while (my $line = <$TEMPLATE_FH>) {
+        my ($repl_cnt,$phld_cnt);
+        ($line,$repl_cnt,$phld_cnt) = recurse_placeholder($line,$file_lhe,$file_rhe,$file_ifs,'');
+        $repl_total += $repl_cnt;
+        $phld_total += $phld_cnt;
+        # {:TODO HANDLE DUPLICATE:}
+        if (not $OPT{-notreally}) {
+          if (exists $OPT{-out} and $OPT{-out} eq '-') {
+            print $line;
+          } else {
+            print $TARGET_FH $line;
+          }#endif
+        }#endif
+      }#endwhile
+      close $TEMPLATE_FH;
+      close $TARGET_FH unless exists $OPT{-notreally} or exists $OPT{-out};
+      $perm |= oct(220); # Make sure it's writeable by the user
+      chmod $perm,$target;
+      unless ($OPT{-quiet}) {
+        printf qq{Created "%s/%s" },realpath($target_dir),$target unless exists $OPT{-out};
+        printf "with " if $repl_total or $phld_total;
+        printf "%d replacements",$repl_total if $repl_total;
+        printf " & " if $repl_total and $phld_total;
+        printf "%d untouched placeholders",$phld_total if $phld_total;
+        printf "\n";
+        printf "Warning: There were %d errors.\n",$errors if $errors != 0;
+      }#endunless
+      if (exists $OPT{-edit}) {
+        if ($OPT{-edit} eq 'default') {
+          $OPT{-edit} = 'vi';
+          $OPT{-edit} = $ENV{EDITOR} if exists $ENV{EDITOR};
+          $OPT{-edit} = $ENV{VISUAL} if exists $ENV{VISUAL}; # overrides
+        }#endif
+        &System("$OPT{-edit} $target");
+      }#endif
+    }#endif
+  }#endfor
+  close $TARGET_FH if exists $OPT{-out} and $OPT{-out} ne '-';
+
+}#endfor $name
+
+# Warn of unused templates
+for my $un (sort keys %USED) {
+  printf "WARNING: Never used provided replacement $un defined $DFND{$un}\n" 
+     unless $USED{$un} > 0 or $OPT{-quiet} or exists $OPTIONAL{$un} or $DFND{$un} =~ m{$rc};
+}#endfor
+
+exit 0; # Done #<<<1
+}#endsub main
+#}}}
+
+# Determine if file is being used as executable or perl module...
+my $SCRIPT_FH;
+open $SCRIPT_FH,q{<},"$RealBin/$RealScript";
+my $open = 1;
+for (1..32) { # only check the first few lines
+  my $line = <$SCRIPT_FH>;
+  next unless $line =~ m{^package NewScript; #MAGIC42};
+  close $SCRIPT_FH;
+  $open = 0;
+  main; # execute the script behavior
+  last;
+}#endfor
+close $SCRIPT_FH if $open;
+
+#------------------------------------------------------------------------------
+# The end!
+#------------------------------------------------------------------------------
+1;
+
+
+#############################################################################
+__DATA__
+# DOCUMENTATION #<<<1
+
+=pod
+
+=head1 NAME
+
+B<new> - create a I<new> set of files from templates
+
+=head1 SYNOPSIS
+
+B<new> --help ####### provides this help
+
+B<new> -l  ########## display list of available templates
+
+B<new> I<{:KIND:}> ## display info about specified type
+
+B<new> [I<{:OPTIONS:}>] I<{:IDENTIFIER=VALUE:}...> I<{:KIND:}> I<{:NAME:}>
+
+ OPTION            BRIEF DESCRIPTION
+ -                 send to STDOUT
+ --alias NEW=OLD   alias parameter names (-a)
+ --clobber         overwrite existing files as needed (-c)
+ -dir D            place under (D)irectory (-d)
+ --default VAR=VAL default value for variable
+ -edit [E]         launch (E)ditor afterwards (-e)
+ --file F          use (F)ile as template (-f)
+ --force           override requirements (see --require)
+ --hard            treat symbolic links as real files (-H)
+ --merge           merge with existing directories/files
+ -notreally        test run (-n)
+ --out F           output to (F)ile (-o)
+ --placeholders    list unique placeholders, (-p)
+ --path            show path to template (-P)
+ --quiet           only report errors (-q)
+ -rc FILE          read command-line arguments from FILE
+ --re L R          specify left & right placeholders
+ --soft            treat symbolic links as links (-S)
+ --require R       specifies requirements (see OPTIONS for details)
+ --templatepath L  use directory (L)ist instead of $TEMPLATEPATH (-t)
+ --test            template test (-T) (see OPTIONS for details)
+ --verbose         display more information (-v)
+ --version         display the version number of this script
+
+=head1 DESCRIPTION
+
+Searches for template KIND and reproduces the contents of the template
+directory in the destination directory (defaults to .). Each file is
+successively copied to the destination. The name and contents of each
+file is scanned for PLACEHOLDER(S) which are updated if a replacement
+VALUE is available.  A placeholder is defined as text matching the one
+of several patterns as follows:
+
+ REF PATTERN            DESCRIPTION
+ --- -----------------  -----------
+ P1. {:IDENTIFIER:}     simple macro
+ P2. {:$IDENTIFIER:}    environment variable
+ P3. {:<IDENTIFIER>:}   file
+ P4. {:<$IDENTIFIER>:}  indirect file
+ P5. {:IDENTIFIER+:}    repeated
+
+Type P1 is a simple replacement as specified by a command-line argument
+of the form IDENTIFIER=TEXT.
+
+Type P2 is replaced with the contents of the corresponding environment
+variable if it exists.
+
+Type P3 specifies a filename, and is similar to the B<#include>
+facilities of some languages.  The identifier must resolve to a readable
+filename.
+
+Type P4 specifies a filaname via an environment variable. It is simply
+a variation of P2 and P3.
+
+Type P5 is a variation on P1 that allows repeated specification of the
+identifier, and causes duplication of the line in which it occurs until
+all definitions of the identifier have been used. It requires at
+least one definition.
+
+A small extension to the above syntax allows for a special prefix
+modifier with the format {:PREFIX:IDENTIFIER:}, where PREFIX may be
+any of:
+
+ uc      => transform resultant text to all UPPERCASE
+ lc      => transform resultant text to all lowercase
+ sc      => transform resultant text to Sentence case (first letter only)
+ wc      => transform resultant text to Word Case (assumes whitespace)
+ cc      => transform resultant text to Camel Case (uppercase after _)
+ rw      => transform resultant text to reverse ordering of words
+ sq      => squeeze text to a legal linux filename
+ sp      => split text on whitespace to separate lines
+ include => use resultant text as a filename for inclusion (same as
+            {:<IDENTIFIER:>:}.
+ new     => invoke new on the text after changing all ':' to ' '
+            (e.g. {:new:pod:this:} would insert output from 'new pod
+             this' in place of text.)
+ if      => part of if-elsif-else-endif construct described separately
+ elsif   => part of if-elsif-else-endif construct described separately
+ else    => part of if-elsif-else-endif construct described separately
+ endif   => part of if-elsif-else-endif construct described separately
+ for     => part of for-endfor construct described separately
+ endfor  => part of for-endfor construct described separately
+ comment => completely ignores IDENTIFIER
+
+Additionally, there are a few suffix modifiers with the formats as follows:
+
+ {:IDENTIFIER:=:DEFAULT_VALUE:#:IDENTIFIER_COMMENT:}
+
+Default values may not contain the text ':#:'. Default values receive no
+warning if they are not overridden. In many cases, it is better to do
+this in the RC file.
+
+Placeholders without a replacement value are left untouched, and
+a warning is issued.
+
+Comments issue no warning. Comments may not contain templates.
+
+When the pattern matching is applied to a filename, the placeholder is
+defined differently. Insted of {: :}, the placeholder is surrounded by
+lx xr. This alternate rule is Windoze friendly.
+
+=head2 Automatic Placeholders
+
+Several automatic placeholders are defined as follows.
+
+=over
+
+=item RCS keywords
+
+Several RCS keywords are predefined.
+
+ PLACEHOLDER     REPLACEMENT
+ ~~~~~~~~~~~     ~~~~~~~~~~~
+ {:Author:}      @(#)$ Author$
+ {:Date:}        @(#)$ Date$
+ {:Log:}         @(#)$ Log$
+ {:RCSfile:}     @(#)$ RCSfile$
+ {:Name:}        @(#)$ Name$
+ {:Revision:}    @(#)$ Revision$
+ {:Source:}      @(#)$ Source$
+ {:State:}       @(#)$ State$
+ {:Id:}          @(#)$ Id$
+ {:Header:}      @(#)$ Header$
+
+=item {:DATE:}
+
+Current date in verbose format.
+
+=item {:TDIR:}
+
+The target directory name for the template being created.
+
+=item {:FDIR:}
+
+The full directory name containing the file being created.
+
+=item {:FILE:}
+
+The base filename of the file being created.
+
+=item {:HOST:}
+
+The name of the host executing this script.
+
+=item {:MDY2:}
+
+Current date in MM/DD/YY format. Useful for change logs.
+
+=item {:MMDDY4:}
+
+Current date in MM/DD/YYYY format. Useful for change logs.
+
+=item {:TIME:}
+
+Current time in verbose format.
+
+=item {:TIMESTAMP:}
+
+Current date and time in verbose format.
+
+=item {:YYMMDD:}
+
+Current date in YYMMDD format. Useful for filenames.
+
+=item {:Y4MMDD:}
+
+Current date in YYYYMMDD format. Useful for filenames.
+
+=item {:YMDHM:}
+
+Current date in 'YYYY MMM DD HH:MM am/pm' format.
+
+=item {:YY:}
+
+Last two digits of current year.
+
+=item {:MM:}
+
+Current month (01-12).
+
+=item {:DD:}
+
+Current month day (01-31).
+
+=item {:MH:}
+
+Current military hour (00-23).
+
+=item {:HH:}
+
+Current hour (01-12).
+
+=item {:PM:}
+
+Current AM or PM aspect of time.
+
+=item {:MN:}
+
+Current minute (00-59).
+
+=item {:NAME:}
+
+The corresponding command-line argument.
+
+B<IMPORTANT:> This is B<NOT> something you set with I<NAME=> syntax. It is
+simply the last argument on the command-line when creating a new
+skeleton. For example assume the following command:
+
+B<new> THREAD=main systemc counter
+
+The value of B<NAME> will be I<counter>.
+
+=item {:NEW_VERSION:}
+
+Version of the B<new> (this) script.
+
+=item {:PATH:}
+
+The full pathname of the file being created.
+
+=item {:RDIR:}
+
+The relative directory name of the file being created.
+
+=item {:USER:}
+
+Username running this script.
+
+=item {:KIND:}
+
+The corresponding command-line argument. For example,
+
+  new perl mine
+
+specifies KIND='perl'.
+
+=item {:YEAR:}
+
+Current year.
+
+=item B<lxLXxr>
+
+A very special purpose and rarely used placeholder.
+Replaces with 'C<lx>'. Used when file names need to preserve
+'C<lx>' and 'C<xr>'. For example, starting with the filename,
+'C<lxLXxrNAMElxXRxr>' will result in 'C<lxNAMExr>'. See also
+B<lxXRxr>.
+
+=item B<lxXRxr>
+
+A very special purpose and rarely used placeholder.
+Replaces with 'C<xr>'. Used when file names need to preserve
+'C<lx>' and 'C<xr>'. For example, starting with the filename,
+'C<lxLXxrNAMElxXRxr>' will result in 'C<lxNAMExr>'. See also
+B<lxLXxr>.
+
+=back
+
+The following environment variables are created as an aid:
+
+=over
+
+=item B<$TEMPLATE_ROOT_DIRECTORY>
+
+Template's root directory (where the template is stored).
+
+=back
+
+=head2 Symbolic links
+
+Symbolic links are treated as symbolic links unless the B<--hard> option
+is specified. This means that if a template contains symbolic links, the
+target will contain symbolic links. Note that placeholders in the both
+the name of the link itself, and the pointing text are replaced.
+
+=head2 set, if-elsif-else-endif, and for-endfor
+
+There remain several other less used, but powerful constructs.
+These are potentially dangerous and you can get very messed up
+with indiscrimate use.
+
+First is the B<set> construct that basically allows you to assign a
+new value to a placeholder during execution. This has limited uses.
+The syntax is:
+
+  {:set:IDENTIFIER:REPLACEMENT:}
+
+The replacement may contain anything except a newline '\n' or the
+placeholder closing sequence (default ':}').
+
+Next is the B<if-elsif-else-endif> construct. It's syntax is as follows:
+
+  {:if:IDENTIFIER1:}
+  TEXT1
+  {:elsif:IDENTIFIER2:}  optional
+  TEXT2                  optional
+  {:elsif:IDENTIFIER3:}  optional
+  TEXT3                  optional
+  {:else:IDENTIFIERn:}   optional
+  TEXT4                  optional
+  {:endif:IDENTIFIERn:}
+
+Each B<if> clause evaluates its identifier as false if undefined
+or it has an empty string value or a value of zero (0). Otherwise,
+the statement evaluates true.
+
+There are two special identifiers: B<NEVER> and B<ALWAYS>.
+
+For the moment, these conditionals must be on a line by themselves.
+Whether to change this is being considered. Notice that I<IDENTIFIERn>
+is the last B<if> or B<elsif> clause identifier, and must be used in
+the optional B<else> clause, and the B<endif> clause.
+
+Clauses may be nested, but never overlapped.
+
+Examples:
+
+  {:if:FIELD1:}
+    Using {:FIELD1:}
+  {:endif:FIELD1:}
+
+WARNING: Overuse of this construct can make templates hard to debug.
+
+=head2 B<EXPERIMENTAL>
+
+Next there is the B<for>-loop construct as follows:
+
+  {:for:IDENTIFIER:}
+  TEXT << may include {:forvar:IDENTIFIER:}
+  {:endfor:IDENTIFIER:}
+
+This splits the text contents of the {:IDENTIFIER:} into an internal list using
+the word separator (-ws option). This is equivalent to Perl's @list=split(m{WS},{:IDENTIFIER:}).
+Then the text between the matching B<for>/B<endfor> is repeated with {:forvar:IDENTIFIER:} taking
+on each element of the resultant list.
+
+B<for>-loops may be nested; however, the {:IDENTIFIER:} must be unique.
+
+Note that the word separator may be changed using {:set:WS::}.
+
+=head1 OPTIONS
+
+=over
+
+=item B<->
+
+Send output to standard out (STDOUT). Used for inserting code snippets
+from within a text editor. For example, in B<vim>, try the following:
+
+ :read !new - TEMPLATE NAME<CR>
+
+=item B<--alias> I<AKA>=I<ORIG>
+
+Allows for aliases of parameters. Aka B<-a>.
+
+=item B<--clobber>
+
+Allow overwriting (clobbering) existing files. Aka B<-c>.
+
+=item B<--default> I<VAR>=I<VALUE>
+
+Default value for variable if not specified.
+
+=item B<--dir> I<DIR>
+
+Base directory name to place results under. Aka B<-d>.
+
+=item B<--edit>[=I<FILENAME>]
+
+Specifies that the text editor should be launched if a
+replacement file is created.
+Aka B<-e>.
+
+=item B<--file> I<FILENAME>
+
+Specifies a single file to act as a template file. Aka B<-f>.
+
+=item B<--force>
+
+Overrides requirements.
+
+=item B<--hard>
+
+Treat symbolic links as hard files/directories.
+
+=item B<--help>
+
+Help (this text).
+
+=item B<--list>
+
+List available templates. Includes information about the number of
+directories and files that will be created, and optionally a short
+description if it exists in the corresponding C<.newrc> file. Aka B<-l>.
+
+=item B<--merge>
+
+Leave existing directories in place and merge template into the existing
+hierarchy. Files are still treated as new. Use B<-clobber> to overwrite
+files. Aka B<-m>.
+
+=item B<--notreally>
+
+Not really. Aka B<-n>.
+
+=item B<--out> I<FILENAME>
+
+Specifies an output file for result. This is really only valid
+when the template is a single file. See B<-f>. Aka B<-o>.
+
+=item B<--placeholders>
+
+List unique placeholders in template. Aka B<-p>.
+
+=item B<--quiet>
+
+Quiet mode. Aka B<-q>.
+
+=item B<--re> I<LHRE> I<RHRE>
+
+Specify the file pattern matching left-hand and right-hand regular
+expressions. Default is B<{:> and B<:}>. Normally, these should not be
+changed. This option allows for situations where the syntax of the file
+uses the defaults in some meaningful way that would conflict with the
+script. Be careful in your choices.
+
+=item B<--require> [I<PLACEHOLDER=[!]>]I<PATTERN>
+
+Specifies either a placeholder requirement, or a directory path
+requirement for the target directory or the existance of a file in the
+target directory.  Fatal unless B<--force> is specified.  Normally, this
+is found in the template's .newrc file.
+
+To require that the placeholder NAME be a valid identifier.
+
+ --require NAME=^[a-zA-Z]\w*$
+
+To require that the placeholder NAME be a not have the suffix "_if".
+
+ --require NAME=!_if$
+
+To require that the CLIENT not have whitespace.
+
+ --require CLIENT=^\S+$
+
+To ensure that the placeholder TESTNO *B<if>* supplied is numeric:
+
+ --require TESTNO=^\d*$
+
+To ensure the template is installed under a directory name ending
+in the letters 'bin':
+
+ --require bin$
+
+To ensure the template is installed under a harness sub-directory
+with _harness in its name:
+
+ --require /sim/harness/[^/]+_harness$
+
+To require a file named Makefile or makefile exists under the target
+directory (uses glob wildcards):
+
+  --require -e=[Mm]akefile
+
+To require a readable file named README exists under the target
+directory (uses glob wildcards):
+
+ --require -r=README{,.txt}
+
+=item B<--path>
+
+List the full file path location of the template directory used.
+
+=item B<--soft>
+
+Treat symbolic links as links. Conteracts --hard when embedded in
+C<.newrc>. Note that placeholders in the both the name of the link
+itself, and the pointing text are replaced.
+
+=item B<--templatepath> DIRECTORY_LIST
+
+Specify additional directory(s) to scan for template directories. Aka
+B<-t>.
+
+=item B<--test>
+
+Tests the specified template. If a B<.newt> script exists, execute that;
+otherwise, effectively does the following:
+
+ mkdir -p /tmp/test-{:KIND:}-$$
+ new {:KIND:} test-{:KIND:}
+ bash -r -i
+ rm -fr  /tmp/test-{:KIND:}-$$
+
+Aka B<-t>.
+
+=item B<--verbose>
+
+Verbose mode. Aka B<-v>.
+
+=item B<--version>
+
+Displays the program name, version and exits. Aka B<-V>.
+
+=back
+
+=head1 FILES
+
+The filename B<.newrc> provides startup information. The
+following directories are searched in order: B</etc>, B<$HOME>,
+B<./> and the matching I<template> directories. Command-line
+options may be specified one per line in the B<.newrc> files.
+
+One frequently used directive ensures that a
+template is used correctly: B<--require>.
+
+Additionally, B<.newrc> files can provide documentation (i.e. help)
+for templates. This is accomplished one of two ways. Either include
+Perl POD format (starts with =pod and ends after =cut) or use
+special comments as follows.
+
+A short one-line description should be provided with a comment of
+form:
+
+ #! This is a quick description of this template.
+
+The above applies to perlpod as well. For the longer description,
+the text is contained within comments that
+begin with <pound><colon> (i.e. #:). For example:
+
+ #: This is potential documentation for a .newrc file under a
+ #: template
+
+The filename B<.newt> is optional, and is the name of a script that
+may be used for testing the template. It is called by the B<newt> script
+with a single argument, the name of the template.
+
+=head1 ENVIRONMENT
+
+Assumes B<TEMPLATEPATH> is defined as a colon separated list of
+directories to find templates in. Templates are contained in
+subdirectory.
+
+B<NEWRC> specifies default arguments processed after B<.newrc>.
+
+=head1 EXAMPLES
+
+Assume a directory 'systemc' exists within a directory in the
+template search path. Assume the directory contains two files,
+lxNAMExr.h and lxNAMExr.cpp. Thus the directory might look like:
+
+ templates/
+ +- systemc/
+    +- lxNAMExr.cpp
+    +- lxNAMExr.h
+
+Assume the contents of the files are as follows:
+
+The file template/systemc/lxNAMExr.h contains:
+
+ #ifndef {:NAME:}_H
+ #define {:NAME:}_H
+ SC_MODULE({:NAME:}) {
+   SC_CTOR({:NAME:}) {
+     SC_THREAD({:THREAD:}_thread);
+   }
+   void {:THREAD:}_thread();
+ };
+ #endif
+ //END {:Id:}
+
+The file template/systemc/lxNAMExr.cpp contains:
+
+ //FILE: {:FILE:} {:KIND:}
+ #include <systemc.h>
+ #include "{:NAME:}.h"
+ void {:NAME:}::{:THREAD:}_thread() {
+   for(;;) {
+     {:YOUR_CODE_HERE:}
+   }
+ }
+ /*{:<COPYRIGHT>:}*/
+ //END {:Id:}
+
+Assume the file legal.txt contains:
+
+  This file is confidential and proprietary.
+
+Assume .newrc contains
+
+  # This is systemc/.newrc
+  #
+  COPYRIGHT=legal.txt
+  #
+  #! A simple systemc design
+  #
+  #: Provides two files for a simple SystemC design
+  #: with two files:
+  #:
+  #: - lxNAMExr.h
+  #: - lxNAMExr.cpp
+  #:
+  #: Several placeholders are provided.
+
+Assume your username is joe. Then issuing the following command:
+
+B<new> THREAD=main systemc counter
+
+Results in two new files created as follows:
+
+./counter.h will contain:
+
+ #ifndef counter_H
+ #define counter_H
+ SC_MODULE(counter) {
+   SC_CTOR(counter) {
+     SC_THREAD(main_thread);
+   }
+   void main_thread();
+ };
+ #endif
+ //END $Id; counter.h 1093 2010-04-16 13:07:25Z dcblack $
+
+./counter.cpp will contain:
+
+ //FILE: counter.cpp (systemc)
+ #include <systemc.h>
+ #include "counter.h"
+ void counter::main_thread() {
+   for(;;) {
+     {:YOUR_CODE_HERE:}
+   }
+ }
+
+=head1 COPYRIGHT/LICENSE
+
+Copyright (C) 2020 David C Black. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 AUTHOR
+
+David C Black <dcblack@mac.com>
+
+=cut
