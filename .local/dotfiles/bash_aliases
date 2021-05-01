@@ -1,5 +1,9 @@
 #!/bin/sh
 
+if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
+  export ALIAS_SCRIPT
+  ALIAS_SCRIPT="${script}"
+fi
 # enable color support of ls and also add handy aliases
 test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
 
