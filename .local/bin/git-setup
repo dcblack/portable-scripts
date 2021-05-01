@@ -1,35 +1,40 @@
 #!/bin/bash
 
+SCRIPT="$(dirname "$0")/reporting.bash"
+if [[ -r "${SCRIPT}" ]]; then
+  # shellcheck source=reporting.bash
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
 #-------------------------------------------------------------------------------
-function get-name() {
-  local yourname=""
-  while [[ "${yourname}" == "" ]]; do
+function Get_name() {
+  YOURNAME=""
+  while [[ "${YOURNAME}" == "" ]]; do
     read -r -p 'Your full name: '
     if [[ "${REPLY}" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
-      yourname="${REPLY}"
+      YOURNAME="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
       return
     else
-      echo "ERROR: Improperly formatted name" 1>&2
+      Error "Improperly formatted name"
     fi
   done
-  echo "${yourname}"
 }
 
 #-------------------------------------------------------------------------------
-function get-email() {
-  local email=""
-  while [[ "${email}" == "" ]]; do
+function Get_email() {
+  YOURMAIL=""
+  while [[ "${YOURMAIL}" == "" ]]; do
     read -r -p 'Your email address: '
     if [[ "${REPLY}" =~ [-.a-zA-Z0-9]+@[-.a-zA-Z0-9]+[.][a-zA-Z]{3} ]]; then
-      email="${REPLY}"
+      YOURMAIL="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
       return
     else
-      echo "ERROR: Improperly formatted e-mail address" 1>&2
+      Error "ERROR: Improperly formatted e-mail address" 1>&2
     fi
   done
-  echo "${email}"
 }
 
 function choose() { # QUESTION CHOICES...
@@ -56,47 +61,66 @@ function choose() { # QUESTION CHOICES...
 #-------------------------------------------------------------------------------
 # Main
 #-------------------------------------------------------------------------------
-local GITCFG
-GITCFG="${HOME}/.gitconfig"
-if [[ -f "${GITCFG}" ]]; then
-  choose "${GITCFG} already exists." continue skip abort
-  test "${ANS}" = continue && mv "${GITCFG}"{,"$(date +%F-%T|sed -e s/:/-/g)"}
-fi
+function Git_setup() {
+  GITCFG="${HOME}/.gitconfig"
+  YOURNAME=""
+  YOURMAIL=""
+  FORCE=0
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" =~ ^-{1,2}n(ame)?$  && $# -gt 1 ]]; then YOURNAME="$2"; shift; fi
+    if [[ "$1" =~ ^-{1,2}e(mail)?$ && $# -gt 1 ]]; then YOURMAIL="$2"; shift; fi
+    if [[ "$1" =~ ^-{1,2}f(orce)?$ && $# -gt 1 ]]; then FORCE=1; fi
+    shift
+  done
 
-if [[ ! -f "${GITCFG}" ]]; then
+  if [[ ! -f "${GITCFG}" ]]; then
 
-  YOURNAME=$(get-name)
-  EMAIL=$(get-email)
-  if [[ "${YOURNAME}" == "" || "${EMAIL}" == "" ]]; then
-    echo "Aborting"
-    exit
+    if test "${FORCE}" -eq 1 -o -z "$(git config --global user.name)"; then
+      Get_name
+      git config --global user.name "${YOURNAME}"
+      printf "Setup user.name=%s\n" "${YOURNAME}"
+    else
+      printf "Leaving user.name=%s\n" "${YOURNAME}"
+    fi
+    if test "${FORCE}" -eq 1 -o -z "$(git config --global user.email)"; then
+      Get_email
+      git config --global user.email "${YOURMAIL}"
+      printf "Setup user.email=%s\n" "${YOURMAIL}"
+    else
+      printf "Leaving user.email=%s\n" "${YOURMAIL}"
+    fi
+
+    git config --global push.followTags true
+    git config --global color.pager true
+    git config --global color.ui auto
+    git config --global core.pager "less -FRSZ"
+    git config --global push.default current
+
+    # Useful aliases
+    git config --global alias.changes  'status -s -uno'
+    git config --global alias.changed  'ls-files -m'
+    git config --global alias.tags     'tag -l'
+    git config --global alias.unstage  'reset HEAD'
+    git config --global alias.untrack  'rm --cached'
+    git config --global alias.hash     'hash-object'
+    git config --global alias.branches 'log --pretty=format:'%h %s' --graph'
+    git config --global alias.ignored  'ls-files -i'
+    git config --global alias.co       'checkout'
+ 
   fi
 
-  git config --global user.name "${YOURNAME}"
-  git config --global user.email "${EMAIL}"
-  git config --global core.editor 'gvim -f'
+  for COURSE in syscfund tlm-2; do
+    if [[ -d "${HOME}/${COURSE}" ]]; then
+      cd "${HOME}/${COURSE}" || Die "Unable to change into ${HOME}/${COURSE}"
+      git init .
+      git add .
+      git commit -m 'initial'
+    fi
+  done
 
-  # Useful aliases
-  git config --global alias.changes  'status -s -uno'
-  git config --global alias.changed  'ls-files -m'
-  git config --global alias.tags     'tag -l'
-  git config --global alias.unstage  'reset HEAD'
-  git config --global alias.untrack  'rm --cached'
-  git config --global alias.hash     'hash-object'
-  git config --global alias.branches 'log --pretty=format:'%h %s' --graph'
-  git config --global alias.ignored  'ls-files -i'
-  git config --global alias.co       'checkout'
+  Info "Git set up"
+}
 
-fi
+Git_setup "$@"
 
-for COURSE in syscfund tlm-2; do
-  if [[ -d "${HOME}/${COURSE}" ]]; then
-    cd "${HOME}/${COURSE}" || echo "Unable to change into ${HOME}/${COURSE}" 1>&2 && exit 1
-    git init .
-    git add .
-    git commit -m 'initial'
-  fi
-done
-
-echo "Git set up"
 #-------------------------------------------------------------------------------
