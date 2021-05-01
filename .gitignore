@@ -13,6 +13,8 @@ thumb.db
 CVS
 RCS
 
+GNUmakefile
+
 # CMake junk
 CMakeLists.txt.user
 CMakeCache.txt

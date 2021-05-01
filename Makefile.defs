@@ -5,10 +5,23 @@
 # This version is beefed up slightly.
 
 # -*- make -*- vim:syntax=make:fdm=marker:fmr=<<<,>>>:tw=80:sw=2:et
+###############################################################################
+#
+#   ####   ####  #     # ##### ###  ####  #    # #####  #####                   
+#  #    # #    # ##    # #      #  #    # #    # #    # #                       
+#  #      #    # # #   # #      #  #      #    # #    # #                       
+#  #      #    # #  #  # #####  #  #  ### #    # #####  #####                   
+#  #      #    # #   # # #      #  #    # #    # #  #   #                       
+#  #    # #    # #    ## #      #  #    # #    # #   #  #                       
+#   ####   ####  #     # #     ###  ####   ####  #    # #####                   
+#
+###############################################################################
 # Find path to THIS file
 THIS_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 
-## Variable that points to SystemC-2.3 installation path
+## Variable that points to SystemC-2.3 installation path (or use environment variable)
+# SYSTEMC_HOME = /your/override/systemc
+# otherwise search in standard places
 ifndef SYSTEMC_HOME
   ifdef SYSTEMC
     SYSTEMC_HOME := ${SYSTEMC}
@@ -16,12 +29,12 @@ ifndef SYSTEMC_HOME
     SYSTEMC_HOME := $(firstword $(wildcard $(addsuffix apps/systemc,${HOME}/.local/ ${HOME}/ /)))
   endif
 endif
+$(info INFO: Using SYSTEMC_HOME = ${SYSTEMC_HOME})
 ifeq "$(words $(wildcard ${SYSTEMC_HOME}/include))" "0"
-  $(info Using SYSTEMC_HOME = ${SYSTEMC_HOME})
   $(error SYSTEMC_HOME does not refer to a valid directory!)
 endif
 ifndef MODULE
-  $(warning Makefile should specify MODULE - using 'run')
+  $(warning Makefile should specify MODULE. Defaulting to use 'run')
   MODULE := run
 endif
 
@@ -45,7 +58,9 @@ CFLAGS := --pedantic -Wall -Wextra -Wno-unused-parameter
 CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
 CFLAGS += ${DEBUG} ${OPT} ${EXTRACFLAGS}
 
+#-------------------------------------------------------------------------------
 # For autotools installations
+#-------------------------------------------------------------------------------
 TARGET_ARCH=linux64
 -include $(dir THIS_MAKEFILE)/Makefile.arch
 
@@ -55,7 +70,6 @@ LIBDIRS := $(wildcard ${SYSTEMC_HOME}/lib ${SYSTEMC_HOME}/lib-${TARGET_ARCH})
 ifeq "$(words ${LIBDIRS})" "1"
   LIBDIR  := $(firstword ${LIBDIRS})
 else
-  $(info Using SYSTEMC_HOME = ${SYSTEMC_HOME})
   $(error Unable to determine systemc library directory - possibly bad SYSTEMC_HOME reference or SystemC installation.)
 endif
 
@@ -66,16 +80,41 @@ LIBS   :=  -lstdc++ -lm ${EXTRA_LIBS} -lsystemc
 
 EXE    := ${MODULE}.x
 
-.PHONY: all run clean 
+###############################################################################
+#
+#  #####  #    # #     #####  ####                                              
+#  #    # #    # #     #     #    #                                             
+#  #    # #    # #     #     #                                                  
+#  #####  #    # #     #####  ####                                              
+#  #  #   #    # #     #          #                                             
+#  #   #  #    # #     #     #    #                                             
+#  #    #  ####  ##### #####  ####                                              
+#
+###############################################################################
+.DEFAULT_GOAL := all
+.PHONY: all compile link build run clean
 
 all: run
+compile: ${OBJS}
+link: ${EXE}
 
+#-------------------------------------------------------------------------------
+# Use cmake
+#-------------------------------------------------------------------------------
+build:
+	mkdir -p build; cd build; cmake ..; make
+#-------------------------------------------------------------------------------
+# Link
+#-------------------------------------------------------------------------------
 ${EXE}: ${OBJS}
 ifdef VERBOSE
 	@echo "# Linking $?"
 endif
 	${CXX} ${CFLAGS} ${INCOPTS} ${LIBOPTS} -o $@ ${OBJS} ${LIBS} 2>&1 | c++filt
 
+#-------------------------------------------------------------------------------
+# Compile C++
+#-------------------------------------------------------------------------------
 ## based on http://www.paulandlesley.org/gmake/autodep.html
 %.o : %.cpp
 ifdef VERBOSE
@@ -87,6 +126,9 @@ endif
 	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 	rm -f $*.d
 
+#-------------------------------------------------------------------------------
+# Compile C
+#-------------------------------------------------------------------------------
 %.o : %.c
 ifdef VERBOSE
 	@echo "# Compiling C $<"
@@ -97,6 +139,9 @@ endif
 	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 	rm -f $*.d
 
+#-------------------------------------------------------------------------------
+# Execute
+#-------------------------------------------------------------------------------
 run: ${EXE}
 
 ifdef VERBOSE
@@ -104,10 +149,13 @@ ifdef VERBOSE
 endif
 	time env LD_LIBRARY_PATH=${LIBDIR}:$$LD_LIBRARY_PATH ./${EXE}
 
+#-------------------------------------------------------------------------------
+# Clean up
+#-------------------------------------------------------------------------------
 clean:
 	-rm -f ${OBJS} *~ ${EXE} *.vcd *.wif *.isdb *.dmp *.P *.log
 
-#help:
+#help: not yet implemented
 
 
 -include $(SRCS:.cpp=.P)
