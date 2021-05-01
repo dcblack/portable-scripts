@@ -36,7 +36,8 @@ function GetBuildOpts() {
   while [[ $# != 0 ]]; do
     case "$1" in
     -h|-help)
-      perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' "$0";
+      HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }'
+      perl -ne "${HELPSCRIPT}" "$0";
       exit 0
       ;;
     --cc=*|CC=*)
@@ -88,8 +89,14 @@ function GetBuildOpts() {
       else
         Die "Need directory argument for $1"
       fi
-      shift;
       export APPS
+      shift
+      ;;
+    --home)
+      APPS="${HOME}"
+      SRC="${HOME}/src"
+      export APPS SRC
+      shift
       ;;
     -s|--src=*)
       if [[ "$1" != '-s' ]]; then
@@ -101,7 +108,7 @@ function GetBuildOpts() {
         Die "Need directory argument for $1"
       fi
       export SRC
-      shift;
+      shift
       ;;
     --std=*|-std=*)
       CMAKE_CXX_STANDARD="${1//*=}"
@@ -150,15 +157,16 @@ function GetBuildOpts() {
   Info "Setup source directory"
   if [[ "${SRC}" != '' && -d "${SRC}" ]]; then
     echo "Using SRC=${SRC}"
-  fi
-  if [[ "${APPS}" == '/apps' ]]; then
-    SRC="${APPS}/src"
-  elif [[ "${APPS}" != '' ]]; then
-    SRC="$(dirname "${APPS}")/src"
-  elif [[ "${HOME}" == "$(pwd)" ]]; then
-    SRC="${HOME}/.local/src"
   else
-    SRC="$(pwd)/src"
+    if [[ "${APPS}" == '/apps' ]]; then
+      SRC="${APPS}/src"
+    elif [[ "${APPS}" != '' ]]; then
+      SRC="$(dirname "${APPS}")/src"
+    elif [[ "${HOME}" == "$(pwd)" ]]; then
+      SRC="${HOME}/.local/src"
+    else
+      SRC="$(pwd)/src"
+    fi
   fi
   mkdir -p "${SRC}" || Die "Failed to find/create ${SRC} directory"
 
