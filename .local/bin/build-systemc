@@ -49,7 +49,7 @@ GetBuildOpts "$0" "$@"
 # Environment variables - MODIFY TO SUITE YOUR NEEDS
 SYSTEMC_HOME="${APPS}/systemc" # <----- THIS IS WHERE INSTALLED VERSION GOES
 CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
-BUILD=build-"$(basename "${CC}")"
+BUILD=build-cmake-"$(basename "${CC}")"
 
 export SYSTEMC_HOME
 export CMAKE_INSTALL_PREFIX CMAKE_CXX_STANDARD
@@ -79,8 +79,9 @@ else
 fi
 
 Info "Compiling SystemC"
-mkdir build || Die "Unable to create build directory"
-cd build || Die "Unable to enter build directory"
+rm -fr "${BUILD}"
+mkdir "${BUILD}" || Die "Unable to create build directory"
+cd "${BUILD}" || Die "Unable to enter ${BUILD} directory"
 cmake ..
 
 # Establish preferences
