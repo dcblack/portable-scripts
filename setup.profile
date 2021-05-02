@@ -6,7 +6,9 @@ APPS="${LOCAL}/apps"
 DOTBIN="${LOCAL}/bin"
 APPSBIN="${LOCAL}/apps/bin"
 TEMPLATEPATH="${HOME}/templates"
-export LOCAL APPS DOTBIN APPSBIN TEMPLATEPATH
+CC="gcc"
+CXX="g++"
+export LOCAL APPS DOTBIN APPSBIN TEMPLATEPATH CC CXX
 
 # shellcheck disable=SC2164
 pushd "${HOME}"
