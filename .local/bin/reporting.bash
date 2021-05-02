@@ -15,11 +15,11 @@ function Require() { # FILE(S) to source
   if [[ $# != 1 ]]; then
     echo "Fatal: Require only allows one argument" 1>&2; exit 1
   fi
-  BINDIR="$(dirname "$0")"
+  BINDIR="$(realpath "$(dirname "$0")"/../bin)"
   SCPT="$1"; shift
   REQD="${BINDIR}/${SCPT}"
   if [[ -f "${REQD}" ]]; then
-    # shellcheck disable=SC1093
+    # shellcheck disable=SC1091
     source "${REQD}"
   else
     echo "Fatal: Missing ${REQD}" 1>&2; exit 1
@@ -67,6 +67,30 @@ function Colors() {
   fi
 }
 Colors on
+function Logfile() {
+  local APPEND
+  APPEND=0
+  if [[ "$1" =~ ^-{1,2}a(ppend)?$ ]]; then
+    APPEND=1
+    shift
+  fi
+  if [[ $# -gt 0 && -z "${LOGFILE}" ]]; then
+    if [[ "${LOGFILE}" =~ ^/ ]]; then
+      LOGFILE=""
+    else
+      LOGFILE="${LOGDIR}/"
+    fi
+    LOGFILE="${LOGFILE}${1//.log/}.log"
+    export LOGFILE
+  fi
+  if [[ -z "${LOGFILE}" ]]; then
+    echo "Error: Must specify a valid logfile name" 1>&2
+    exit 1
+  fi
+  test "${APPEND}" -eq 0 && rm -f "${LOGFILE}"
+  printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
+  printf "Logging to %s\n" "${LOGFILE}"
+}
 
 function Log() {
   local OPT
@@ -178,19 +202,18 @@ function Summary() {
   if [[ $# != 0 ]]; then Echo "$*"; fi
 }
 
+LOGDIR="${HOME}/logs"
+mkdir -p "${LOGDIR}"
+export LOGDIR
 case $# in
   1)
-    LOGFILE="$(pwd)/$(basename "$1").log"
-    rm -f "${LOGFILE}"
-    printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
-    printf "Logging to %s\n" "${LOGFILE}"
+    Logfile "$(basename "$1")"
     ;;
   0)
     if [[ -z "${LOGFILE}" ]]; then
       echo "${CRED}Warning:${NONE} Did not specify LOGFILE${NONE}"
     else
-      printf "\n# Logfile for %s on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
-      printf "Logging to %s\n" "${LOGFILE}"
+      Logfile
     fi
     ;;
   *)
