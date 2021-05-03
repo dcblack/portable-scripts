@@ -110,7 +110,7 @@ function Git_setup() {
   fi
 
   for COURSE in syscfund tlm-2; do
-    if [[ -d "${HOME}/${COURSE}" ]]; then
+    if [[ -d "${HOME}/${COURSE}" && ! -d "${HOME}/${COURSE}/.git" ]]; then
       cd "${HOME}/${COURSE}" || Die "Unable to change into ${HOME}/${COURSE}"
       git init .
       git add .
