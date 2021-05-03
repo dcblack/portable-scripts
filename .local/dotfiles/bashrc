@@ -7,14 +7,15 @@ fi
 
 # User specific aliases and functions
 
-export script
-for script in bash_debug bash_env bash_aliases bash_functions bash_paths; do
-  if [[ -x "${HOME}/${SCRIPT}" ]]; then
-    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${HOME}/${SCRIPT}"; fi
-    source "${HOME}/${SCRIPT}"
+export SCRIPT_NAME SCRIPT_PATH
+for SCRIPT_NAME in bash_debug bash_env bash_aliases bash_functions bash_paths; do
+  SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
+  if [[ -x "${SCRIPT_PATH}" ]]; then
+    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    source "${SCRIPT_PATH}"
   fi
 done
-unset script
+unset SCRIPT_NAME SCRIPT_PATH
 
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
