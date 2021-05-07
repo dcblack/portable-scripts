@@ -1,4 +1,13 @@
 #!/bin/bash
+#
+# This script does the following:
+# 1. Sets up environment variables for use with the portable-scripts collection.
+# 2. Clones the portable-scripts if they are not present in the $HOME directory.
+# 3. Updates the portable-scripts
+# 4. Inserts a symbolic link $HOME/.local referencing portable-scripts/.local
+# 5. Adjusts PATH and TEMPLATEPATH appropriately.
+#
+# WARNING: This will create portable-scripts/ in your $HOME directory.
 
 # Where to install
 LOCAL="${HOME}/.local"
@@ -12,6 +21,8 @@ export LOCAL APPS DOTBIN APPSBIN TEMPLATEPATH CC CXX
 
 # shellcheck disable=SC2164
 pushd "${HOME}"
+
+# Get portable-scripts if necessary
 if [[ -d portable-scripts ]]; then
   # shellcheck disable=SC2164
   pushd portable-scripts
@@ -28,6 +39,7 @@ else
 fi
 
 function unique_path() {
+  # DESCR: Removes duplicate paths in specified variable
   # USAGE: unique_path VAR
   local PERL_SCRIPT
   PERL_SCRIPT='
@@ -56,4 +68,4 @@ unique_path TEMPLATEPATH
 # shellcheck disable=SC2164
 popd
 
-#vim:nospell
+# vim:nospell
