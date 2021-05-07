@@ -40,8 +40,8 @@ DEBUG=0
 NPROC=4 # Cores to use when building
 # Following for the non-git approach where you need to specify the version
 MAJVERS=3
-MINVERS=19
-DOTVERS=7
+MINVERS=20
+DOTVERS=1
 if [[ "${TYPE}" == "" ]]; then
   TYPE=-wget # use -git or -wget or -curl
 fi
