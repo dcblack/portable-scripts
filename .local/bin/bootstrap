@@ -1,3 +1,6 @@
 #!/bin/bash -x
+#
+# Use this to setup autotools
+
 mkdir -p m4
 exec autoreconf --install "$@"
