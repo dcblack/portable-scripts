@@ -22,7 +22,7 @@ function dotfile() {
       echo "${f}"; return
     fi
   done
-  echo "Unable to located ${f}" 1>&2
+  echo "Unable to locate ${f}" 1>&2
   ABORT
 }
 alias vial='"${VI}"    -f "$(dotfile bash_aliases)";   source "$(dotfile bash_aliases)"'
