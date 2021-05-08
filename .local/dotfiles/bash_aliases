@@ -15,14 +15,24 @@ alias m='less'
 alias cls='clear'
 alias vivado-setup='source "${APPS}"/xilinx/2020.1/Vivado/2020.1/settings64.sh'
 export VI='vim'
-alias vial='"${VI}" -f "${HOME}"/.bash_aliases; . "${HOME}"/.bash_aliases'
-alias vibash='"${VI}" -f "${HOME}"/.bashrc; . "${HOME}"/.bashrc'
-alias vienv='"${VI}" -f "${HOME}"/.bashenv; . "${HOME}"/.bashenv'
-alias vifuncs='"${VI}" -f "${HOME}"/.bash_functions; . "${HOME}"/.bash_functions'
-alias .alias='. "${HOME}"/.bash_aliases'
-alias .bash='. "${HOME}"/.bashrc'
-alias .env='. "${HOME}"/.bashenv'
-alias .funcs='. "${HOME}"/.bash_functions'
+function dotfile() {
+  local f
+  for f in "${HOME}/.$1" "${HOME}/.local/dotfiles/$1"; do
+    if [[ -f "${f}" ]]; then
+      echo "${f}"; return
+    fi
+  done
+  echo "Unable to located ${f}" 1>&2
+  ABORT
+}
+alias vial='"${VI}"    -f "$(dotfile bash_aliases)";   source "$(dotfile bash_aliases)"'
+alias vibash='"${VI}"  -f "$(dotfile bashrc)";         source "$(dotfile bashrc)"'
+alias vienv='"${VI}"   -f "$(dotfile bashenv)";        source "$(dotfile bashenv)"'
+alias vifuncs='"${VI}" -f "$(dotfile bash_functions)"; source "${HOME}"/.bash_functions'
+alias .alias='source "$(dotfile bash_aliases)"'
+alias .bash='source  "$(dotfile bashrc)"'
+alias .env='source   "$(dotfile bashenv)"'
+alias .funcs='source "$(dotfile bash_functions)"'
 alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
 alias funcs='declare -F|perl -pe "s/declare -f//;"|fmt'
 alias tcpip='ifconfig | grep -i mask'
