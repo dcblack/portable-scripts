@@ -93,7 +93,7 @@ function Git_setup() {
     git config --global push.followTags true
     git config --global color.pager true
     git config --global color.ui auto
-    git config --global core.pager "less -FRSZ"
+    git config --global core.pager "less -FRSX"
     git config --global push.default current
 
     # Useful aliases
