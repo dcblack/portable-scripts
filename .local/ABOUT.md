@@ -1,11 +1,11 @@
-
-
 The portable-scripts collection
-================
+===============================
 
 Scripts used to setup a familiar environment on new Linux hosts and build favorite tools. These should be useful to Doulos instructors. These should work on any Ubuntu installation including AWS, CoCalc and Docker. They are designed to work when you do not have `sudo` or `root` privileges.
 
 It may not be obvious, but most of the utility is under a directory called `.local`. The intent is that you might locate it under `$HOME` or perhaps more profitably, create a symbolic link to it from `$HOME`.
+
+WARNING: If symbolic links are employed, take care to avoid renaming or moving the location of this directory, lest you destroy critical functionality (e.g., .bashrc).
 
 ```sh
 if [[ "$(basename $(pwd))" == "portable-scripts" ]]; then
