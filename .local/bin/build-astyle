@@ -1,0 +1,183 @@
+#!/bin/bash
+#
+# Install the latest or specified version of astyle
+
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#|  $0 - build and install astyle from source
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [-clean] [-debug] [-wget|-curl] [-install=DIR] [-src=SRCDIR]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#|  Downloads, unpacks, builds and installs the latest or specified version of astyle.
+#|
+
+#-------------------------------------------------------------------------------
+# Make things more visible in the output
+
+REPORTING_BASH="$(dirname "$0")/reporting.bash"
+if [[ -f "${REPORTING_BASH}" ]]; then
+  # shellcheck source reporting.bash
+  source "${REPORTING_BASH}" "$0"
+else
+  echo "Error: Missing ${REPORTING_BASH}" 1>&2; exit 1
+fi
+
+# Defaults
+#-------------------------------------------------------------------------------
+TOOL="astyle"
+CLEAN=0
+DEBUG=0
+NPROC=4 # Cores to use when building
+# Following for the non-git approach where you need to specify the version
+MAJVERS=3
+MINVERS=1
+DOTVERS=0
+if [[ "${TYPE}" == "" ]]; then
+  TYPE=-wget # use -wget or -curl
+fi
+
+#-------------------------------------------------------------------------------
+# Scan command-line for options
+#-------------------------------------------------------------------------------
+while [[ $# != 0 ]]; do
+  case "$1" in
+  -h|-help)
+    perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' "$0";
+    exit 0;
+    ;;
+  -wget|-curl)
+    TYPE="$1";
+    shift;
+    ;;
+  -d|-debug|--debug)
+    DEBUG=1;
+    shift;
+    ;;
+  --clean|-clean)
+    CLEAN=1;
+    shift;
+    ;;
+  -i|--install=*)
+    if [[ "$1" != '-i' ]]; then
+      CMAKE_INSTALL_PREFIX="${1//*=/}"
+    elif [[ $# -gt 1 && -d "$2" ]]; then
+      CMAKE_INSTALL_PREFIX="$2"
+      shift
+    else
+      Die "Need directory argument for --install"
+    fi
+    shift;
+    ;;
+  -s|--src=*)
+    if [[ "$1" != '-s' ]]; then
+      SRC="${1//*=/}"
+    elif [[ $# -gt 1 && -d "$2" ]]; then
+      SRC="$2"
+      shift
+    else
+      Die "Need directory argument for --src"
+    fi
+    shift;
+    ;;
+  *)
+    Die "ERROR: Unkhown option $1";
+    ;;
+  esac
+done
+
+if [[ "${DEBUG}" == 1 ]]; then
+  echo "DEBUG=${DEBUG}"
+  echo "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
+  echo "MAJVERS=${MAJVERS}"
+  echo "MINVERS=${MINVERS}"
+  echo "DOTVERS=${DOTVERS}"
+  echo "NPROC=${NPROC}"
+fi
+
+#-------------------------------------------------------------------------------
+Info "Setup source directory"
+if [[ -n ${SRC} && -d "${SRC}" ]]; then
+  echo "Using SRC=${SRC}"
+fi
+if [[ -v APPS ]]; then
+  SRC="${APPS}/src"
+elif [[ "${HOME}" == "$(pwd)" ]]; then
+  SRC="${HOME}/.local/src"
+else
+  SRC="$(pwd)/src"
+fi
+mkdir -p "${SRC}" || Die "Failed to find/create ${SRC} directory"
+
+#-------------------------------------------------------------------------------
+# Determine installation directory
+if [[ ! -v CMAKE_INSTALL_PREFIX ]]; then
+  CMAKE_INSTALL_PREFIX="$(dirname "${SRC}")"
+fi
+export CMAKE_INSTALL_PREFIX
+
+cd "${SRC}" || Die "Unable to enter ${SRC}"
+test "${CLEAN}" == 1 && rm -fr "${TOOL}*"
+
+
+###############################################################################
+#
+#  #     #                     |     ####                               
+#  #  #  #               #     |    #    #               ##             
+#  #  #  #  ###          #     |    #                     #             
+#  #  #  # #   #  ###   ###    |    #      #    # # ###   #             
+#  #  #  #  #### #####   #     |    #      #    # ##      #             
+#  #  #  #     # #       # #   |    #    # #    # #       #             
+#   ## ##   ###   ###     #    |     ####   ##### #      ###            
+#
+###############################################################################
+FULL_VERS=${MAJVERS}.${MINVERS}
+ASTYLE_TARBALL="astyle_${FULL_VERS}_linux.tar.gz"
+URL="https://sourceforge.net/projects/astyle/files/astyle/astyle%20${FULL_VERS}/astyle_${FULL_VERS}_linux.tar.gz/download"
+echo "Fetching ${TOOL}"
+if [[ "${TYPE}" == "-wget" ]]; then
+  echo "% wget ${URL}"
+  wget "${URL}" || Die "Failed to download ${TOOL} from ${URL}"
+else
+  echo "% curl -output ${ASTYLE_TARBALL} ${URL}"
+  curl -output "${ASTYLE_TARBALL}" "${URL}" || Die "Failed to download ${TOOL} from ${URL}"
+fi
+echo "Expanding ${TOOL} tarball"
+echo "% tar zxvf ${ASTYLE_TARBALL}"
+tar zxvf "${ASTYLE_TARBALL}" || Die "Failed to extract ${ASTYLE_TARBALL}"
+echo "% cd ${TOOL}"
+cd "${TOOL}" || Die "Unable to enter source directory"
+
+Info "Building ${TOOL}"
+BUILD_DIR="${TOOL}-build"
+mkdir "${BUILD_DIR}" || Die "Unable to create ${BUILD_DIR} directory"
+cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR} directory"
+cmake ..
+make
+
+Info "Installing ${TOOL}"
+echo "% make install"
+mv "${TOOL}" "${CMAKE_INSTALL_PREFIX}/bin/"
+
+cd "${SRC}" || Die "Unable to enter source directory"
+if [[ "${CLEAN}" == 1 ]]; then
+  Info "Clean up"
+  rm -fr "${TOOL}"*
+fi
+
+cd || Die "Unable to return to home"
+"${TOOL}" --version
+
+Info "Finished installing ${TOOL}"
+
+# vim:nospell
