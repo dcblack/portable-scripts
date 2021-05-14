@@ -12,6 +12,10 @@ function lx() { # Display last N files (default 30) sorted by modification time
   /bin/ls -lt "$@" | head $N
 }
 
+function lns() { # Display symbolic links
+  ls -lA "$@" | grep -- '->'
+}
+
 function h() { # Display most recent N history lines
   local N=-20
   if [[ "$1" =~ ^-[0-9]+ ]]; then
