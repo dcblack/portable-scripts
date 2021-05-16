@@ -1,12 +1,41 @@
 #!/bin/sh
+#
+#-------------------------------------------------------------------------------
+# Documentation
+#-------------------------------------------------------------------------------
+cat <<'EOD' >/dev/null
+
+There's more than aliases there and invoke some other files under $HOME/.local/dotfiles:
+
+1. bash_debug -- if executable
+2. bash_env -- sets environment variables
+3. -- body of aliases happens after the above
+4. bash_functions -- sets environment variables
+5. bash_paths -- sets environment variables
+
+EOD
+#-------------------------------------------------------------------------------
 
 if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
   export ALIAS_SCRIPT
   ALIAS_SCRIPT="${script}"
 fi
-# enable color support of ls and also add handy aliases
-test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
 
+export SCRIPT_NAME SCRIPT_PATH
+for SCRIPT_NAME in bash_debug bash_env; do
+  SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
+  if [[ -x "${SCRIPT_PATH}" ]]; then
+    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    source "${SCRIPT_PATH}"
+  fi
+done
+
+# enable color support of ls and also add handy aliases
+if [[ -r ~/.dircolors ]]; then
+  eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+fi
+
+#-------------------------------------------------------------------------------
 alias ls='ls -BCF --color=always'
 alias la='ls -A'
 alias ll='ls -l'
@@ -45,3 +74,12 @@ alias egrep='egrep --color=auto'
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
+#-------------------------------------------------------------------------------
+for SCRIPT_NAME in bash_functions bash_paths; do
+  SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
+  if [[ -x "${SCRIPT_PATH}" ]]; then
+    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    source "${SCRIPT_PATH}"
+  fi
+done
+unset SCRIPT_NAME SCRIPT_PATH
