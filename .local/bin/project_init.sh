@@ -3,10 +3,8 @@
 function project_init() {
   local TIMESTAMP="$(date +%y%m%d-%H%M%S)"
   local VERBOSE=0
-  if [[ "$1" == "-v" ]]; then
-    VERBOSE=1
-  fi
-  if [[ $VERBOSE == 1 ]]; echo "Host: $(hostname)"; fi
+  if [[ "$1" == "-v" ]]; then VERBOSE=1 fi
+  if [[ $VERBOSE == 1 ]]; then echo "Host: $(hostname)"; fi
   for DOTFILE in bash_aliases vim vimrc; do
     if [[ -h "${HOME}/.${DOTFILE}" ]]; then
       if [[ $VERBOSE == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place"; fi
