@@ -1,6 +1,56 @@
 #!/bin/bash
 #
 # Establishes options for building
+#
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#|  $0 - helper script for build scripts
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -devhelp
+#|  Require $0
+#|  GetBuildOpts() "${0}" "$@"
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#|  Downloads, unpacks, builds and installs the latest or specified version of fmtlib.
+#|
+#|PARSED COMMAND-LINE OPTIONS
+#|---------------------------
+#|
+#|  Option             |  Alternative      | Description
+#|  ------             |  ------------     | -----------
+#|  --cc=C_COMPILER    |  CC=C_COMPILER    | chooses C compiler executable
+#|  --clang            |                   | quick --cc=clang --cxx=clang++
+#|  --cxx=CPP_COMPILER |  CXX=CPP_COMPILER | chooses C++ compiler executable
+#|  --debug            |                   | developer use
+#|  --default          |                   | quick -i=$HOME/.local -src=$HOME/.local/src
+#|  --gcc              |                   | quick --cc=gcc --cxx=g++
+#|  --home             |                   | quick -i $HOME -s $HOME/src
+#|  --install=DIR      |  -i DIR           | choose installation directory
+#|  --src=DIR          |  -s DIR           | choose source directory
+#|  --std=N            |  -std=N           | set make C++ compiler version where N={98,11,14,17,20,...}
+#|  --suffix=TEXT      |  -suf TEXT        | set suffix for installation name
+#|
+#|OUTPUTS
+#|-------
+#|
+#| The following environment variables are used by scripts
+#|
+#| - $SRC
+#| - $APPS
+#| - $CMAKE_CXX_STANDARD
+#| - $CC
+#| - $CXX
+#| - $DEBUG
+#| - $SUFFIX
 
 function GetBuildOpts() {
 
@@ -24,20 +74,21 @@ function GetBuildOpts() {
       Die "Unable to determine C++ compiler"
     fi
   fi
-  if [[ "${GIT_URL}" == '' ]]; then
-    GIT_URL="https://github.com/accellera-official/systemc.git"
-  fi
 
   #-------------------------------------------------------------------------------
   # Scan command-line for options
   #-------------------------------------------------------------------------------
   declare -a ARGV # Holds left-overs
   export ARGV
+  HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }'
   while [[ $# != 0 ]]; do
     case "$1" in
-    -h|-help)
-      HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }'
+    -devhelp)
       perl -ne "${HELPSCRIPT}" "$0";
+      exit 0
+      ;;
+    -h|-help)
+      perl -ne "${HELPSCRIPT}" "$1";
       exit 0
       ;;
     --cc=*|CC=*)
@@ -74,6 +125,12 @@ function GetBuildOpts() {
       DEBUG=1;
       export DEBUG
       shift;
+      ;;
+    --default)
+      APPS="${HOME}.local/apps"
+      SRC="${HOME}/.local/src"
+      export APPS SRC
+      shift
       ;;
     --gcc)
       CC=gcc
@@ -116,7 +173,7 @@ function GetBuildOpts() {
       ;;
     --suffix=*|-suf)
       export SUFFIX
-      if [[ "$1" != '-pf' ]]; then
+      if [[ "$1" != '-suf' ]]; then
         SUFFIX="${1//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         SUFFIX="$2"
