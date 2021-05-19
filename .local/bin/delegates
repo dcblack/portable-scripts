@@ -1,0 +1,90 @@
+#!perl
+
+require v5.6;
+use strict;
+use English;
+use JSON;
+use FindBin qw($RealBin $RealScript);
+use FileHandle;
+use Cwd;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+my %OPT;
+while( $ARGV[0] =~ m/^-/ ) {
+  my $opt = shift @ARGV;
+  if( $opt =~ m/=/ ) {
+    $OPT{$`} = $';
+  } else {
+    $OPT{$opt}=1;
+  }#endif
+}
+
+if( scalar(@ARGV) == 0 ) {
+  printf "Syntax: $0 [-ssh|-who=PATT] COURSEFILE(S)...\n";
+  exit 1;
+}
+
+if( exists $OPT{-ssh} ) {
+  my $date = `date`;
+  print << "EOT";
+# ssh config file (place under $ENV{HOME}/.ssh/ as 'config')
+# created on $date
+
+Host localhost
+    HostKeyAlias myself
+
+EOT
+  }
+
+for my $course_file ( @ARGV ) {
+  if( $course_file !~ m/[.]course$/ ) {
+    printf STDERR "Error: file $course_file does not end with .course -- ignored\n";
+    next;
+  }
+  printf "#{ %s\n\n", $course_file if exists $OPT{-ssh};
+  open COURSE,'<',$course_file;
+  my $idx = 0;
+  while(<COURSE>) {
+    my $course_json = decode_json($_);
+    next unless defined $course_json->{"email_address"};
+    ++$idx;
+    my $email = $course_json->{"email_address"};
+    my $user  = $course_json->{"project_id"};
+    $user =~ s/-//g;
+    if( exists $OPT{-ssh} ) {
+      printf "# %s\n", $email;
+      printf "Host delegate%d\n", $idx;
+      printf "    User   %s\n", $user;
+      printf "    Hostname ssh.cocalc.com\n";
+      printf "\n";
+    } elsif( exists $OPT{-who} ) {
+      my $who = $OPT{-who};
+      next unless $email =~ m/$who/;
+      printf "ssh %s\@ssh.cocalc.com ;# %d %s\n", $user, $idx, $email;
+    } else {
+      printf "%d %s %s\@ssh.cocalc.com\n", $idx, $email, $user;
+    }
+  }#endwhile
+  printf "#}\n" if exists $OPT{-ssh};
+  close COURSE;
+
+}#endfor
+
+if( exists $OPT{-ssh} ) {
+print << "EOT";
+
+# Site-wide defaults for various options
+Host *
+    PubkeyAcceptedKeyTypes=+ssh-dss
+    Ciphers aes128-ctr,aes192-ctr,aes256-ctr
+    ForwardX11 yes
+    ForwardX11Trusted yes
+    ForwardAgent yes
+    ServerAliveCountMax 10
+    ServerAliveInterval 45
+    SendEnv SSHUSER_*
+EOT
+}
+
+exit 0;
