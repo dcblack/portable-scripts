@@ -8,22 +8,26 @@ function project_init() {
   if [[ ${VERBOSE} == 1 ]]; then echo "Host: $(hostname)"; fi
   
   # Add symbolic links to select "dot" files
-  for DOTFILE in bash_aliases vim vimrc; do
-    if [[ -h "${HOME}/.${DOTFILE}" ]]; then
-      if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place"; fi
-      continue;
-    elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
-      if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place"; fi
-      continue;
-    elif [[ -f "${HOME}/.${DOTFILE}" ]]; then
-      bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
+  for DOTFILE in bash_aliases vim vimrc lessfilter; do
+    if [[ -r "${HOME}/.local/dotfiles/${DOTFILE}" ]]; then
+      if [[ -h "${HOME}/.${DOTFILE}" ]]; then
+        if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place"; fi
+        continue;
+      elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
+        if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place"; fi
+        continue;
+      elif [[ -f "${HOME}/.${DOTFILE}" ]]; then
+        bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
+      fi
+      bash -v -c "ln -s '${HOME}/.local/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
+    else
+      echo "Missing ${HOME}/.local/dotfiles/${DOTFILE}" 1>&2
     fi
-    bash -v -c "ln -s '${HOME}/.local/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
   done
   
   # Make sure `ag` (aka silver-searcher) doesn't search .snapshots
   AGIGNORE="${HOME}/.agignore"
-  for IGNORED in .snapshots; do
+  for IGNORED in .snapshots .hide; do
     if [[ -r "${AGIGNORE}" ]]; then
       grep -sqF "${IGNORED}" "${AGIGNORE}" \
       || echo "${IGNORED}" >> "${AGIGNORE}"
