@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+case "$1" in
+    *[Mm]akefile*)
+        pygmentize -f 256 -l make "$1";;
+
+    CMakeLists.txt)
+        pygmentize -f 256 -l cmake "$1";;
+
+    *.awk|*.bash|*.csh|*.groff|*.java|*.js|*.m4|*.php|*.pl|*.pm|*.pod|*.sh|\
+    *.ad[asb]|*.asm|*.inc|*.[ch]|*.[ch]pp|*.[ch]xx|*.cc|*.cmake|*.hh|*.htm|*.html|\
+    *.lsp|*.l|*.mk|*.md|*.pas|*.p|*.xml|*.xps|*.xsl|*.axp|*.ppd|*.pov|\
+    *.diff|*.patch|*.py|*.rb|*.sql|*.ebuild|*.eclass|*.[sS]|*.yaml|*.yml|*.zsh)
+        pygmentize -f 256 "$1";;
+
+    .bashrc|.bash_aliases|.bash_environment|.bash_login|.bash_logout)
+        pygmentize -f 256 -l bash "$1";;
+
+    .cshrc|.csh_aliases|.csh_environment|.login|.csh_logout)
+        pygmentize -f 256 -l zsh "$1";;
+
+    .zshrc|.zsh_aliases|.zsh_environment|.zsh_login|.zsh_logout)
+        pygmentize -f 256 -l zsh "$1";;
+
+    *)
+        HASHBANG=$(perl -lane 's/ .*//;s{^[#][!](.*/)?}{};print;exit' "$1")
+        if [[ -s $HASHBANG ]]; then
+            pygmentize -f 256 -l $HASHBANG "$1"
+        elif grep -q "#\!/bin/bash" "$1" 2> /dev/null; then
+            pygmentize -f 256 -l bash "$1"
+        else
+            exit 1
+        fi
+esac
+
+exit 0
