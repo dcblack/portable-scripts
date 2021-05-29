@@ -1,8 +1,13 @@
 #!/bin/bash
+#
+# Enable this file by changing its permissions to executable.
+#
+# Warning: if BASH_QUIET is turned off, a number of things can break.
 
-export BASH_DEBUG=1
-export BASH_QUIET=1
-export BASH_LOG="${HOME}/bash_debug.log"
+BASH_DEBUG=1
+BASH_QUIET=1
+BASH_LOG="${HOME}/bash_debug.log"
+export BASH_DEBUG BASH_QUIET BASH_LOG
 function REPORT_DEBUG() {
   if [[ "${BASH_DEBUG}" != 1  ]]; then return; fi
   if [[ "${BASH_LOG}"   != "" ]]; then printf "DEBUG: %s\n" "$*" >>"${BASH_LOG}"; fi
