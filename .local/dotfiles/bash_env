@@ -2,7 +2,7 @@
 
 set -o vi
 
-export FAVS LOCAL APPS LESS CXX CC CMAKE_VERSION CMAKE_BUILD 
+export FAVS LOCAL APPS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR
 # Favorites
 FAVS="${HOME}"/Favorites
 mkdir -p "${FAVS}"
@@ -16,4 +16,4 @@ CMAKE_BUILD="7"
 # Change following if have and prefer clang
 CC="gcc"
 CXX="g++"
-
+EDITOR="vim"
