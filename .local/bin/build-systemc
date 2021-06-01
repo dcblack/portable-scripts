@@ -33,23 +33,28 @@
 #|  --std=N | -std=N
 #|
 
-SCRIPT="$(dirname "$0")/reporting.bash"
-if [[ -f "${SCRIPT}" ]]; then
-  # shellcheck source=reporting.bash
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
+
+SCRIPT="$(dirname $(Realpath "$0"))/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"
 else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
 fi
+SetupLogdir "$0"
 
-# shellcheck source=get-build-opts.bash
-Require get-build-opts.bash
 GetBuildOpts "$0" "$@"
 
 #-------------------------------------------------------------------------------
 # Environment variables - MODIFY TO SUITE YOUR NEEDS
+TARGET='systemc'
+GIT_URL="https://github.com/accellera-official/systemc.git"
 SYSTEMC_HOME="${APPS}/systemc" # <----- THIS IS WHERE INSTALLED VERSION GOES
-CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
 BUILD=build-cmake-"$(basename "${CC}")"
+CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
 
 export SYSTEMC_HOME
 export CMAKE_INSTALL_PREFIX CMAKE_CXX_STANDARD
