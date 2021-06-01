@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Run solutions
+
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
+SCRIPT="$(dirname "$(Realpath "$0")")/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash disable=SC1091
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+SetupLogdir "$0"
+
+cd "$(git rev-parse --show-toplevel)" || Die "Unable to find working path"
+
+LOGFILE="regress.log"
+if [[ $# != 0 ]]; then
+  LOGFILE="$(echo "$*"|sed -e 's+[-/_ ]+-+g').log"
+fi
+
+#-------------------------------------------------------------------------------
+function Clean_exercise() {
+  Info "Cleaning ${1}"
+  rm -fr "${1}"
+  git checkout "${1}";
+}
+
+function Do_exercise() {
+  echo ""
+  Ruler -blu "${1}"
+  Do rsync -av "${1}/" "${2}/";
+  make -C "${2}" clean run || echo "# FAILED ${1}";
+# make -C "${2}" stats;
+}
+
+#-------------------------------------------------------------------------------
+date "+Regression test %c %Z" | tee "${LOGFILE}"
+
+if [[ $# == 0 ]]; then
+  for f in ex?; do
+    Clean_exercise "${f}"
+  done
+else
+  for f in "$@"; do
+    Clean_exercise "${f//?part*}"
+  done
+fi
+
+if [[ $# == 0 ]]; then
+  (
+    for f in ex*; do
+      if [[ -d "answers/${f}/part1" ]]; then
+        # Exercises that have multiple parts
+        for p in "answers/${f}/part"*; do
+          Do_exercise "${p}" "${f}"
+        done
+      else
+        Do_exercise "answers/${f}" "${f}"
+      fi
+    done
+  ) 2>&1 | tee -a "${LOGFILE}"
+else
+  (
+    for f in "$@"; do
+      if [[ "${f}" =~ / ]]; then
+        p="${f}"
+        f="$(dirname "${f}")"
+        Do_exercise "answers/${p}" "${f}"
+      else
+        Do_exercise "answers/${f}" "${f}"
+      fi
+    done
+  ) 2>&1 | tee -a "${LOGFILE}"
+fi
+
+echo "" | tee -a "${LOGFILE}"
+echo "#- Summary ---------------------------------------------------------------------" | tee -a "${LOGFILE}"
+FAILURES="$(grep -c FAIL "${LOGFILE}")"
+if [[ ${FAILURES} == 0 ]]; then
+  echo "# Passed all tests" | tee -a "${LOGFILE}"
+else
+  grep FAILED "${LOGFILE}" | tee -a "${LOGFILE}"
+  echo "# Failed ${FAILURES} tests" | tee -a "${LOGFILE}"
+fi
+date "+# Completed %c %Z" | tee -a "${LOGFILE}"
+echo "#-------------------------------------------------------------------------------" | tee -a "${LOGFILE}"
+echo "Results in $(realpath "${LOGFILE}")"
