@@ -1,6 +1,32 @@
 #!/bin/bash
+#
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#| project_init.sh - executed on startup by CoCalc in $HOME directory.
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [OPTIONS...]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#| Set-up symbolic links for the portable scripts tools.
+#|
+#|OPTIONS
+#|-------
+#|
+#| -v verbose output
+#|
 
-function project_init() {
+# Wrap body in function to allow local variables
+function Project_init() {
   local TIMESTAMP VERBOSE
   TIMESTAMP="$(date +%y%m%d-%H%M%S)";
   VERBOSE=0;
@@ -37,4 +63,4 @@ function project_init() {
   done
 }
 
-project_init "$@"
+Project_init "$@"
