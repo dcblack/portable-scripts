@@ -35,7 +35,7 @@ function Project_init() {
 
   if [[ ! -d "${HOME}/.local" ]]; then
     if [[ -d "${HOME}/portable-scripts/.local" ]]; then
-      ln -s "${HOME}/portable-scripts/.local" "${HOME}/.local"
+      bash -v -c "ln -s ${HOME}/portable-scripts/.local ${HOME}/.local"
     else
       echo "Error: Unable to find portable-scripts/.local to link as ${HOME}/.local! Please link manually." 1>&2
       return
