@@ -37,21 +37,8 @@ function Project_init() {
     if [[ -d "${HOME}/portable-scripts/.local" ]]; then
       ln -s "${HOME}/portable-scripts/.local" "${HOME}/.local"
     else
-      local n
-      n=0
-      for f in $(find "${HOME}" -type f -path "*/.local/bin/project_init.sh"); do
-        let ++n
-        if [[ $n != 1 ]]; then continue; fi
-        local LOCAL
-        LOCAL="$(dirname "$(dirname "${f}")")"
-        ln -s "${LOCAL}" "${HOME}/.local"
-      done
-      if [[ $n -gt 1 ]]; then
-        echo "Warning: More than one match to portable-scripts/.local/bin" 1>&2
-      elif [[ $n == 0 ]]; then
-        echo "Warning: No match for portable-scripts/.local/bin" 1>&2
-        return
-      fi
+      echo "Error: Unable to find portable-scripts/.local to link as ${HOME}/.local! Please link manually." 1>&2
+      return
     fi
   fi
   
