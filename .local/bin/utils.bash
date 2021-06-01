@@ -82,7 +82,7 @@ function Colors() {
   export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
   if [[ ${USE_COLOR} -gt 0 ]]; then
     # shellcheck disable=SC2034
-    ESC="\033"
+    ESC=""
     BOLD="${ESC}[01m" NONE="${ESC}[00m"
     UNDR="${ESC}[04m" NONE="${ESC}[00m"
     CBLK="${ESC}[30m" NONE="${ESC}[00m"
@@ -149,6 +149,13 @@ function Echo() {
   Log  "${OPT}" "$*"
 }
 
+function Printf() {
+  # shellcheck disable=SC2059
+  printf "$@"
+  # shellcheck disable=SC2059
+  if [[ -f "${LOGFILE}" ]]; then printf "$@" >>"${LOGFILE}"; fi
+}
+
 function Do() {
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
@@ -171,7 +178,18 @@ function PassFail() { # Reports success or failure
 }
 
 function Info() {
-  Echo "${CGRN}Info: ${NONE}$*${NONE}"
+  local PRE
+  # Test for color prefix
+  case "$1" in
+    -pre) PRE="${2}"    ; shift; shift ;;
+    -cyn) PRE="${CCYN}" ; shift ;;
+    -red) PRE="${CRED}" ; shift ;;
+    -grn) PRE="${CGRN}" ; shift ;;
+    -ylw) PRE="${CYLW}" ; shift ;;
+    -blu) PRE="${CBLU}" ; shift ;;
+    *) PRE="${NONE}" ;;
+  esac
+  Echo "${CGRN}Info: ${PRE}$*${NONE}"
 }
 
 function Debug() {
@@ -179,21 +197,22 @@ function Debug() {
 }
 
 function Ruler() {
-  local ARGS SEP MAX LIN WID PRE
+  local ARGS SEP MAX LIN WID
   SEP="-" # Default
   MAX=80 # TODO: Change to match terminal width
+  local PRE
   PRE=""
   # Test for color prefix
   case "$1" in
-    -pre) PRE="${2}" shift; shift ;;
-    -cyn) PRE="${CCYN}" shift ;;
-    -red) PRE="${CRED}" shift ;;
-    -grn) PRE="${CGRN}" shift ;;
-    -ylw) PRE="${CYLW}" shift ;;
-    -blu) PRE="${CBLU}" shift ;;
+    -pre) PRE="${2}"    ; shift; shift ;;
+    -cyn) PRE="${CCYN}" ; shift ;;
+    -red) PRE="${CRED}" ; shift ;;
+    -grn) PRE="${CGRN}" ; shift ;;
+    -ylw) PRE="${CYLW}" ; shift ;;
+    -blu) PRE="${CBLU}" ; shift ;;
     *) PRE="" ;;
   esac
-  printf "%s" "${PRE}"
+  Printf "%s" "${PRE}"
   # Grab separator
   if [[ $# -gt 0 && "${#1}" == 1 ]]; then
     SEP="$1"
@@ -206,9 +225,9 @@ function Ruler() {
   fi
   LIN="$(/usr/bin/perl -le 'my ($w,$s)=@ARGV;printf(qq{%${w}.${w}s},${s}x${w})' "${MAX}" "${SEP}")"
   if [[ $# == 0 ]]; then
-    printf "%s%s\n" "${LIN}" "${NONE}"
+    Printf "%s%s\n" "${LIN}" "${NONE}"
   else
-    printf "%s%s %s %s%s\n" "${SEP}" "${SEP}" "${ARGS}" "${LIN}" "${NONE}"
+    Printf "%s%s %s %s%s\n" "${SEP}" "${SEP}" "${ARGS}" "${LIN}" "${NONE}"
   fi
 }
 
@@ -465,7 +484,7 @@ function GetBuildOpts() {
     Debug "APPS='${APPS}' SRC='${SRC}' SUFFIX='${SUFFIX}'"
     Debug "CC='${CC}' CXX='${CXX}'"
     Debug "CMAKE_CXX_STANDARD='${CMAKE_CXX_STANDARD}'"
-    for i in {0..${#ARGV[@]}}; do
+    for (( i=0; i<${#ARGV[@]}; ++i )); do
       Debug "ARGV[${i}]='${ARGV[${i}]}'"
     done
   fi
