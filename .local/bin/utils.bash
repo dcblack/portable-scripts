@@ -82,17 +82,18 @@ function Colors() {
   export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
   if [[ ${USE_COLOR} -gt 0 ]]; then
     # shellcheck disable=SC2034
-    BOLD="[01m" NONE="[00m"
-    UNDR="[04m" NONE="[00m"
-    CBLK="[30m" NONE="[00m"
-    CRED="[31m" NONE="[00m"
-    CGRN="[32m" NONE="[00m"
-    CYLW="[33m" NONE="[00m"
-    CBLU="[34m" NONE="[00m"
-    CMAG="[35m" NONE="[00m"
-    CCYN="[36m" NONE="[00m"
-    CWHT="[37m" NONE="[00m"
-    CRED="[31m" NONE="[00m"
+    ESC="\033"
+    BOLD="${ESC}[01m" NONE="${ESC}[00m"
+    UNDR="${ESC}[04m" NONE="${ESC}[00m"
+    CBLK="${ESC}[30m" NONE="${ESC}[00m"
+    CRED="${ESC}[31m" NONE="${ESC}[00m"
+    CGRN="${ESC}[32m" NONE="${ESC}[00m"
+    CYLW="${ESC}[33m" NONE="${ESC}[00m"
+    CBLU="${ESC}[34m" NONE="${ESC}[00m"
+    CMAG="${ESC}[35m" NONE="${ESC}[00m"
+    CCYN="${ESC}[36m" NONE="${ESC}[00m"
+    CWHT="${ESC}[37m" NONE="${ESC}[00m"
+    CRED="${ESC}[31m" NONE="${ESC}[00m"
   else
     NONE=""
     BOLD=""
@@ -149,7 +150,10 @@ function Echo() {
 }
 
 function Do() {
+  local OPT
+  if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   Echo "${CBLU}%${NONE} $*"
+  if [[ "${OPT}" == "-n" ]]; then return; fi
   "$@"
 }
 
