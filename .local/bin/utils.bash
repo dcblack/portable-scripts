@@ -174,7 +174,11 @@ function Pass() {
 
 function PassFail() { # Reports success or failure
   # shellcheck disable=SC2181
-  if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
+  if [[ $# == 0 ]];; then
+    if [[ $? == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
+  else
+    if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
+  fi
 }
 
 function Info() {
