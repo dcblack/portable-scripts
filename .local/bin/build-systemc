@@ -52,6 +52,7 @@ GetBuildOpts "$0" "$@"
 # Environment variables - MODIFY TO SUITE YOUR NEEDS
 TARGET='systemc'
 GIT_URL="https://github.com/accellera-official/systemc.git"
+VERSION_TAG=2.3.3
 SYSTEMC_HOME="${APPS}/systemc" # <----- THIS IS WHERE INSTALLED VERSION GOES
 BUILD=build-cmake-"$(basename "${CC}")"
 CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
@@ -61,45 +62,49 @@ export CMAKE_INSTALL_PREFIX CMAKE_CXX_STANDARD
 export BUILD CXX CC
 
 if [[ "${DEBUG}" == 1 ]]; then
-  echo "BUILD=${BUILD}"
-  echo "CC=${CC}"
-# echo "CLEAN=${CLEAN}"
-  echo "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
-  echo "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}"
-  echo "CXX=${CXX}"
-# echo "DEBUG=${DEBUG}"
-  echo "SYSTEMC_HOME=${SYSTEMC_HOME}"
-  exit
+  Debug "BUILD=${BUILD}"
+  Debug "CC=${CC}"
+  Debug "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
+  Debug "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}"
+  Debug "CXX=${CXX}"
+  Debug "SRC=${SRC}"
+  Debug "SYSTEMC_HOME=${SYSTEMC_HOME}"
+  Debug
 fi
 
 #-------------------------------------------------------------------------------
-Info "Obtaining SystemC source"
+Info -grn "Obtaining SystemC source"
+cd "${SRC}" || Die "Unable to change into source directory '${SRC}'"
 if [[ -d systemc/.git ]]; then
   cd systemc || Die "Unable to enter repo directory"
-  git pull
+  Do git pull
 else
   # Download
-  git clone "${GIT_URL}" || Die "Unable to clone"
+  Do git clone "${GIT_URL}" || Die "Unable to clone"
   cd systemc || Die "Unable to enter repo directory"
 fi
+if [[ -s ${VERSION_TAG} ]]; then
+  Do git  checkout "${VERSION_TAG}"
+fi
 
-Info "Compiling SystemC"
-rm -fr "${BUILD}"
-mkdir "${BUILD}" || Die "Unable to create build directory"
+Info -grn "Compiling SystemC"
+Do rm -fr "${BUILD}"
+Do mkdir "${BUILD}" || Die "Unable to create build directory"
 cd "${BUILD}" || Die "Unable to enter ${BUILD} directory"
-cmake ..
+Do cmake ..
 
 # Establish preferences
-perl -pi -e '$v=q{CMAKE_INSTALL_PREFIX};if(m{^$v:}){s{=.*}{=$ENV{$v}}}' CMakeCache.txt
 perl -pi -e '$v=q{CMAKE_CXX_STANDARD};if(m{^$v:}){s{=.*}{=$ENV{$v}}}' CMakeCache.txt
+perl -pi -e '$v=q{CMAKE_INSTALL_PREFIX};if(m{^$v:}){s{=.*}{=$ENV{$v}}}' CMakeCache.txt
 touch ../systemc/docs/tlm/ChangeLog
-cmake ..
+Info "Modifed CMakeCache.txt to specify CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD} and CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
+Do cmake ..
 
-make
-make check
-Info "Installing SystemC to final location"
-make install
+Do make
+Do make check
+Info -grn "Installing SystemC to final location"
+Do make install
 
-Info "Finished installation of SystemC into ${SYSTEMC_HOME}"
+Info -grn "Finished installation of SystemC into ${SYSTEMC_HOME}"
 
 # vim:nospell
