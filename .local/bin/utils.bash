@@ -24,7 +24,7 @@ SYNOPSIS
 | Error "_MESSAGE_"          | Echo an error message
 | Warn "_MESSAGE_"           | Echo a warning message
 | Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
-| GetBuildOpts               | Parses standard _build_ command-line inputs
+| GetBuildOpts "$0" "$@"     | Parses standard _build_ command-line inputs
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 
 USAGE
@@ -158,6 +158,7 @@ function Printf() {
 
 function Do() {
   local OPT
+  if [[ -s "${NOTREALLY}" ]]; then OPT="-n"; fi
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   Echo "${CBLU}%${NONE} $*"
   if [[ "${OPT}" == "-n" ]]; then return; fi
@@ -174,7 +175,7 @@ function Pass() {
 
 function PassFail() { # Reports success or failure
   # shellcheck disable=SC2181
-  if [[ $# == 0 ]];; then
+  if [[ $# == 0 ]]; then
     if [[ $? == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
   else
     if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
@@ -185,7 +186,7 @@ function Info() {
   local PRE
   # Test for color prefix
   case "$1" in
-    -pre) PRE="${2}"    ; shift; shift ;;
+    -pre) PRE="${2}"    ; shift  ; shift ;;
     -cyn) PRE="${CCYN}" ; shift ;;
     -red) PRE="${CRED}" ; shift ;;
     -grn) PRE="${CGRN}" ; shift ;;
@@ -208,7 +209,7 @@ function Ruler() {
   PRE=""
   # Test for color prefix
   case "$1" in
-    -pre) PRE="${2}"    ; shift; shift ;;
+    -pre) PRE="${2}"    ; shift  ; shift ;;
     -cyn) PRE="${CCYN}" ; shift ;;
     -red) PRE="${CRED}" ; shift ;;
     -grn) PRE="${CGRN}" ; shift ;;
@@ -309,8 +310,6 @@ function GetBuildOpts() {
 #|SYNOPSIS
 #|--------
 #|
-#|  $0 -devhelp
-#|  Require $0
 #|  GetBuildOpts() "${0}" "$@"
 #|
 #|DESCRIPTION
@@ -383,6 +382,11 @@ function GetBuildOpts() {
     -h|-help)
       HelpText "$0";
       exit 0
+      ;;
+    -n|--notreally)
+      NOTREALLY="-n"
+      export NOTREALLY
+      shift
       ;;
     --cc=*|CC=*)
       export CC CXX
@@ -488,6 +492,7 @@ function GetBuildOpts() {
     Debug "APPS='${APPS}' SRC='${SRC}' SUFFIX='${SUFFIX}'"
     Debug "CC='${CC}' CXX='${CXX}'"
     Debug "CMAKE_CXX_STANDARD='${CMAKE_CXX_STANDARD}'"
+    if [[ -s "${NOTREALLY}" ]]; then Debug "NOTREALLY"; fi
     for (( i=0; i<${#ARGV[@]}; ++i )); do
       Debug "ARGV[${i}]='${ARGV[${i}]}'"
     done
