@@ -160,7 +160,7 @@ function Do() {
   local OPT
   if [[ -s "${NOTREALLY}" ]]; then OPT="-n"; fi
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
-  Echo "${CBLU}%${NONE} $*"
+  Echo "${CBLU}%${NONE} ${BOLD}$*${NONE}"
   if [[ "${OPT}" == "-n" ]]; then return; fi
   "$@"
 }
