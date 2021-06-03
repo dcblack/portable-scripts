@@ -19,7 +19,7 @@
 #|DESCRIPTION
 #|-----------
 #|
-#|  Downloads, unpacks, builds and installs the latest or specified version of cmake.
+#|  Downloads, unpacks, builds and installs the latest or specified version of SystemC.
 #|
 #|OPTIONS
 #|-------
