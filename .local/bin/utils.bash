@@ -36,7 +36,8 @@ Source this as follows inside your bash script:
 function Realpath () {
   /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
 }
-SCRIPT="$(dirname $(Realpath "$0"))/utils.bash"
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"

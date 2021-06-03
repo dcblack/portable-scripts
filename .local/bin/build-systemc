@@ -37,7 +37,8 @@ function Realpath () {
   /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
 }
 
-SCRIPT="$(dirname $(Realpath "$0"))/utils.bash"
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"
@@ -51,9 +52,9 @@ GetBuildOpts "$0" "$@"
 #-------------------------------------------------------------------------------
 # Environment variables - MODIFY TO SUITE YOUR NEEDS
 TARGET='systemc'
-GIT_URL="https://github.com/accellera-official/systemc.git"
+GIT_URL="https://github.com/accellera-official/${TARGET}.git"
 VERSION_TAG=2.3.3
-SYSTEMC_HOME="${APPS}/systemc" # <----- THIS IS WHERE INSTALLED VERSION GOES
+SYSTEMC_HOME="${APPS}/${TARGET}" # <----- THIS IS WHERE INSTALLED VERSION GOES
 BUILD=build-cmake-"$(basename "${CC}")"
 CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
 
@@ -75,13 +76,13 @@ fi
 #-------------------------------------------------------------------------------
 Info -grn "Obtaining SystemC source"
 cd "${SRC}" || Die "Unable to change into source directory '${SRC}'"
-if [[ -d systemc/.git ]]; then
-  cd systemc || Die "Unable to enter repo directory"
+if [[ -d "${TARGET}"/.git ]]; then
+  cd "${TARGET}" || Die "Unable to enter repo directory"
   Do git pull
 else
   # Download
   Do git clone "${GIT_URL}" || Die "Unable to clone"
-  cd systemc || Die "Unable to enter repo directory"
+  cd "${TARGET}" || Die "Unable to enter repo directory"
 fi
 if [[ -s ${VERSION_TAG} ]]; then
   Do git  checkout "${VERSION_TAG}"
@@ -91,15 +92,10 @@ Info -grn "Compiling SystemC"
 Do rm -fr "${BUILD}"
 Do mkdir "${BUILD}" || Die "Unable to create build directory"
 cd "${BUILD}" || Die "Unable to enter ${BUILD} directory"
-Do cmake ..
-
-# Establish preferences
-perl -pi -e '$v=q{CMAKE_CXX_STANDARD};if(m{^$v:}){s{=.*}{=$ENV{$v}}}' CMakeCache.txt
-perl -pi -e '$v=q{CMAKE_INSTALL_PREFIX};if(m{^$v:}){s{=.*}{=$ENV{$v}}}' CMakeCache.txt
-touch ../systemc/docs/tlm/ChangeLog
-Info "Modifed CMakeCache.txt to specify CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD} and CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
-Do cmake ..
-
+Do cmake\
+   -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
+   -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+   ..
 Do make
 Do make check
 Info -grn "Installing SystemC to final location"
