@@ -48,7 +48,6 @@ else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
 fi
 
-# shellcheck source=get-build-opts.bash
 GetBuildOpts "$0" "$@"
 
 TARGET='fmt'
