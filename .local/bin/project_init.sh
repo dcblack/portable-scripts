@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #-------------------------------------------------------------------------------
 # The following is formatted for use with -help

@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Install the latest or specified version of cmake
+# Install the latest or specified version of git
 
 echo "ERROR: Not yet complete" 1>&2
 exit 1
@@ -11,32 +11,32 @@ exit 1
 CLEAN=0
 DEBUG=0
 # Following for the non-git approach where you need to specify the version
-MAJVERS=3
-MINVERS=19
-DOTVERS=7
+MAJVERS=2
+MINVERS=3
+DOTVERS=1
 
 #-------------------------------------------------------------------------------
 # Scan command-line for options
 #-------------------------------------------------------------------------------
-if [[ "$TYPE" == "" ]]; then
+if [[ "${TYPE}" == "" ]]; then
   TYPE=-git # use -git or -wget or -curl
 fi
 
 while [[ $# != 0 ]]; do
-  case "$1" in
+  case "" in
   -h|-help)
-    perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' $0;
+    perl -ne ' = ${ARGV}; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' $0;
 #|
 #|NAME
 #|----
 #|
-#|  $0 - build and install cmake from source
+#|   - Download, build and install cmake from source
 #|
 #|SYNOPSIS
 #|--------
 #|
-#|  $0 -help
-#|  $0 [-clean] [-debug] -git|-wget|-curl
+#|   -help
+#|   [-clean] [-debug] -git|-wget|-curl
 #|
 #|DESCRIPTION
 #|-----------
@@ -46,7 +46,7 @@ while [[ $# != 0 ]]; do
     exit 0;
     ;;
   -git|-wget|-curl)
-    TYPE="$1";
+    TYPE="";
     shift;
     ;;
   -d|-debug|--debug)
@@ -59,48 +59,49 @@ while [[ $# != 0 ]]; do
     shift;
     ;;
   *)
-    echo "ERROR: Unkhown option $1";
+    echo "ERROR: Unkhown option ";
     exit 1;
     ;;
   esac
 done
 
-cd $HOME
+cd "${HOME}" || Die "Unable to cd to ${HOME}"
 mkdir -p .local/src
 cd .local/src
-export CMAKE_INSTALL_PREFIX="$HOME/.local"
+export CMAKE_INSTALL_PREFIX="${HOME}/.local"
 
 sudo yum install dh-autoreconf curl-devel expat-devel gettext-devel openssl-devel perl-devel zlib-devel
 sudo yum install asciidoc xmlto docbook2X
 
-if [[ "$TYPE" == "-git" ]]; then
+if [[ "${TYPE}" == "-git" ]]; then
  
   echo "Cloning git"
-  git clone git://git.kernel.org/pub/scm/git/git.git && cd git
+  GIT_URL="https://github.com/git/git.git"
+  git clone "${GIT_URL}" && cd git
   echo "Building git"
-  make prefix=$CMAKE_INSTALL_PREFIX all doc info
+  make prefix=MAKE_INSTALL_PREFIX all doc info
 
 else
-  VERSION=$MAJVERS.$MINVERS.$DOTVERS
-  FILE="cmake-$VERSION.tar.gz"
-  URL="https://cmake.org/files/LatestRelease/$FILE"
+  VERSION=AJVERS.${MINVERS}.${DOTVERS}
+  FILE="cmake-ERSION.tar.gz"
+  TAR_URL=""
   echo "Fetching cmake"
-  # Assumed to be under latest; otherwise, use v$MAJOR.$MINOR
-  if [[ "$TYPE" == "-wget" ]]; then
-    echo "% wget $URL"
-    wget "$URL" || exit 1
+  # Assumed to be under latest; otherwise, use ${MAJOR}.${MINOR}
+  if [[ "${TYPE}" == "-wget" ]]; then
+    echo "% wget ${TAR_URL}"
+    wget "${TAR_URL}" || exit 1
   else
-    echo "% curl -output $FILE $URL"
-    curl -output $FILE $URL || exit 1
+    echo "% curl -output ILE ${TAR_URL}"
+    curl -output ILE ${TAR_URL} || exit 1
   fi
   echo "Expanding cmake tarball"
-  echo "% tar zxvf cmake-$VERSION.tar.gz"
-  tar zxvf cmake-$VERSION.tar.gz || exit 1
-  echo "% cd cmake-$VERSION"
-  cd cmake-$VERSION
+  echo "% tar zxvf cmake-ERSION.tar.gz"
+  tar zxvf cmake-ERSION.tar.gz || exit 1
+  echo "% cd cmake-ERSION"
+  cd cmake-ERSION
   echo "Configuring cmake"
-  echo "% ./bootstrap --prefix=$HOME/.local"
-  ./bootstrap --prefix=$HOME/.local || exit 1
+  echo "% ./bootstrap --prefix=${HOME}/.local"
+  ./bootstrap --prefix=${HOME}/.local || exit 1
   echo "Building  cmake"
   echo "% make -j$(nproc)"
   make -j$(nproc) || exit 1

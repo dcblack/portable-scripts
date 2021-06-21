@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Steps to build and install fmtlib (useful prior to C++20)
 
