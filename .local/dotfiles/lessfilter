@@ -24,8 +24,8 @@ case "$1" in
 
     *)
         HASHBANG=$(perl -lane 's/ .*//;s{^[#][!](.*/)?}{};print;exit' "$1")
-        if [[ -s $HASHBANG ]]; then
-            pygmentize -f 256 -l $HASHBANG "$1"
+        if [[ -s "${HASHBANG}" ]]; then
+            pygmentize -f 256 -l "${HASHBANG}" "$1"
         elif grep -q "#\!/bin/bash" "$1" 2> /dev/null; then
             pygmentize -f 256 -l bash "$1"
         else
