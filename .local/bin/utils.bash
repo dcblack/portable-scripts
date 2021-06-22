@@ -301,7 +301,11 @@ function Die() {
 function Assert() {
   # shellcheck disable=SC218
   test "$@" && return
-  Die "Failed assertion $*"
+  local FNC FIL LNO
+  FNC="${FUNCNAME[1]}"
+  FIL="${BASH_SOURCE[1]}"
+  LNO="${BASH_LINENO[0]}"
+  Die "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
 ERRORS=0
@@ -470,6 +474,7 @@ function GetBuildOpts() {
 
   # Grab program name
   local SCRIPT
+  # shellcheck disable=SC2034
   SCRIPT="$1"
   shift
 
@@ -653,12 +658,17 @@ function SetupLogdir() {
   esac
 }
 
-if [[ $# != 0 ]]; then
-  GetBuildOpts "$0" "$@"
-  if [[ ${#ARGV[@]} -gt 0 ]]; then
-    if [[ -n "${DEBUG}" ]]; then echo "${ARGV[@]}"; fi
-    "${ARGV[@]}"
+function Main() {
+  Assert "${BASH_VERSINFO[0]}" -ge 5
+  if [[ $# != 0 ]]; then
+    GetBuildOpts "$0" "$@"
+    if [[ ${#ARGV[@]} -gt 0 ]]; then
+      if [[ -n "${DEBUG}" ]]; then echo "${ARGV[@]}"; fi
+      "${ARGV[@]}"
+    fi
   fi
-fi
+}
+
+Main "$@"
 
 # The end
