@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 cat >/dev/null <<'EOF' ;# Documentation begin_markdown
 SYNOPSIS
@@ -19,12 +19,14 @@ SYNOPSIS
 | PassFail "_MESSAGE_"       | Displays message with pass/fail status
 | Info "_MESSAGE_"           | Echo an informational message
 | Debug "_MESSAGE_"          | Echo a debug message
-| Ruler [_MESSAGE_]          | Echo a ruler with option embedded message
+| Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
 | Die "_MESSAGE_"            | Echo a fatal message and exit with fail
 | Error "_MESSAGE_"          | Echo an error message
 | Warn "_MESSAGE_"           | Echo a warning message
 | Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
 | GetBuildOpts "$0" "$@"     | Parses standard _build_ command-line inputs
+| ShowBuildOpts              | Display options variables from GetBuildOpts
+| ConfirmBuildOpts           | Asks user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 
 USAGE
@@ -49,6 +51,26 @@ SetupLogdir "$0"
 end_markdown
 EOF
 
+declare -a ARGV
+export APPS
+export ARGV
+export CC
+export CLEAN
+export CLEANUP
+export CMAKE_CXX_STANDARD
+export CXX
+export DEBUG
+export ERRORS
+export LOGDIR
+export LOGFILE
+export NOTREALLY
+export SRC
+export SUFFIX
+export UNINSTALL
+export VERBOSITY
+export WARNINGS
+export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
+
 function Realpath () {
   /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
 }
@@ -70,6 +92,34 @@ function Require() { # FILE(S) to source
 }
 
 #-------------------------------------------------------------------------------
+# Verify existance of tools in search path
+
+function Needs() {
+  local I J X D P
+  I=0 J=0
+  for X in "$@"; do
+    (( ++I ));
+    for D in $(perl -le 'print join(q{\n},split(/:/,$ENV{PATH}))'); do
+      Debug "Testing  ${D}/${X}"
+      P="$(Realpath "${D}/${X}")"
+      if [[ -n "${P}" && -x "${P}" && ! -d "${P}" ]]; then
+        (( ++J ));
+        echo "${P}"
+        break
+      else
+        P=""
+      fi
+    done
+    if [[ -z "${P}" ]]; then Error "Missing ${X}"; fi
+  done
+  if [[ "${I}" == "${J}" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+#-------------------------------------------------------------------------------
 # Make things more visible in the output
 
 function Colors() {
@@ -80,7 +130,6 @@ function Colors() {
     *) USE_COLOR=1;;
   esac
   if [[ -z ${NOCOLOR+x} ]]; then USE_COLOR=1; fi
-  export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
   if [[ ${USE_COLOR} -gt 0 ]]; then
     # shellcheck disable=SC2034
     ESC=""
@@ -126,7 +175,6 @@ function Logfile() {
       LOGFILE="${LOGDIR}/"
     fi
     LOGFILE="${LOGFILE}${1//.log/}.log"
-    export LOGFILE
   fi
   if [[ -z "${LOGFILE}" ]]; then
     echo "Error: Must specify a valid logfile name" 1>&2
@@ -158,11 +206,11 @@ function Printf() {
 }
 
 function Do() {
-  local OPT
-  if [[ -s "${NOTREALLY}" ]]; then OPT="-n"; fi
-  if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
-  Echo "${CBLU}%${NONE} ${BOLD}$*${NONE}"
-  if [[ "${OPT}" == "-n" ]]; then return; fi
+  local NX
+  if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
+  if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
+  Echo "${CBLU}${NX}%${NONE} ${BOLD}$*${NONE}"
+  if [[ "${NX}" == "-" ]]; then return; fi
   "$@"
 }
 
@@ -184,6 +232,9 @@ function PassFail() { # Reports success or failure
 }
 
 function Info() {
+  if [[ -s "${VERBOSITY}" || "${VERBOSITY}" -lt 0 ]]; then
+    return 0
+  fi
   local PRE
   # Test for color prefix
   case "$1" in
@@ -199,7 +250,9 @@ function Info() {
 }
 
 function Debug() {
-  Echo "${CRED}Debug: ${NONE}$*${NONE}"
+  if [[ -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
+    Echo "${CRED}Debug: ${NONE}$*${NONE}"
+  fi
 }
 
 function Ruler() {
@@ -268,7 +321,7 @@ function Warn() {
 }
 
 function Summary() {
-  Assert $# == 0
+  Assert $# != 0
   Echo "Execution summary for $(basename "$1"):"
   shift
   Echo " ${WARNINGS} warnings"
@@ -296,6 +349,51 @@ function HelpText() {
   /usr/bin/perl -ne "${HELPSCRIPT}" "$@";
 }
 
+function ShowVar() {
+  local DLR VAR VAL
+  VAR="$1"
+  DLR='$'
+  VAL="$(eval "echo ${DLR}${VAR}")"
+  if [[ -n "${VAL}" ]]; then
+    echo "${1}=${VAL}"
+  fi
+}
+
+function ShowBuildOpts() {
+  Ruler -blu "Build Options"
+  for (( i=0; i<${#ARGV[@]}; ++i )); do
+    Debug "ARGV[${i}]='${ARGV[${i}]}'"
+  done
+  ShowVar APPS
+  ShowVar CLEAN
+  ShowVar CLEANUP
+  ShowVar CMAKE_CXX_STANDARD
+  ShowVar CC
+  ShowVar CXX
+  ShowVar DEBUG
+  ShowVar LOGDIR
+  ShowVar LOGFILE
+  ShowVar NOTREALLY
+  ShowVar SRC
+  ShowVar SUFFIX
+  ShowVar UNINSTALL
+  ShowVar VERBOSITY
+  Ruler -blu
+}
+
+function ConfirmBuildOpts() {
+  ShowBuildOpts
+  while true; do
+    printf "Confirm above options (Y/n)? "
+    read -r REPLY
+    case "${REPLY}" in
+      y) return 0 ;;
+      n) return 1 ;;
+      *) REPLY=""; echo "Must reply with 'y' or 'n'" ;;
+    esac
+  done
+}
+
 function GetBuildOpts() {
 
 # Establishes options for building
@@ -316,7 +414,7 @@ function GetBuildOpts() {
 #|DESCRIPTION
 #|-----------
 #|
-#|  Downloads, unpacks, builds and installs the latest or specified version of fmtlib.
+#|  Read command-line options and sets various environment variables.
 #|
 #|PARSED COMMAND-LINE OPTIONS
 #|---------------------------
@@ -325,28 +423,50 @@ function GetBuildOpts() {
 #|  ------             |  ------------     | -----------
 #|  --cc=C_COMPILER    |  CC=C_COMPILER    | chooses C compiler executable
 #|  --clang            |                   | quick --cc=clang --cxx=clang++
+#|  --clean            |  -clean           | reinstall source
+#|  --cleanup          |  -cleanup         | remove source after installation
 #|  --cxx=CPP_COMPILER |  CXX=CPP_COMPILER | chooses C++ compiler executable
-#|  --debug            |                   | developer use
+#|  --debug            |  -d               | developer use
 #|  --default          |                   | quick -i=$HOME/.local -src=$HOME/.local/src
 #|  --gcc              |                   | quick --cc=gcc --cxx=g++
 #|  --home             |                   | quick -i $HOME -s $HOME/src
 #|  --install=DIR      |  -i DIR           | choose installation directory
+#|  --notreally        |  -n               | don't execute, just show possibilities
 #|  --src=DIR          |  -s DIR           | choose source directory
 #|  --std=N            |  -std=N           | set make C++ compiler version where N={98,11,14,17,20,...}
 #|  --suffix=TEXT      |  -suf TEXT        | set suffix for installation name
+#|  --uninstall        |  -rm              | remove if possible -- not always supported
+#|  --verbose          |  -v               | echo more information (may be repeated)
+#|  --quiet            |  -q               | echo less information (may be repeated)
 #|
 #|OUTPUTS
 #|-------
 #|
-#| The following environment variables are used by scripts
+#| Below are some of the environment variables are used by scripts:
 #|
-#| - $SRC
 #| - $APPS
-#| - $CMAKE_CXX_STANDARD
 #| - $CC
+#| - $CLEAN
+#| - $CLEANUP
+#| - $CMAKE_CXX_STANDARD {98,03,11,14,17,20}
 #| - $CXX
 #| - $DEBUG
+#| - $ERRORS integer
+#| - $LOGDIR
+#| - $LOGFILE
+#| - $NOTREALLY
+#| - $SRC directory
 #| - $SUFFIX
+#| - $UNINSTALL
+#| - $VERBOSITY integer
+#| - $WARNINGS integer
+#|
+#| Use -devhelp for internal documentation.
+#|
+#|LICENSE
+#|-------
+#|
+#| Apache 2.0
 
   # Grab program name
   local SCRIPT
@@ -356,7 +476,6 @@ function GetBuildOpts() {
   # Defaults
   #-------------------------------------------------------------------------------
   CMAKE_CXX_STANDARD=17 # <---------- VERSION OF C++ YOUR COMPILER SUPPORTS
-  export CMAKE_CXX_STANDARD
   if [[ "${CXX}" == "" ]]; then
     if [[ "$(command -v clang++)" != "" ]]; then
       CXX=clang++
@@ -372,25 +491,21 @@ function GetBuildOpts() {
   #-------------------------------------------------------------------------------
   # Scan command-line for options
   #-------------------------------------------------------------------------------
-  declare -a ARGV # Holds left-overs
-  export ARGV
   while [[ $# != 0 ]]; do
     case "$1" in
-    -devhelp)
-      HelpText "$0";
+    -devhelp|--devhelp)
+      HelpText -md "${0}";
       exit 0
       ;;
     -h|-help)
-      HelpText "$0";
+      HelpText "${0}";
       exit 0
       ;;
     -n|--notreally)
       NOTREALLY="-n"
-      export NOTREALLY
       shift
       ;;
     --cc=*|CC=*)
-      export CC CXX
       CC="${1//*=}"
       if [[ "${CC}" =~ .*gcc ]];then
         CXX=g++
@@ -406,11 +521,13 @@ function GetBuildOpts() {
       ;;
     --clean|-clean)
       CLEAN=1;
-      export CLEAN
+      shift;
+      ;;
+    --cleanup|-cleanup)
+      CLEANUP=1;
       shift;
       ;;
     --cxx=*|CXX=*)
-      export CC CXX
       CXX="${1//*=}"
       if [[ "${CXX}" == g++ ]]; then
         CC=gcc
@@ -421,13 +538,11 @@ function GetBuildOpts() {
       ;;
     -d|-debug|--debug)
       DEBUG=1;
-      export DEBUG
       shift;
       ;;
     --default)
       APPS="${HOME}.local/apps"
       SRC="${HOME}/.local/src"
-      export APPS SRC
       shift
       ;;
     --gcc)
@@ -444,13 +559,11 @@ function GetBuildOpts() {
       else
         Die "Need directory argument for $1"
       fi
-      export APPS
       shift
       ;;
     --home)
       APPS="${HOME}"
       SRC="${HOME}/src"
-      export APPS SRC
       shift
       ;;
     -s|--src=*)
@@ -462,7 +575,6 @@ function GetBuildOpts() {
       else
         Die "Need directory argument for $1"
       fi
-      export SRC
       shift
       ;;
     --std=*|-std=*)
@@ -470,7 +582,6 @@ function GetBuildOpts() {
       shift;
       ;;
     --suffix=*|-suf)
-      export SUFFIX
       if [[ "$1" != '-suf' ]]; then
         SUFFIX="${1//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
@@ -481,39 +592,27 @@ function GetBuildOpts() {
       fi
       shift;
       ;;
+    --uninstall|-rm)
+      CLEANUP=1;
+      shift;
+      ;;
     *)
-      ARGV[${#ARGV[*]}]="$1"
+      ARGV[${#ARGV[@]}]="$1"
       shift
       ;;
     esac
   done
 
-  if [[ ${DEBUG} != 0 ]]; then
-    Debug "SCRIPT='${SCRIPT}' DEBUG=${DEBUG}"
-    Debug "APPS='${APPS}' SRC='${SRC}' SUFFIX='${SUFFIX}'"
-    Debug "CC='${CC}' CXX='${CXX}'"
-    Debug "CMAKE_CXX_STANDARD='${CMAKE_CXX_STANDARD}'"
-    if [[ -s "${NOTREALLY}" ]]; then Debug "NOTREALLY"; fi
-    for (( i=0; i<${#ARGV[@]}; ++i )); do
-      Debug "ARGV[${i}]='${ARGV[${i}]}'"
-    done
-  fi
-
   #-------------------------------------------------------------------------------
   # Setup apps directory
-  if [[ "${APPS}" != '' && -d "${APPS}" ]]; then
-    echo "Using APPS=${APPS}"
-  else
+  if [[ -z "${APPS}" || ! -d "${APPS}" ]]; then
     APPS="${HOME}/.local/apps"
-    echo "Using APPS=${APPS}"
   fi
   mkdir -p "${APPS}" || Die "Failed to find/create ${APPS} directory"
 
   #-------------------------------------------------------------------------------
   Info "Setup source directory"
-  if [[ "${SRC}" != '' && -d "${SRC}" ]]; then
-    echo "Using SRC=${SRC}"
-  else
+  if [[ -z "${SRC}" || ! -d "${SRC}" ]]; then
     if [[ "${APPS}" == '/apps' ]]; then
       SRC="${APPS}/src"
     elif [[ "${APPS}" != '' ]]; then
@@ -528,12 +627,15 @@ function GetBuildOpts() {
 
   cd "${SRC}" || Die "Unable to change into source directory"
 
+  if [[ -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
+    ShowBuildOpts
+  fi
+
 }
 
 function SetupLogdir() {
   LOGDIR="${HOME}/logs"
   mkdir -p "${LOGDIR}"
-  export LOGDIR
   case $# in
     1)
       Logfile "$(basename "$1")"
@@ -550,5 +652,13 @@ function SetupLogdir() {
       ;;
   esac
 }
+
+if [[ $# != 0 ]]; then
+  GetBuildOpts "$0" "$@"
+  if [[ ${#ARGV[@]} -gt 0 ]]; then
+    if [[ -n "${DEBUG}" ]]; then echo "${ARGV[@]}"; fi
+    "${ARGV[@]}"
+  fi
+fi
 
 # The end
