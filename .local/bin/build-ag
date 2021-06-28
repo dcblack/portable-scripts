@@ -15,29 +15,16 @@ else
 fi
 
 GetBuildOpts "$0" "$@"
-ConfirmBuildOpts
+ConfirmBuildOpts || exit
 
-cd "${SRC}" || Die "Unable to enter source directory"
-if [[ -n "${CLEAN}" && "${CLEAN}" == 1 ]]; then
-  rm -fr "${TOOL_SRC}"
-fi
-if [[ -d "${TOOL_SRC}/.git" ]]; then
-  Do git pull
-else
-  if [[ -d "${TOOL_SRC}/." ]]; then
-    Do mkdir -p "${TOOL_SRC}-save"
-    Do rsync -a "${TOOL_SRC}/" "${TOOL_SRC}-save/"
-    Do rm -fr "${TOOL_SRC}" 
-  fi
-  Do git clone "${TOOL_URL}" "${TOOL_SRC}" || Die "Unable to clone"
-fi
-cd "${TOOL_SRC}" || Die "Unable to enter repo"
+Create_and_Cd "${SRC}"
+GitClone_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
+
 Info "Configuring ${TOOL_NAME}"
-Do ./build.sh --prefix="${APPS}" || Die "Unable to build"
+_do ./build.sh --prefix="${APPS}" || Die "Unable to build"
 Info "Installing ${TOOL_NAME}"
-Do make install
-Summary ag "Installed. ${TOOL_INFO}"
-if [[ -n "${CLEANUP}" && "${CLEANUP}" == 1 ]]; then
-  cd "${SRC}" || Die "Unable to enter source directory"
-  rm -fr "${TOOL_SRC}"
-fi
+_do make install
+
+Summary "${TOOL_NAME}" "Installed. ${TOOL_INFO}"
+
+Cleanup "${TOOL_SRC}"
