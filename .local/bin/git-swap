@@ -1,0 +1,16 @@
+#!/usr/bin/env perl
+
+use strict;
+my $config = qx{git rev-parse --show-toplevel};
+chomp $config;
+$config .= '/.git/config';
+my $repo = qx{git remote -v};
+chomp $repo;
+printf STDERR "REPO '%s'\n", $repo;
+if ( $repo =~ m{\bgit\@} ) {
+  printf STDERR "->https\n";
+  system( "perl -pi -e 's{git.github.com:}{https://github.com/}' $config" );
+} else {
+  printf STDERR "->ssh\n";
+  system( "perl -pi -e 's{https://github.com/}{git\\\@github.com:}' $config" );
+}

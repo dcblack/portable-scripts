@@ -40,7 +40,7 @@ function Do_exercise() {
 date "+Regression test %c %Z" | tee "${LOGFILE}"
 
 if [[ $# == 0 ]]; then
-  for f in ex?; do
+  for f in ex[0-9]*; do
     Clean_exercise "${f}"
   done
 else
@@ -51,7 +51,7 @@ fi
 
 if [[ $# == 0 ]]; then
   (
-    for f in ex*; do
+    for f in ex[0-9]*; do
       if [[ -d "answers/${f}/part1" ]]; then
         # Exercises that have multiple parts
         for p in "answers/${f}/part"*; do
