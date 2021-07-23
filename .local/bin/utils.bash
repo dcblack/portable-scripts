@@ -944,7 +944,6 @@ function Main() {
     GetBuildOpts "$0" "$@"
     if [[ ${#ARGV[@]} -gt 0 ]]; then
       if [[ -n "${DEBUG}" ]]; then echo "${ARGV[@]}"; fi
-      "${ARGV[@]}"
     fi
   fi
 }
