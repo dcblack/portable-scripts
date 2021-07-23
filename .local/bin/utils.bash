@@ -87,6 +87,7 @@ export WARNINGS
 export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
 function Comment() {
+  true;
 }
 
 # Following is 'just in case you did not define this'
@@ -310,15 +311,6 @@ function Pass() {
   return 0
 }
 
-function PassFail() { # Reports success or failure
-  # shellcheck disable=SC2181
-  if [[ $# == 0 ]]; then
-    if [[ $? == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
-  else
-    if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
-  fi
-}
-
 function Info() {
   if [[ -s "${VERBOSITY}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
@@ -337,6 +329,15 @@ function Info() {
     *) PRE="${NONE}" ;;
   esac
   Echo "${CGRN}Info: ${PRE}$*${NONE}"
+}
+
+function PassFail() { # Reports success or failure
+  # shellcheck disable=SC2181
+  if [[ $# == 0 ]]; then
+    if [[ $? == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
+  else
+    if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
+  fi
 }
 
 function Debug() {
