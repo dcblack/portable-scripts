@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if 0;#running_under_some_shell;
+
+# DESCRIPTION
+#   Displays the contents of environment variables containing a colon
+#   separated list in a friendly vertical format
+
+use strict;
+
+push @ARGV,'PATH' unless @ARGV;
+
+for my $ARR ( @ARGV ) {
+  $ARR =~ tr/A-Z/a-z/ if not exists $ENV{${ARR}};
+  $ARR =~ tr/a-z/A-Z/ if not exists $ENV{${ARR}};
+  if( exists $ENV{${ARR}} ) {
+    printf qq{${ARR}:\n};
+    my @paths = split(qr/:/,$ENV{${ARR}});
+    my $n=0;
+    for my $bin (@paths) {
+      ++$n;
+      $bin =~ s{[ '"]}{\\$&}g;
+      printf qq{%d %s\n},$n,$bin;
+    }
+  } else {
+    printf qq{ERROR: No such environment variable %s\n},${ARR};
+  }
+}

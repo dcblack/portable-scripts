@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#
+# List all git aliases
+
+git config --get-regexp 'alias.*' | colrm 1 6 | sed -e 's/ .*//' | fmt | table
+
+# THE END

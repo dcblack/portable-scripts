@@ -104,7 +104,7 @@ function Git_setup() {
     git config --global alias.untrack  'rm --cached'
     git config --global alias.hash     'hash-object'
     git config --global alias.branches 'log --pretty=format:'%h %s' --graph'
-    git config --global alias.ignored  'ls-files -i'
+    git config --global alias.ignored  'ls-files -o'
     git config --global alias.co       'checkout'
  
   fi
