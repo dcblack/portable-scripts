@@ -86,6 +86,9 @@ export VERBOSITY
 export WARNINGS
 export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
+function Comment() {
+}
+
 # Following is 'just in case you did not define this'
 function Realpath () {
 #@ Output the realpath name treating all arguments as a single filename specification
