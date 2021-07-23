@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #
-# Steps to build and install fmtlib (useful prior to C++20)
+# Script to build and install fmtlib (useful prior to C++20)
+TOOL_NAME="C++ formatting library (fmt)"
+TOOL_INFO="Go to 'https://fmt.dev/latest/index.html' for more information."
+TOOL_SRC='fmt'
+TOOL_URL="https://github.com/fmtlib/fmt.git"
+GENERATOR="cmake"
 
 #-------------------------------------------------------------------------------
 # The following is formatted for use with -help
@@ -39,9 +44,12 @@
 #|  --suffix=TEXT      |  -suf TEXT        | set suffix for installation name
 #|
 
-SCRIPT="$(Realpath "$0")"
-SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
-if [[ -f "${SCRIPT}" ]]; then
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
+
+SCRIPT="$(dirname $(Realpath "$0"))/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"
 else
@@ -49,30 +57,19 @@ else
 fi
 
 GetBuildOpts "$0" "$@"
+ConfirmBuildOpts || exit
 
-TARGET='fmt'
-GIT_URL="https://github.com/fmtlib/fmt.git"
-BUILD=build-cmake-"$(basename "${CC}")"
-CMAKE_INSTALL_PREFIX="$(dirname "${APPS}")/share"
+Create_and_Cd "${SRC}"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
-SRC="${HOME}/.local/src"
-mkdir -p "${SRC}" || Die "Unable to create ${SRC}"
-cd "${SRC}" || Die "Unable to enter source directory ${SRC}"
-Do rm -fr "${TARGET}"
-Do git clone "${GIT_URL}" || Die "Unable to fetch repo"
-cd "./${TARGET}" || Die "Unable to enter repo"
-mkdir "${BUILD}" || Die "Unable to create ${BUILD}"
-cd "${BUILD}" || Die "Unable to enter ${BUILD}"
-Do cmake\
-   -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
-   ..
-Do make
-Do make install
+Generate "${GENERATOR}"
+_do make
+_do make install
 echo "
 ${CBLU}
 -------------------------------------------------------------------------------
-* Built ${TARGET} under ${SRC}/${TARGET}.
-* Installed ${TARGET} under ${CMAKE_INSTALL_PREFIX}.
+* Built ${TOOL_SRC} under ${SRC}/${TOOL_SRC}.
+* Installed ${TOOL_SRC} under ${CMAKE_INSTALL_PREFIX}.
 -------------------------------------------------------------------------------
 ${NONE}
 "

@@ -27,4 +27,4 @@ _do make install
 
 Summary "${TOOL_NAME}" "Installed. ${TOOL_INFO}"
 
-Cleanup "${TOOL_SRC}"
+Cleanup_Source "${TOOL_SRC}"

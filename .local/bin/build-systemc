@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #
 # Steps to build and install SystemC
+TOOL_NAME="SystemC"
+TOOL_INFO="Go to 'https://accellera.org/downloads/standards/systemc' for more information."
+TOOL_SRC="systemc"
+TOOL_URL="https://github.com/accellera-official/systemc.git"
+TOOL_VERS=2.3.3
 
 #-------------------------------------------------------------------------------
 # The following is formatted for use with -help
@@ -48,59 +53,31 @@ fi
 SetupLogdir "$0"
 
 GetBuildOpts "$0" "$@"
+ConfirmBuildOpts || exit
 
-#-------------------------------------------------------------------------------
-# Environment variables - MODIFY TO SUITE YOUR NEEDS
-TARGET='systemc'
-GIT_URL="https://github.com/accellera-official/${TARGET}.git"
-VERSION_TAG=2.3.3
-SYSTEMC_HOME="${APPS}/${TARGET}" # <----- THIS IS WHERE INSTALLED VERSION GOES
-BUILD=build-cmake-"$(basename "${CC}")"
-CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
+Create_and_Cd "${SRC}"
+Info -grn "Obtaining ${TOOL_NAME} source"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
-export SYSTEMC_HOME
-export CMAKE_INSTALL_PREFIX CMAKE_CXX_STANDARD
-export BUILD CXX CC
+Info -grn "Compiling ${TOOL_NAME}"
+Generate "${GENERATOR}"
+_do make
+_do make check
 
-if [[ "${DEBUG}" == 1 ]]; then
-  Debug "BUILD=${BUILD}"
-  Debug "CC=${CC}"
-  Debug "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
-  Debug "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}"
-  Debug "CXX=${CXX}"
-  Debug "SRC=${SRC}"
-  Debug "SYSTEMC_HOME=${SYSTEMC_HOME}"
-  Debug
-fi
+if [[ -z "${NOINSTALL+x}" ]]; then
+  Info -grn "Installing ${TOOL_NAME} to final location"
+  _do make install
 
-#-------------------------------------------------------------------------------
-Info -grn "Obtaining SystemC source"
-cd "${SRC}" || Die "Unable to change into source directory '${SRC}'"
-if [[ -d "${TARGET}"/.git ]]; then
-  cd "${TARGET}" || Die "Unable to enter repo directory"
-  Do git pull
+  # Optional clean up
+  if [[ "${CLEAN}" == 1 ]]; then
+    Info "Clean up"
+    cd "${SRC}" || Die "Unable to enter source directory"
+    rm -fr "${TOOL_NAME}"*
+  fi
+
+  Info -grn "Finished installation of ${TOOL_NAME} into ${SYSTEMC_HOME}"
 else
-  # Download
-  Do git clone "${GIT_URL}" || Die "Unable to clone"
-  cd "${TARGET}" || Die "Unable to enter repo directory"
+  Info -mag "Stopped shy installing ${TOOL_NAME}"
 fi
-if [[ -s ${VERSION_TAG} ]]; then
-  Do git  checkout "${VERSION_TAG}"
-fi
-
-Info -grn "Compiling SystemC"
-Do rm -fr "${BUILD}"
-Do mkdir "${BUILD}" || Die "Unable to create build directory"
-cd "${BUILD}" || Die "Unable to enter ${BUILD} directory"
-Do cmake\
-   -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
-   -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
-   ..
-Do make
-Do make check
-Info -grn "Installing SystemC to final location"
-Do make install
-
-Info -grn "Finished installation of SystemC into ${SYSTEMC_HOME}"
 
 # vim:nospell

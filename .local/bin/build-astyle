@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Install the latest or specified version of astyle
 
@@ -25,17 +25,17 @@
 #-------------------------------------------------------------------------------
 # Make things more visible in the output
 
-REPORTING_BASH="$(dirname "$0")/reporting.bash"
-if [[ -f "${REPORTING_BASH}" ]]; then
-  # shellcheck source reporting.bash
-  source "${REPORTING_BASH}" "$0"
+SCRIPT="$(dirname "$0")/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash
+  source "${SCRIPT}" "$0"
 else
-  echo "Error: Missing ${REPORTING_BASH}" 1>&2; exit 1
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
 fi
 
 # Defaults
 #-------------------------------------------------------------------------------
-TOOL="astyle"
+TOOL_NAME="astyle"
 CLEAN=0
 DEBUG=0
 NPROC=4 # Cores to use when building
@@ -127,7 +127,7 @@ fi
 export CMAKE_INSTALL_PREFIX
 
 cd "${SRC}" || Die "Unable to enter ${SRC}"
-test "${CLEAN}" == 1 && rm -fr "${TOOL}*"
+test "${CLEAN}" == 1 && rm -fr "${TOOL_NAME}*"
 
 
 ###############################################################################
@@ -144,40 +144,47 @@ test "${CLEAN}" == 1 && rm -fr "${TOOL}*"
 FULL_VERS=${MAJVERS}.${MINVERS}
 ASTYLE_TARBALL="astyle_${FULL_VERS}_linux.tar.gz"
 URL="https://sourceforge.net/projects/astyle/files/astyle/astyle%20${FULL_VERS}/astyle_${FULL_VERS}_linux.tar.gz/download"
-echo "Fetching ${TOOL}"
+echo "Fetching ${TOOL_NAME}"
 if [[ "${TYPE}" == "-wget" ]]; then
   echo "% wget ${URL}"
-  wget "${URL}" || Die "Failed to download ${TOOL} from ${URL}"
+  wget "${URL}" || Die "Failed to download ${TOOL_NAME} from ${URL}"
 else
   echo "% curl -output ${ASTYLE_TARBALL} ${URL}"
-  curl -output "${ASTYLE_TARBALL}" "${URL}" || Die "Failed to download ${TOOL} from ${URL}"
+  curl -output "${ASTYLE_TARBALL}" "${URL}" || Die "Failed to download ${TOOL_NAME} from ${URL}"
 fi
-echo "Expanding ${TOOL} tarball"
+echo "Expanding ${TOOL_NAME} tarball"
 echo "% tar zxvf ${ASTYLE_TARBALL}"
 tar zxvf "${ASTYLE_TARBALL}" || Die "Failed to extract ${ASTYLE_TARBALL}"
-echo "% cd ${TOOL}"
-cd "${TOOL}" || Die "Unable to enter source directory"
+echo "% cd ${TOOL_NAME}"
+cd "${TOOL_NAME}" || Die "Unable to enter source directory"
 
-Info "Building ${TOOL}"
-BUILD_DIR="${TOOL}-build"
+Info "Building ${TOOL_NAME}"
+BUILD_DIR="${TOOL_NAME}-build"
 mkdir "${BUILD_DIR}" || Die "Unable to create ${BUILD_DIR} directory"
 cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR} directory"
 cmake ..
 make
 
-Info "Installing ${TOOL}"
-echo "% make install"
-mv "${TOOL}" "${CMAKE_INSTALL_PREFIX}/bin/"
+if [[ -z "${NOINSTALL+x}" ]]; then
+  Info "Installing ${TOOL_NAME}"
+  echo "% make install"
+  mv "${TOOL_NAME}" "${CMAKE_INSTALL_PREFIX}/bin/"
 
-cd "${SRC}" || Die "Unable to enter source directory"
-if [[ "${CLEAN}" == 1 ]]; then
-  Info "Clean up"
-  rm -fr "${TOOL}"*
+  # Optional clean up
+  if [[ "${CLEAN}" == 1 ]]; then
+    Info "Clean up"
+    cd "${SRC}" || Die "Unable to enter source directory"
+    rm -fr "${TOOL_NAME}"*
+  fi
+
+  # Verify version installed
+  cd || Die "Unable to return to home"
+  "${TOOL_NAME}" --version
+
+  Info "Finished installing ${TOOL_NAME}"
+else
+  Info -mag "Stopped shy installing ${TOOL_NAME}"
 fi
 
-cd || Die "Unable to return to home"
-"${TOOL}" --version
-
-Info "Finished installing ${TOOL}"
 
 # vim:nospell

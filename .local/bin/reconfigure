@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# Update autotools and recreates configure script
+
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
+
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+
+# Dependencies libtoolize autoreconf automake
+
+_do libtoolize
+_do autoreconf
+_do automake --add-missing
+_do autoupdate
+_do autoreconf
+
+# vim:nospell

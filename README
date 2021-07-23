@@ -1,8 +1,0 @@
-See `.local/ABOUT.md`.
-
-*IMPORTANT:* Do NOT move, rename or delete this directory unless you understand the full implications of such an action. There are several key files that may be linked into this directory using symbolic links:
-
-1. .bashrc
-2. .local
-3. .vimrc
-4. .vim

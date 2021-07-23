@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+#
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#| project_init.sh - executed on startup by CoCalc in $HOME directory to ensure proper setup.
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [OPTIONS...]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#| Set-up symbolic links for the portable scripts tools. If done successfully, the following
+#| additional hierarchy will exist:
+#| 
+#| $HOME/
+#|      |-- .local@ ---------> portable-scripts/.local/
+#|      |-- .vimrc@ ---------> portable-scripts/.local/dotfiles/vimrc
+#|      |-- .vim@ -----------> portable-scripts/.local/dotfiles/vim/
+#|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
+#|      |-- .lessfilter@ ---->portable-scripts/.local/dotfiles/lessfilter
+#|      |-- .agignore
+#|      |-- portable-scripts/
+#|
+#|OPTIONS
+#|-------
+#|
+#| -v verbose output
+#|
+
+
+if [[ "$1" =~ ^--?h(elp)?$ ]]; then
+  HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
+  /usr/bin/perl -ne "${HELPSCRIPT}" "$0";
+  exit
+fi
+
+# Wrap body in function to allow local variables to avoid problems in case this script is sourced.
+function portable-setup() {
+  local PORTABLE_DIR TIMESTAMP VERBOSE
+  LOCAL=".local"
+  PORTABLE_DIR="${HOME}/${LOCAL}"
+  TIMESTAMP="$(date +%y%m%d-%H%M%S)";
+  VERBOSE=0;
+  if [[ "$1" == "-v" ]]; then VERBOSE=1; fi
+  if [[ ${VERBOSE} == 1 ]]; then echo "Host: $(hostname)"; fi
+
+  if [[ ! -d "${PORTABLE_DIR}" ]]; then
+    if [[ -d "${HOME}/portable-scripts/.local" ]]; then
+      bash -v -c "ln -s ${HOME}/portable-scripts/.local ${PORTABLE_DIR}"
+    else
+      echo "Error: Unable to find portable-scripts/.local to link as ${PORTABLE_DIR}! Please link manually." 1>&2
+      return
+    fi
+  fi
+  
+  # Add symbolic links for a minimal set of selected "dot" files
+  for DOTFILE in bash_aliases vim vimrc lessfilter; do
+    if [[ -r "${PORTABLE_DIR}/dotfiles/${DOTFILE}" ]]; then
+      if [[ -h "${HOME}/.${DOTFILE}" ]]; then
+        if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place - please check/correct" 1>&2; fi
+        continue;
+      elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
+        if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place - please check/correct" 1>&2; fi
+        continue;
+      elif [[ -f "${HOME}/.${DOTFILE}" ]]; then
+        bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
+      fi
+      bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
+    else
+      echo "Missing ${PORTABLE_DIR}/dotfiles/${DOTFILE}" 1>&2
+    fi
+  done
+  
+  # Make sure `ag` (aka silver-searcher) doesn't search .snapshots
+  AGIGNORE="${HOME}/.agignore"
+  for IGNORED in .snapshots .hide; do
+    if [[ -r "${AGIGNORE}" ]]; then
+      grep -sqF "${IGNORED}" "${AGIGNORE}" \
+      || echo "${IGNORED}" >> "${AGIGNORE}"
+    else
+      echo "${IGNORED}" > "${AGIGNORE}"
+    fi
+  done
+}
+
+portable-setup "$@"
+
+function Unique_path() {
+  # DESCR: Removes duplicate paths in specified variable
+  # USAGE: Unique_path VAR
+  local PERL_SCRIPT
+  PERL_SCRIPT='
+    $v=$ARGV[0];
+    for my $d(split(qr":",$ENV{$v})){
+      next if !-d $d;
+      $e=abs_path($d);
+      if( ! exists $e{$e} ){
+        $e{$e}=1;
+        push(@e,$e);
+      }
+    }
+    printf qq{%s="%s"\n},$v,join(":",@e);
+  '
+  eval $(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")
+}
+
+function portable-env() {
+  # Environment
+  PORTABLE_DIR="${HOME}/.local"
+  APPS="${PORTABLE_DIR}/apps"
+  DOTBIN="${PORTABLE_DIR}/bin"
+  APPSBIN="${PORTABLE_DIR}/apps/bin"
+  SYSTEMC_HOME="${PORTABLE_DIR}/apps/systemc"
+  PATH="${DOTBIN}:${APPSBIN}:${PATH}"
+  TEMPLATEPATH="${HOME}/templates"
+  for f in "${APPS}/sc-templates"; do
+    if [[ -d "${f}" ]]; then
+      TEMPLATEPATH="${TEMPLATEPATH}:${f}"
+    fi
+  done
+
+  Unique_path PATH
+  Unique_path TEMPLATEPATH
+
+  export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME PATH
+
+}
+
+# TAF!

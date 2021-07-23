@@ -1,31 +1,55 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Build Vim from github clone and installs under ~/clone.
+# Script to build Vim from github and installs under ~/.local/.
+TOOL_NAME="Vi Improved (vim/gvim)"
+TOOL_INFO="Go to 'https://vim.org' for more information."
+TOOL_SRC="vim"
+TOOL_URL="https://github.com/vim/vim.git"
+GENERATOR="cmake"
 
-source reporting.bash "$0"
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
 
-SRC="${HOME}/.local/src"
-mkdir -p "${SRC}" || Die "Unable to create ${SRC}"
-cd "${HOME}/.local/src" || Die "Unable to enter source directory ${SRC}"
-git clone https://github.com/vim/vim.git || Die "Unable to fetch repo"
-cd ./vim || Die "Unable to enter repo"
-./configure --prefix ${HOME}/.local
-make
-make install
-cat <<'EOF'
+SCRIPT="$(dirname $(Realpath "$0"))/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+
+SetupLogdir "$0"
+
+GetBuildOpts "$0" "$@"
+ConfirmBuildOpts || exit
+
+Create_and_Cd "${SRC}"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
+
+Info "Configuring ${TOOL_NAME}"
+_do ./configure --prefix "${APPS}"
+Info "Making ${TOOL_NAME}"
+_do make
+Info "Installing ${TOOL_NAME}"
+_do make install
+
+Cleanup_Source "${TOOL_SRC}"
+
+IMPLEMENTATION=<<'EOF'
 -------------------------------------------------------------------------------
-* Built Vim under $HOME/.local/src/vim.
-* Installed Vim under $HOME/.local.
-* To use, prepend $HOME/.local/bin to your path appropriately.
-* For bash modify `.bashrc` by adding: `PATH="$HOME/.local/bin:$PATH"`
-* When satisfied, you may:
++ Built Vim under ${HOME}/.local/src/vim.
++ Installed Vim under ${HOME}/.local
++ To use, prepend ${HOME}/.local/bin to your path appropriately.
++ For bash modify `.bashrc` by adding: `PATH="${HOME}/.local/bin:$PATH"`
++ When satisfied, you may:
 
-  1. Clean-up the build directly with `cd $HOME/.local/src/vim && make clean`
+  1. Clean-up the build directly with `cd ${HOME}/.local/src/vim && make clean`
   - OR -
-  2. Remove Vim entirely with `rm -fr $HOME/.local/src/vim`
+  2. Remove Vim entirely with `rm -fr ${HOME}/.local/src/vim`
 
-* To share with others: `chmod a+x $HOME && chmod a+rx $HOME/.local`, and let
-  them know to add to `$HOME/.local/bin` to their paths.
++ To share with others: `chmod a+x ${HOME} && chmod a+rx ${HOME}/.local`, and let
+  them know to add to `${HOME}/.local/bin` to their paths.
 -------------------------------------------------------------------------------
 
 EOF

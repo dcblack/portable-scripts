@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-SCRIPT="$(dirname "$0")/reporting.bash"
+SCRIPT="$(dirname "$0")/utils.bash"
 if [[ -r "${SCRIPT}" ]]; then
-  # shellcheck source=reporting.bash
+  # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"
 else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
@@ -37,7 +37,7 @@ function Get_email() {
   done
 }
 
-function choose() { # QUESTION CHOICES...
+function Choose() { # QUESTION CHOICES...
   if [[ $# -lt 3 ]]; then
     echo "Error: Must have a question and at least two choices." 1>&2
     exit 1

@@ -1,14 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# A script to test the reporting.bash functions and provide an example of usage
+# A script to test the utils.bash functions and provide an example of usage
 
 BINDIR="$(realpath $(dirname "$0")/../bin)"
-REPORTING_BASH="${BINDIR}/reporting.bash"
-if [[ -f "${REPORTING_BASH}" ]]; then
-  # shellcheck source ../bin/reporting.bash
-  source "${REPORTING_BASH}" "$0"
+UTILS_BASH="${BINDIR}/utils.bash"
+if [[ -f "${UTILS_BASH}" ]]; then
+  # shellcheck source ../bin/utils.bash
+  source "${UTILS_BASH}" "$0"
 else
-  echo "Error: Missing ${REPORTING_BASH}" 1>&2; exit 1
+  echo "Error: Missing ${UTILS_BASH}" 1>&2; exit 1
 fi
 
 echo xx "Testing Log; Echo; Info; Do; Ruler" xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -19,7 +19,7 @@ Info "Testing Info"
 Do "echo Testing Do"
 Info "Testing Ruler +; / Message; - Message"
 Do Ruler +
-Do Ruler / Hello there
+Do Ruler -grn / Hello there
 Do Ruler Hello there
 
 Ruler -cyn _ "Testing Pass; Fail; PassFail"
