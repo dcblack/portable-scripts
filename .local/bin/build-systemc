@@ -53,6 +53,7 @@ fi
 SetupLogdir "$0"
 
 GetBuildOpts "$0" "$@"
+CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
 ConfirmBuildOpts || exit
 
 Create_and_Cd "${SRC}"
@@ -70,7 +71,7 @@ if [[ -z "${NOINSTALL+x}" ]]; then
 
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
-    Info "Clean up"
+    Info -red "Clean up"
     cd "${SRC}" || Die "Unable to enter source directory"
     rm -fr "${TOOL_NAME}"*
   fi
