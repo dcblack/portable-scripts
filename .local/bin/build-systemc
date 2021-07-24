@@ -39,7 +39,7 @@ TOOL_VERS=2.3.3
 #|
 
 function Realpath () {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
 }
 
 SCRIPT="$(Realpath "$0")"

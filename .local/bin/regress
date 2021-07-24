@@ -3,7 +3,7 @@
 # Run solutions
 
 function Realpath () {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
 }
 SCRIPT="$(dirname "$(Realpath "$0")")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then

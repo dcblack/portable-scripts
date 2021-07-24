@@ -42,7 +42,7 @@ Source this as follows inside your bash script:
  
 ```sh
 function Realpath () {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
 }
 SCRIPT="$(Realpath "$0")"
 SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
