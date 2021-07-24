@@ -2,19 +2,60 @@
 
 set -o vi
 
-export FAVS LOCAL APPS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR SYSTEMC_HOME
-# Favorites
-FAVS="${HOME}"/Favorites
-mkdir -p "${FAVS}"
+function Unique_path() {
+  # DESCR: Removes duplicate paths in specified variable
+  # USAGE: Unique_path VAR
+  local PERL_SCRIPT
+  PERL_SCRIPT='
+    $v=$ARGV[0];
+    for my $d(split(qr":",$ENV{$v})){
+      next if !-d $d;
+      $e=abs_path($d);
+      if( ! exists $e{$e} ){
+        $e{$e}=1;
+        push(@e,$e);
+      }
+    }
+    printf qq{%s="%s"\n},$v,join(":",@e);
+  '
+  eval $(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")
+}
+
 # Locations
-LOCAL="${HOME}/.local"
-APPS="${LOCAL}/apps"
-SYSTEMC_HOME="${HOME}/.local/apps/systemc"
-# Affect applications
-LESS="-afrMRXj4x4"
-CMAKE_VERSION="3.19"
-CMAKE_BUILD="7"
-# Change following if have and prefer clang
-CC="gcc"
-CXX="g++"
-EDITOR="vim"
+function portable-env() {
+  # Environment
+  PORTABLE_DIR="${HOME}/.local"
+  APPS="${PORTABLE_DIR}/apps"
+  DOTBIN="${PORTABLE_DIR}/bin"
+  APPSBIN="${PORTABLE_DIR}/apps/bin"
+  SYSTEMC_HOME="${PORTABLE_DIR}/apps/systemc"
+  PATH="${DOTBIN}:${APPSBIN}:${PATH}"
+  TEMPLATEPATH="${HOME}/templates"
+  for f in "${APPS}/sc-templates"; do
+    if [[ -d "${f}" ]]; then
+      TEMPLATEPATH="${TEMPLATEPATH}:${f}"
+    fi
+  done
+
+  Unique_path PATH
+  Unique_path TEMPLATEPATH
+
+  export PORTABLE_DIR APPS TEMPLATEPATH SYSTEMC_HOME PATH
+
+  # Favorites
+  FAVS="${HOME}"/Favorites
+  mkdir -p "${FAVS}"
+
+  # Affect applications
+  LESS="-afrMRXj4x4"
+  CMAKE_VERSION="3.19"
+  CMAKE_BUILD="7"
+  # Change following if have and prefer clang
+  CC="gcc"
+  CXX="g++"
+  EDITOR="vim"
+
+  export FAVS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR
+}
+
+portable-env
