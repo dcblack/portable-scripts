@@ -253,7 +253,7 @@ EOT
 
   # Deal with new working script if it exists
   export nws
-  nws="$(firstreal "$(Add_suffix "/${working_script}" . .. ../.. ../../..)")"
+  nws="$(firstreal "$(add_suffix "/${working_script}" . .. ../.. ../../..)")"
   if [[ "${nws}" != "" ]]; then
     nws="$(realpath "${nws}")"
     if [[ "${lws}" != "" && "${lws}" != "${nws}" && -x "${lws}" && ! -d "${lws}" ]]; then
