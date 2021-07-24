@@ -170,7 +170,7 @@ function Require() { # FILE(S) to source
   if [[ $# != 1 ]]; then
     echo "Fatal: Require only allows one argument" 1>&2; exit 1
   fi
-  BINDIR="$(realpath "$(dirname "$0")"/../bin)"
+  BINDIR="$(Realpath "$(dirname "$0")"/../bin)"
   SCPT="$1"; shift
   REQD="${BINDIR}/${SCPT}"
   if [[ -f "${REQD}" ]]; then
@@ -252,48 +252,73 @@ function Colors() {
 Colors on
 
 function Logfile() {
-  local APPEND
+  local APPEND PREV_LOGFILE
   APPEND=0
   if [[ "$1" =~ ^-{1,2}a(ppend)?$ ]]; then
     APPEND=1
     shift
   fi
+  if [[ -n ${LOGFILE} ]]; then PREV_LOGFILE="${LOGFILE}"; else PREV_LOGFILE=""; fi
+  LOGFILE=""
   if [[ $# -gt 0 && -z "${LOGFILE}" ]]; then
+    # Figure out where to store logfile
     if [[ "${LOGFILE}" =~ ^/ ]]; then
       LOGFILE=""
+    elif [[ -n "${LOGDIR}" ]]; then
+      if [[ ! -d "${LOGDIR}" ]]; then mkdir -p "${LOGDIR}"; fi
+      LOGFILE="$(Realpath "${LOGDIR}")/"
     else
-      LOGFILE="${LOGDIR}/"
+      LOGFILE="$(Realpath .)/"
     fi
+    # Append the filename ensuring suffix is .log
     LOGFILE="${LOGFILE}${1//.log/}.log"
   fi
-  if [[ -z "${LOGFILE}" ]]; then
+  if [[ -n "${PREV_LOGFILE}" && "${PREV_LOGFILE}" != "${LOGFILE}" ]]; then
+    printf "\n# Closed %s\n" "$(date)" >> "${PREV_LOGFILE}"
+    printf "Closed %s\n" "${PREV_LOGFILE}"
+  elif [[ -z "${LOGFILE}" ]]; then
     echo "Error: Must specify a valid logfile name" 1>&2
     exit 1
   fi
-  test "${APPEND}" -eq 0 && rm -f "${LOGFILE}"
-  printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
-  printf "Logging to %s\n" "${LOGFILE}"
+  if [[ -n "${LOGFILE}" ]]; then
+    test "${APPEND}" -eq 0 && rm -f "${LOGFILE}"
+    printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
+    printf "Logging to %s\n" "${LOGFILE}"
+  fi
 }
 
 function Log() {
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
-  if [[ -f "${LOGFILE}" ]]; then echo "${OPT}" "$@" >>"${LOGFILE}"; fi
+  if [[ $# == 0 ]]; then # pipe
+    if [[ -f "${LOGFILE}" ]]; then tee -a "${LOGFILE}"; else cat "${LOGFILE}"; fi
+  else
+    if [[ -f "${LOGFILE}" ]]; then
+      if [[ "${OPT}" == "-n" ]]; then
+        echo -n "$@" >>"${LOGFILE}";
+      else
+        echo    "$@" >>"${LOGFILE}";
+      fi
+    fi
+  fi
 }
 
 function Echo() {
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
-  echo "${OPT}" "$*"
-  Log  "${OPT}" "$*"
-}
+  if [[ "${OPT}" == "-n" ]]; then
+    echo -n "$*"; Log  -n "$*"
+  else
+    echo "$*"; Log "$*"
+  fi
+  }
 
-function Printf() {
-  # shellcheck disable=SC2059
-  printf "$@"
-  # shellcheck disable=SC2059
-  if [[ -f "${LOGFILE}" ]]; then printf "$@" >>"${LOGFILE}"; fi
-}
+  function Printf() {
+    # shellcheck disable=SC2059
+    printf "$@"
+    # shellcheck disable=SC2059
+    if [[ -f "${LOGFILE}" ]]; then printf "$@" >>"${LOGFILE}"; fi
+  }
 
 function _do() {
   local NX
@@ -830,7 +855,7 @@ function GetBuildOpts() {
 
   #-------------------------------------------------------------------------------
   # Test some assumptions
-  if [[ "${GENERATOR}" =~ cmake|autotools ]]; then
+  if [[ "${GENERATOR}" =~ (cmake|autotools) ]]; then
     Comment all is ok
   else
     Error "GENERATOR must be one of 'cmake' or 'autotools'"

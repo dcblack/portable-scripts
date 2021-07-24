@@ -2,7 +2,7 @@
 #
 # Steps to build and install SystemC
 TOOL_NAME="SystemC"
-TOOL_INFO="Go to 'https://accellera.org/downloads/standards/systemc' for more information."
+TOOL_INFO='Go to 'https://accellera.org/downloads/standards/systemc' for more information.'
 TOOL_SRC="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS=2.3.3
@@ -61,19 +61,19 @@ Info -grn "Obtaining ${TOOL_NAME} source"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
 Info -grn "Compiling ${TOOL_NAME}"
-Generate
-_do make
-_do make check
+Generate "${GENERATOR}" | Log
+_do make | Log
+_do make check | Log
 
 if [[ -z "${NOINSTALL+x}" ]]; then
   Info -grn "Installing ${TOOL_NAME} to final location"
-  _do make install
+  _do make install | Log
 
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
     Info -red "Clean up"
     cd "${SRC}" || Die "Unable to enter source directory"
-    rm -fr "${TOOL_NAME}"*
+    rm -fr "${TOOL_NAME}"* | Log
   fi
 
   Info -grn "Finished installation of ${TOOL_NAME} into ${SYSTEMC_HOME}"
