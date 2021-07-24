@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+touch DONT_FORGET_TO_CLEAN_BEFORE_HANDOUT

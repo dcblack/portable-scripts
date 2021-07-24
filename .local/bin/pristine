@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+GIT_CONFIG="$(git rev-parse --show-toplevel)"
+if [[ ! -r "${GIT_CONFIG}" ]]; then
+  echo "ERROR: Not inside a git repository" 1>&2
+  exit 1
+fi
+read -n 20 -p "Type YES to confirm restoration of this directory ($(pwd)): "
+if [[ "${REPLY}" != "YES" ]]; then
+  echo "Nothing changed"
+  exit
+fi
+rm -fr *
+git checkout .
+echo "Restored"
