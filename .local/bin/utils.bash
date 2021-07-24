@@ -32,7 +32,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | ConfirmBuildOpts || exit   | Asks user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
-| Generate                   | Invokes cmake or autotools
+| Generate TYPE              | Invokes cmake or autotools
 | Cleanup_Source             | Removes source
 
 USAGE
@@ -68,6 +68,7 @@ export CMAKE_INSTALL_PREFIX
 export CXX
 export DEBUG
 export ERRORS
+export GENERATOR
 export LOGDIR
 export LOGFILE
 export NOTREALLY

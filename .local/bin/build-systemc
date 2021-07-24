@@ -60,7 +60,7 @@ Info -grn "Obtaining ${TOOL_NAME} source"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
 Info -grn "Compiling ${TOOL_NAME}"
-Generate "${GENERATOR}"
+Generate
 _do make
 _do make check
 
