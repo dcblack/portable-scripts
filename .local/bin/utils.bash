@@ -76,6 +76,7 @@ export SRC
 export SYSTEMC_HOME
 export SUFFIX
 export TOOL_NAME
+# shellcheck disable=SC2090
 export TOOL_INFO
 export TOOL_VERS
 export TOOL_URL

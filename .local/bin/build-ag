@@ -2,17 +2,20 @@
 #
 # Script to build/install Silver searcher, the fastest file searching tool on the planet!
 TOOL_NAME="Silver searcher (ag)"
+# shellcheck disable=SC2089
 TOOL_INFO="Use 'ag --help' for more information."
 TOOL_SRC="the_silver_searcher"
 TOOL_URL="https://github.com/ggreer/the_silver_searcher.git"
 
-SCRIPT="$(dirname "$0")/utils.bash"
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"
 else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
 fi
+SetupLogdir "$0"
 
 GetBuildOpts "$0" "$@"
 ConfirmBuildOpts || exit
@@ -23,7 +26,7 @@ GitClone_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 Info "Configuring ${TOOL_NAME}"
 _do ./build.sh --prefix="${APPS}" || Die "Unable to build"
 Info "Installing ${TOOL_NAME}"
-_do make install
+_do make install | Log
 
 Summary "${TOOL_NAME}" "Installed. ${TOOL_INFO}"
 
