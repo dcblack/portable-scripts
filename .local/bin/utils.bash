@@ -937,6 +937,10 @@ function GetSource_and_Cd() {
 }
 
 function Generate() {
+  if [[ $# == 1 ]]; then
+    GENERATOR="$1"
+    shift
+  fi
   Assert $# = 0
   case "${GENERATOR}" in
     cmake)
@@ -956,7 +960,7 @@ function Generate() {
           ../configure --prefix="${SYSTEMC_HOME}"
       ;;
     *)
-      Error "Unknown generator ${1}"
+      Error "Unknown generator '${GENERATOR}'"
       ;;
   esac
 }
