@@ -25,7 +25,7 @@ GetBuildOpts "$0" "$@"
 ConfirmBuildOpts || exit
 
 Create_and_Cd "${SRC}"
-GitClone_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
 Info "Configuring ${TOOL_NAME}"
 _do ./build.sh --prefix="${APPS}" || Die "Unable to build"
