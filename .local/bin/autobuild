@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+}
+
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+
+Generate autotools
+_do make
+
+# vim:nospell
