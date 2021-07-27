@@ -32,7 +32,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | ConfirmBuildOpts || exit   | Asks user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
-| Generate TYPE              | Invokes cmake or autotools
+| Generate [TYPE]            | Invokes cmake or autotools
 | Cleanup_Source             | Removes source
 
 USAGE
@@ -471,14 +471,15 @@ function HelpText() {
   /usr/bin/perl -ne "${HELPSCRIPT}" "$@";
 }
 
-function ShowVar() {
+function ShowVars() {
   local DLR VAR VAL
-  VAR="$1"
-  DLR='$'
-  VAL="$(eval "echo ${DLR}${VAR}")"
-  if [[ -n "${VAL}" ]]; then
-    echo "${1}=${VAL}"
-  fi
+  for VAR in "$@"; do
+    DLR='$'
+    VAL="$(eval "echo ${DLR}${VAR}")"
+    if [[ -n "${VAL}" ]]; then
+      Echo "${VAR}='${VAL}'"
+    fi
+  done
 }
 
 function ShowBuildOpts() {
@@ -486,29 +487,31 @@ function ShowBuildOpts() {
   for (( i=0; i<${#ARGV[@]}; ++i )); do
     Debug "ARGV[${i}]='${ARGV[${i}]}'"
   done
-  ShowVar APPS
-  ShowVar CLEAN
-  ShowVar CLEANUP
-  ShowVar CMAKE_CXX_STANDARD
-  ShowVar CMAKE_INSTALL_PREFIX
-  ShowVar CC
-  ShowVar CXX
-  ShowVar DEBUG
-  ShowVar LOGDIR
-  ShowVar LOGFILE
-  ShowVar NOTREALLY
-  ShowVar SRC
-  ShowVar SYSTEMC_HOME
-  ShowVar SUFFIX
-  ShowVar TOOL_NAME
-  ShowVar TOOL_INFO
-  ShowVar TOOL_VERS
-  ShowVar TOOL_URL
-  ShowVar BUILD_DIR
-  ShowVar GENERATOR
-  ShowVar NOINSTALL
-  ShowVar UNINSTALL
-  ShowVar VERBOSITY
+  ShowVars \
+    APPS \
+    CLEAN \
+    CLEANUP \
+    CMAKE_CXX_STANDARD \
+    CMAKE_INSTALL_PREFIX \
+    CC \
+    CXX \
+    DEBUG \
+    LOGDIR \
+    LOGFILE \
+    NOTREALLY \
+    SRC \
+    SYSTEMC_HOME \
+    SUFFIX \
+    TOOL_NAME \
+    TOOL_INFO \
+    TOOL_VERS \
+    TOOL_URL \
+    BUILD_DIR \
+    GENERATOR \
+    NOINSTALL \
+    UNINSTALL \
+    VERBOSITY \
+    ;
   Ruler -blu
 }
 
@@ -936,10 +939,14 @@ function GetSource_and_Cd() {
   fi
 }
 
+# Arguments are optional
+# shellcheck disable=SC2120
 function Generate() {
-  if [[ $# == 1 ]]; then
+  if [[ $# == 1 ]]; then # option generator
     GENERATOR="$1"
     shift
+  else
+    Assert -n "${GENERATOR}"
   fi
   Assert $# = 0
   case "${GENERATOR}" in

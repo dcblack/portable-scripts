@@ -61,13 +61,14 @@ Info -grn "Obtaining ${TOOL_NAME} source"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
 Info -grn "Compiling ${TOOL_NAME}"
-Generate "${GENERATOR}" | Log
-_do make | Log
-_do make check | Log
+# shellcheck disable=SC2119
+Generate | Log
+_do cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR}"
+_do make
 
 if [[ -z "${NOINSTALL+x}" ]]; then
   Info -grn "Installing ${TOOL_NAME} to final location"
-  _do make install | Log
+  _do make install
 
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
