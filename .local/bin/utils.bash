@@ -5,6 +5,8 @@ SYNOPSIS
 ========
 
 `utils.bash` - A collection of bash functions useful for scripting.
+In particular, these are intended for use in scripts to build (fetch,
+configure, compile and install) various apps and libraries (e.g., SystemC).
 
 Note: Capitalizing function names reduces collisions with scripts/executables.
 
@@ -28,7 +30,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | Warn "_MESSAGE_"           | Echo a warning message
 | Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
 | GetBuildOpts "$0" "$@"     | Parses standard _build_ command-line inputs
-| ShowBuildOpts              | Display options variables from GetBuildOpts
+| ShowBuildOpts              | Display options variables
 | ConfirmBuildOpts || exit   | Asks user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
@@ -568,7 +570,9 @@ function GetBuildOpts() {
 #|  --home             |                   | quick -i $HOME -s $HOME/src
 #|  --info=TEXT        |  -info TEXT       | choose installation directory
 #|  --install=DIR      |  -i DIR           | choose installation directory
+#|  --nogetbuildopts   |  -na              | don't automatically GetBuildOpts
 #|  --notreally        |  -n               | don't execute, just show possibilities
+#|  --no-install       |  -no-install      | 
 #|  --src=DIR          |  -s DIR           | choose source directory
 #|  --std=N            |  -std=N           | set make C++ compiler version where N={98,11,14,17,20,...}
 #|  --systemc=DIR      |  -sc              | reference SystemC installation
@@ -617,6 +621,8 @@ function GetBuildOpts() {
 #|-------
 #|
 #| Apache 2.0
+
+  if [[ "$2" =~ ^-{1,2}(na|nogetbuildopts)$ ]]; then return; fi
 
   # Grab program name
   local SCRIPT
@@ -893,6 +899,7 @@ function GetBuildOpts() {
 }
 
 function SetupLogdir() {
+  # Creates log directory and sets initial LOGFILE
   LOGDIR="${HOME}/logs"
   mkdir -p "${LOGDIR}"
   case $# in
