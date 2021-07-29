@@ -2,9 +2,15 @@
 #
 # Run solutions
 
+
 function Realpath () {
   /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
 }
+
+ORIG_DIR="$(Realpath .)"
+LAB_DIR="$(git rev-parse --show-toplevel)"
+LAB_NAME="${LAB_DIR//.*\///}"
+
 SCRIPT="$(dirname "$(Realpath "$0")")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash disable=SC1091
@@ -14,34 +20,31 @@ else
 fi
 SetupLogdir "$0"
 
-cd "$(git rev-parse --show-toplevel)" || Die "Unable to find working path"
-
-LOGFILE="regress.log"
-if [[ $# != 0 ]]; then
-  # shellcheck disable=SC2001
-  LOGFILE="$(echo "$*"|sed -e 's+[-/_ ]+-+g').log"
+if [[ -z "${LAB_DIR}" ]]; then
+  Error "This script must be run from within a valid set of exercises"
 fi
+_do cd "${LAB_DIR}" || Die "Unable to find working path from '${ORIG_DIR}'"
 
 #-------------------------------------------------------------------------------
 function Clean_exercise() {
-  Info "Cleaning ${1}"
-  rm -fr "${1}"
-  git checkout "${1}";
+  Info "Cleaning $*"
+  rm -fr "$@"
+  git checkout "$@";
 }
 
 function Do_exercise() {
   echo ""
   Ruler -blu "${1}"
   _do rsync -av "${1}/" "${2}/";
-  make -C "${2}" clean run || echo "# FAILED ${1}";
+  _do make -C "${2}" clean run || echo "# FAILED ${1}";
 # make -C "${2}" stats;
 }
 
 #-------------------------------------------------------------------------------
-date "+Regression test %c %Z" | tee "${LOGFILE}"
+Info "$(date "+Regression test %c %Z") for ${LAB_NAME}"
 
 if [[ $# == 0 ]]; then
-  for f in ex[0-9]*; do
+  for f in ./ex[0-9]* ; do
     Clean_exercise "${f}"
   done
 else
@@ -62,7 +65,7 @@ if [[ $# == 0 ]]; then
         Do_exercise "answers/${f}" "${f}"
       fi
     done
-  ) 2>&1 | tee -a "${LOGFILE}"
+  ) 2>&1 | Log
 else
   (
     for f in "$@"; do
@@ -74,18 +77,19 @@ else
         Do_exercise "answers/${f}" "${f}"
       fi
     done
-  ) 2>&1 | tee -a "${LOGFILE}"
+  ) 2>&1 | Log
 fi
 
-echo "" | tee -a "${LOGFILE}"
-echo "#- Summary ---------------------------------------------------------------------" | tee -a "${LOGFILE}"
-FAILURES="$(grep -c FAIL "${LOGFILE}")"
+Echo ""
+Ruler -blue Summary
+FAILURES="$(grep -c FAIL "${LOGFILE:?}")"
 if [[ ${FAILURES} == 0 ]]; then
-  echo "# Passed all tests" | tee -a "${LOGFILE}"
+  Info -grn "# Passed all tests"
 else
-  grep FAILED "${LOGFILE}" | tee -a "${LOGFILE}"
-  echo "# Failed ${FAILURES} tests" | tee -a "${LOGFILE}"
+  grep FAILED "${LOGFILE:?}"
+  Error "# Failed ${FAILURES} tests"
 fi
-date "+# Completed %c %Z" | tee -a "${LOGFILE}"
-echo "#-------------------------------------------------------------------------------" | tee -a "${LOGFILE}"
-echo "Results in $(realpath "${LOGFILE}")"
+Info "$(date "+# Completed %c %Z") from ${LAB_NAME}"
+Ruler -blu
+Info "REMINDER: Exercises are not clean."
+Info "Results in $(realpath "${LOGFILE:?}")"
