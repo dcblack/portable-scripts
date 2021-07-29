@@ -32,10 +32,22 @@
 # MJS 2008-03-31  Added new user - ovm
 #
 
+Fatal() {
+  echo "Fatal: $*" 1>&2
+  exit 1
+}
+
+Error() {
+  echo "Error: $*" 1>&2
+  if [ -z "${ERRORS+x}" ]; then ERRORS=0 ; fi
+  ERRORS=$(( ERRORS + 1 ))
+  export ERRORS
+}
+
 # Make sure the correct programs are used. The locations depend on the
 # OS that's running
 
-OS=`uname`
+OS="$(uname)"
 
 if [ "${OS}" = "SunOS" ]; then
 	FIND=/bin/find
@@ -43,23 +55,24 @@ if [ "${OS}" = "SunOS" ]; then
 	TAR=/bin/tar
 	TAROPTS=-I
 	COMPRESS=/bin/compress
+        # shellcheck disable=SC2034
 	GREP=/usr/xpg4/bin/grep
 	ID=/usr/xpg4/bin/id
-elif [ "$OS" = "Linux" ]; then
+elif [ "${OS}" = "Linux" ]; then
 	FIND=/usr/bin/find
 	FINDOPTS=-noleaf
 	TAR=/bin/tar
 	TAROPTS=-T
 	COMPRESS=/usr/bin/gzip
+        # shellcheck disable=SC2034
 	GREP=/bin/grep
 	ID=/usr/bin/id
 else
-	echo Unsupported OS: $OS. Exiting ...
-	exit 1;
+	Fatal "Unsupported OS: ${OS}. Exiting ..."
 fi
 
 # create a temporary file in which to list the files to be tarred
-TMPFILE=$HOME/tmpfilelist.tmp
+TMPFILE="${HOME}/tmpfilelist.tmp"
 
 # The name of the resulting tar file is derived from the name of the course
 # as follows:
@@ -95,11 +108,11 @@ TMPFILE=$HOME/tmpfilelist.tmp
 # one-liner to strip off the trailing numbers. So, if the username is
 # vhdl8, COURSEUSER gets set to "vhdl"
 
-COURSEUSER=`$ID -u -n | perl -e '<STDIN> =~ /[a-z]+/i and print $&'`
+COURSEUSER="$("${ID}" -u -n | perl -e '<STDIN> =~ /[a-z]+/i and print $&')"
 
 # What sort of course is this? This determines the tar file name
 
-case $COURSEUSER in
+case "${COURSEUSER}" in
 
   evhdv | evhdd | evhdl | ams | vhdl | vhdlbae | tca| tcx)
     COURSE=vhdl;;
@@ -117,7 +130,7 @@ case $COURSEUSER in
     COURSE=tcltk;;
 
   e)
-    FINDOPTS="$FINDOPTS -name *eRM* -prune -type f -o"
+    FINDOPTS="${FINDOPTS} -name *eRM* -prune -type f -o"
     COURSE=e;;
 
   cpp)
@@ -133,73 +146,80 @@ case $COURSEUSER in
     COURSE=ovm;;
 		
   *)
-    echo $0: Unrecognised User - tar file will be called course.tar
+    echo "$0: Unrecognised User - tar file will be called course.tar"
     COURSE=course;;
 esac
 
 # change to user's home directory, so that relative paths are used
 # in the tar file
 
-cd $HOME
+cd "${HOME}" || Fatal "Unable to cd to ${HOME}"
 
 # search for each type of file in turn and append them to 
 # tmpfilelist.tmp
 
-$FIND . $FINDOPTS -name '*.vhd'    > $TMPFILE
-$FIND . $FINDOPTS -name '*.v'     >> $TMPFILE
-$FIND . $FINDOPTS -name '*.out'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.setup' >> $TMPFILE
-$FIND . $FINDOPTS -name '*.scr'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.bat'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.txt'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.ucf'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.acf'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.cmd'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.do'    >> $TMPFILE
-$FIND . $FINDOPTS -name '*.setup' >> $TMPFILE
-$FIND . $FINDOPTS -name '*.hex'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.mem'   >> $TMPFILE
+Find_files_matching() {
+  "${FIND}" . "${FINDOPTS}" -name "$*"
+}
 
-# Added for SystemVerilog
-$FIND . $FINDOPTS -name '*.sv'    >> $TMPFILE
-$FIND . $FINDOPTS -name '*.c'     >> $TMPFILE
-$FIND . $FINDOPTS -name '*.mca'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.f'     >> $TMPFILE
-$FIND . $FINDOPTS -name 'start*'  >> $TMPFILE
-$FIND . $FINDOPTS -name 'run*'    >> $TMPFILE
-$FIND . $FINDOPTS -name '*README*'>> $TMPFILE
+(
+  Find_files_matching '*.vhd'
+  Find_files_matching '*.v'
+  Find_files_matching '*.out'
+  Find_files_matching '*.setup'
+  Find_files_matching '*.scr'
+  Find_files_matching '*.bat'
+  Find_files_matching '*.txt'
+  Find_files_matching '*.ucf'
+  Find_files_matching '*.acf'
+  Find_files_matching '*.cmd'
+  Find_files_matching '*.do'
+  Find_files_matching '*.setup'
+  Find_files_matching '*.hex'
+  Find_files_matching '*.mem'
 
-# Added for SystemC
-$FIND . $FINDOPTS -name 'Makefile*'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.cpp'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.h'     >> $TMPFILE
-$FIND . $FINDOPTS -name '*.hpp'   >> $TMPFILE
+  # Added for SystemVerilog
+  Find_files_matching '*.sv'
+  Find_files_matching '*.c'
+  Find_files_matching '*.mca'
+  Find_files_matching '*.f'
+  Find_files_matching 'start*'
+  Find_files_matching 'run*'
+  Find_files_matching '*README*'
 
-# Added for Perl and Tcl/Tk
-$FIND . $FINDOPTS -name '*.pl'    >> $TMPFILE
-$FIND . $FINDOPTS -name '*.pm'    >> $TMPFILE
-$FIND . $FINDOPTS -name '*.tcl'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.rpt'   >> $TMPFILE
-$FIND . $FINDOPTS -name '*.tbl'   >> $TMPFILE
+  # Added for SystemC
+  Find_files_matching 'Makefile*'
+  Find_files_matching '*.cpp'
+  Find_files_matching '*.h'
+  Find_files_matching '*.hpp'
 
-# Added for e
-$FIND . $FINDOPTS -name '*.e' 	  >> $TMPFILE
-$FIND . $FINDOPTS -name '*.sh' 	  >> $TMPFILE
-$FIND . $FINDOPTS -name '*.csh'	  >> $TMPFILE
-$FIND . $FINDOPTS -name '*.ini'	  >> $TMPFILE
-$FIND . $FINDOPTS -name 'cds.lib' >> $TMPFILE
-$FIND . $FINDOPTS -name 'hdl.var' >> $TMPFILE
-$FIND . $FINDOPTS -name '*start*'  >> $TMPFILE
-$FIND . $FINDOPTS -name 'makefile' >> $TMPFILE
+  # Added for Perl and Tcl/Tk
+  Find_files_matching '*.pl'
+  Find_files_matching '*.pm'
+  Find_files_matching '*.tcl'
+  Find_files_matching '*.rpt'
+  Find_files_matching '*.tbl'
 
-# Added for psl
-$FIND . $FINDOPTS -name '*.psl' 	  >> $TMPFILE
+  # Added for e
+  Find_files_matching '*.e'
+  Find_files_matching '*.sh'
+  Find_files_matching '*.csh'
+  Find_files_matching '*.ini'
+  Find_files_matching 'cds.lib'
+  Find_files_matching 'hdl.var'
+  Find_files_matching '*start*'
+  Find_files_matching 'makefile'
+
+  # Added for psl
+  Find_files_matching '*.psl'
+
+) > "${TMPFILE}"
 
 # Create and compress the tar file
 
-$TAR -cf ${USER}_${COURSE}.tar ${TAROPTS} $TMPFILE
-$COMPRESS ${USER}_${COURSE}.tar
+"${TAR}" -cf "${USER}_${COURSE}.tar" "${TAROPTS}" "${TMPFILE}"
+"${COMPRESS}" "${USER}_${COURSE}.tar"
 
 # Say we've finished
 
-echo ${USER}_${COURSE}.tar.gz has been created 
+echo "${USER}_${COURSE}.tar.gz has been created"
