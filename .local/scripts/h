@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+function lns() { # Display symbolic links
+  # shellcheck disable=SC2010
+  ls -lA "$@" | grep -F -- '->'
+}

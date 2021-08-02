@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+function h() { # Display most recent N history lines
+  local N=-20
+  if [[ "$1" =~ ^-[0-9]+ ]]; then
+    N="$1"
+    shift
+  fi
+  history | tail "${N}"
+}

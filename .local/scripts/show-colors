@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+function show-colors() { # display all the color combinations
+  echo "${BOLD}${BBLK}${CRED}Hello ${CGRN}world:${NONE}"
+  echo "    ${UNDR}${BOLD}RAW PLN BLD${NONE}"
+  echo "  - ${CBLK}blk ${BWHT}${CBLK}blk ${BOLD}BLK${NONE}"
+  echo "  - ${CRED}red ${BWHT}${CRED}red ${BOLD}RED${NONE}"
+  echo "  - ${CGRN}grn ${BBLK}${CGRN}grn ${BOLD}GRN${NONE}"
+  echo "  - ${CYLW}ylw ${BBLK}${CYLW}ylw ${BOLD}YLW${NONE}"
+  echo "  - ${CBLU}blu ${BWHT}${CBLU}blu ${BOLD}BLU${NONE}"
+  echo "  - ${CMAG}mag ${BWHT}${CMAG}mag ${BOLD}MAG${NONE}"
+  echo "  - ${CCYN}cyn ${BBLK}${CCYN}cyn ${BOLD}CYN${NONE}"
+  echo "  - ${CWHT}wht ${BBLK}${CWHT}wht ${BOLD}WHT${NONE}"
+}
+
