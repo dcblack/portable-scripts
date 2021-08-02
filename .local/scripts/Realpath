@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+function Realpath() {
+  perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+}
+

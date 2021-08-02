@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+function Unique_path() {
+  # USAGE: unique_path [-v] VAR
+  local VERBOSE PLSCRIPT ASSIGNMENT
+  VERBOSE=0
+  if [[ "$1" == "-v" ]]; then
+    VERBOSE=1
+    shift
+  fi
+  # shellcheck disable=SC2016
+  PLSCRIPT='$v=$ARGV[0]; for my $d(split(qr{:},$ENV{$v})){ next if ! -d $d; $e=abs_path($d); if( ! exists $e{$e} ){ $e{$e}=1; push(@e,$e); } } printf qq{%s="%s"\n},$v,join(":",@e);'
+  ASSIGNMENT="$(perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "$1")"
+  if [[ "${VERBOSE}" == 1 ]]; then
+    Echo "Evaluating ${ASSIGNMENT}"
+  fi
+  eval "${ASSIGNMENT}"
+}

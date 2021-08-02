@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+function Remove_path() {
+  # USAGE: remove_path VAR PATH
+  local plscript
+  # shellcheck disable=SC2016
+  plscript=' $v=$ARGV[0]; $p=abs_path($ARGV[1]); for (split(qr":",$ENV{$v})) { $e=abs_path($_); if($p ne $e) { $push(@e,$e); } } print "$v=",join(":",@e) '
+  eval "$(perl -M'Cwd(abs_path)' -e "${plscript}" "$1" "$2")"
+}
+

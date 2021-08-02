@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+
+export lwd nwd cws nws
+function j() {
+  # Synopsis
+  #   j - more powerful alternative to cd (aka jump)
+  # Syntax
+  #   j DIR(S)
+  # Begin parsing options
+  #-----------------------------------------------------------------------------
+  local J_VERBOSE J_DEBUG
+  J_VERBOSE=0
+  J_DEBUG=0
+  if [[ "${FAVS}" == "" ]]; then
+    local fav
+    for fav in Favorites favs .favs; do
+      FAVS="$(realpath "${HOME}/${fav}")"
+      if [[ "${FAVS}" != "" ]]; then
+        break
+      fi
+    done
+    export FAVS
+  fi
+  if [[ $# != 0 ]]; then
+    while [[ "$1" =~ ^-. ]]; do
+      if [[ ${J_DEBUG} == 1 ]]; then echo "DEBUG: $1"; fi
+      case "$1" in
+      -h | -help | --help) cat 1>&2 <<EOT
+Synopsis
+--------
+
+  j - slightly more flexible alternative to change directory 'cd' command (uses cd internally).
+
+Syntax
+------
+
+  j -help
+  j -list
+  j {dir_or_file}...
+
+Description
+-----------
+
+  For each argument, j uses case-insensitive globbing to
+  locate that element.
+
+  If it finds a directory, then *j* moves to that directory
+  (cd) and processes the next argument.
+
+  If the result is a path to a non-directory element, then
+  it jumps to the directory containing that element.
+
+Examples
+--------
+
+  j tlm-? answers EX01
+  j ~/syscfund/ex01/ex01.cpp
+
+EOT
+        return
+        ;;
+      -d | --debug )
+        J_DEBUG=1
+        ;;
+      -v | --verbose )
+        # shellcheck disable=SC2034
+        J_VERBOSE=1
+        ;;
+      -l | -list )
+        if [[ -n "${FAVS}" ]]; then
+          /bin/ls "${FAVS}"
+        else
+          echo "No favorites directory specified" 1>&2
+        fi
+        return
+        ;;
+      -L | -lns )
+        if [[ -n "${FAVS}" ]]; then
+          /bin/ls -l "${FAVS}"
+        else
+          echo "No favorites directory specified" 1>&2
+        fi
+        return
+        ;;
+      -[1-9])
+        ;;
+      * ) 
+        echo 1>&2 "ERROR: Unknown option $1"
+        return
+        ;;
+      esac
+      shift
+    done
+  fi
+  # End parsing options
+  #-----------------------------------------------------------------------------
+  local working_script='setup.profile'
+
+  # Last working directory
+  local prev_lwd="${lwd}"
+  lwd="$(Realpath .)"
+  export lwd
+  if [[ $# == 0 ]]; then
+    # shellcheck disable=SC2164
+    cd
+  else
+    while [[ $# != 0 ]]; do
+      if [[ ${J_DEBUG} == 1 ]]; then printf "DEBUG: Arg '%s'\n" "$1"; fi
+      if [[ "$1" == '-' ]]; then
+        # shellcheck disable=SC2164
+        cd -
+      else
+        arg="$1"
+        alt="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
+        if [[ ${J_DEBUG} == 1 ]]; then
+          printf "DEBUG: arg='%s'\n" "${arg}"
+          printf "DEBUG: alt='%s'\n" "${alt}"
+        fi
+        if [[ -e "${arg}" && -f "${arg}" ]]; then
+          arg=$(dirname "${arg}")
+        fi
+        # ToDo: add case-insensitivity
+        # shellcheck disable=SC2164
+        cd "${arg}" 1>/dev/null 2>&1 \
+        || cd "${alt}" 1>/dev/null 2>&1 \
+        || break
+      fi
+      shift
+    done
+  fi
+  # New working directory
+  local next_wd
+  next_wd="$(Realpath .)"
+  # shellcheck disable=SC2164
+  cd "${lwd}" 2>/dev/null 1>/dev/null
+  # shellcheck disable=SC2164
+  cd "${next_wd}"
+
+  if [[ "${next_wd}" != "${prev_lwd}" ]]; then
+    lwd="${prev_lwd}"
+  else
+    export cwd
+    cwd="${next_wd}"
+  fi
+#  echo "<${next_wd}>"
+
+  # Last working script
+  if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
+
+  # Deal with new working script if it exists
+  export nws
+  nws="$(Firstreal "$(Add_suffix "/${working_script}" . .. ../.. ../../..)")"
+  if [[ "${nws}" != "" ]]; then
+    nws="$(Realpath "${nws}")"
+    if [[ "${lws}" != "" && "${lws}" != "${nws}" && -x "${lws}" && ! -d "${lws}" ]]; then
+      if [[ "${J_VERBOSE}" == 1 ]]; then echo "Removing ${nws}"; fi
+      export action
+      action='rm'
+      # shellcheck disable=SC1090
+      source "${lws}"
+      unset action
+    fi
+    if [[ -x "${nws}" && ! -d "${nws}" ]]; then
+      test "${J_VERBOSE}" = 1 && echo "Adding ${nws}"
+      export action
+      action='add'
+      # shellcheck disable=SC1090
+      source "${nws}"
+      unset action
+    fi
+  fi
+  if [[ -n "$(command -v set_title)" ]]; then
+    set_title "$(pwd)"
+  fi
+  if [[ -n "$(command -v set_icon)" ]]; then
+    set_icon "$(basename "$(pwd)")"
+  fi
+}

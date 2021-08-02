@@ -1,0 +1,289 @@
+#!/usr/bin/env bash
+#
+# Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
+# - Comment
+# - Color-Setup
+# - Logfile
+# - Log
+# - Echo
+# _do
+# - Ruler
+# - Info
+# - Warn
+# - Die
+# - Debug
+# - Assert
+# - Fail
+# - Pass
+# - PassFail
+# - Summary
+# - HelpText
+
+function Comment() {
+  # Allow and ignore all arguments
+  true;
+}
+
+function Realpath () {
+#@ Output the realpath name treating all arguments as a single filename specification
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+}
+
+function Color-Setup() {
+  local USE_COLOR
+  USE_COLOR=1
+  case "$*" in
+    off|OFF) USE_COLOR=1;;
+    *) USE_COLOR=1;;
+  esac
+  if [[ -z ${NOCOLOR+x} ]]; then USE_COLOR=1; fi
+  if [[ ${USE_COLOR} -gt 0 ]]; then
+    # shellcheck disable=SC2034
+    ESC=""
+    BOLD="${ESC}[01m" NONE="${ESC}[00m"
+    UNDR="${ESC}[04m" NONE="${ESC}[00m"
+    CBLK="${ESC}[30m" NONE="${ESC}[00m"
+    CRED="${ESC}[31m" NONE="${ESC}[00m"
+    CGRN="${ESC}[32m" NONE="${ESC}[00m"
+    CYLW="${ESC}[33m" NONE="${ESC}[00m"
+    CBLU="${ESC}[34m" NONE="${ESC}[00m"
+    CMAG="${ESC}[35m" NONE="${ESC}[00m"
+    CCYN="${ESC}[36m" NONE="${ESC}[00m"
+    CWHT="${ESC}[37m" NONE="${ESC}[00m"
+  else
+    NONE=""
+    BOLD=""
+    UNDR=""
+    CBLK=""
+    CRED=""
+    CGRN=""
+    CYLW=""
+    CBLU=""
+    CMAG=""
+    CCYN=""
+    CWHT=""
+  fi
+  export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT
+}
+
+function Logfile() {
+  local APPEND PREV_LOGFILE
+  APPEND=0
+  if [[ "$1" =~ ^-{1,2}a(ppend)?$ ]]; then
+    APPEND=1
+    shift
+  fi
+  if [[ -n ${LOGFILE} ]]; then PREV_LOGFILE="${LOGFILE}"; else PREV_LOGFILE=""; fi
+  LOGFILE=""
+  if [[ $# -gt 0 && -z "${LOGFILE}" ]]; then
+    # Figure out where to store logfile
+    if [[ "${LOGFILE}" =~ ^/ ]]; then
+      LOGFILE=""
+    elif [[ -n "${LOGDIR}" ]]; then
+      if [[ ! -d "${LOGDIR}" ]]; then mkdir -p "${LOGDIR}"; fi
+      LOGFILE="$(Realpath "${LOGDIR}")/"
+    else
+      LOGFILE="$(Realpath .)/"
+    fi
+    # Append the filename ensuring suffix is .log
+    LOGFILE="${LOGFILE}${1//.log/}.log"
+  fi
+  if [[ -n "${PREV_LOGFILE}" && "${PREV_LOGFILE}" != "${LOGFILE}" ]]; then
+    printf "\n# Closed %s\n" "$(date)" >> "${PREV_LOGFILE}"
+    printf "Closed %s\n" "${PREV_LOGFILE}"
+  elif [[ -z "${LOGFILE}" ]]; then
+    echo "Error: Must specify a valid logfile name" 1>&2
+    exit 1
+  fi
+  if [[ -n "${LOGFILE}" ]]; then
+    test "${APPEND}" -eq 0 && rm -f "${LOGFILE}"
+    printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
+    printf "Logging to %s\n" "${LOGFILE}"
+  fi
+}
+
+function Log() {
+  local OPT
+  if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
+  if [[ $# == 0 ]]; then # pipe
+    if [[ -f "${LOGFILE}" ]]; then tee -a "${LOGFILE}"; else cat "${LOGFILE}"; fi
+  else
+    if [[ -f "${LOGFILE}" ]]; then
+      if [[ "${OPT}" == "-n" ]]; then
+        echo -n "$@" >>"${LOGFILE}";
+      else
+        echo    "$@" >>"${LOGFILE}";
+      fi
+    fi
+  fi
+}
+
+function Echo() {
+  local OPT
+  if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
+  if [[ "${OPT}" == "-n" ]]; then
+    echo -n "$*"; Log  -n "$*"
+  else
+    echo "$*"; Log "$*"
+  fi
+  }
+
+  function Printf() {
+    # shellcheck disable=SC2059
+    printf "$@"
+    # shellcheck disable=SC2059
+    if [[ -f "${LOGFILE}" ]]; then printf "$@" >>"${LOGFILE}"; fi
+  }
+
+function _do() {
+  local NX
+  if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
+  if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
+  Echo "${CBLU}${NX}%${NONE} ${BOLD}$*${NONE}"
+  if [[ "${NX}" == "-" ]]; then return; fi
+  "$@"
+}
+
+function Fail() {
+  return 1
+}
+
+function Pass() {
+  return 0
+}
+
+function Info() {
+  if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
+    return 0
+  fi
+  local PRE
+  # Test for color prefix
+  case "$1" in
+    -pre) PRE="${2}"    ; shift  ; shift ;;
+    -cyn) PRE="${CCYN}" ; shift ;;
+    -red) PRE="${CRED}" ; shift ;;
+    -grn) PRE="${CGRN}" ; shift ;;
+    -ylw) PRE="${CYLW}" ; shift ;;
+    -blu) PRE="${CBLU}" ; shift ;;
+    -mag) PRE="${CMAG}" ; shift ;;
+    -wht) PRE="${CWHT}" ; shift ;;
+    *) PRE="${NONE}" ;;
+  esac
+  Echo "${CGRN}Info: ${PRE}$*${NONE}"
+}
+
+function PassFail() { # Reports success or failure
+  # shellcheck disable=SC2181
+  if [[ $# == 0 ]]; then
+    if [[ $? == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
+  else
+    if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
+  fi
+}
+
+function Debug() {
+  if [[ -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
+    Echo "${CRED}Debug: ${NONE}$*${NONE}"
+  fi
+}
+
+function Ruler() {
+  local ARGS SEP MAX LIN WID
+  SEP="-" # Default
+  MAX=80 # TODO: Change to match terminal width
+  local PRE
+  PRE=""
+  # Test for color prefix
+  case "$1" in
+    -pre) PRE="${2}"    ; shift  ; shift ;;
+    -cyn) PRE="${CCYN}" ; shift ;;
+    -red) PRE="${CRED}" ; shift ;;
+    -grn) PRE="${CGRN}" ; shift ;;
+    -ylw) PRE="${CYLW}" ; shift ;;
+    -blu) PRE="${CBLU}" ; shift ;;
+    *) PRE="" ;;
+  esac
+  Printf "%s" "${PRE}"
+  # Grab separator
+  if [[ $# -gt 0 && "${#1}" == 1 ]]; then
+    SEP="$1"
+    shift
+  fi
+  ARGS="$*"
+  if [[ $# != 0 ]]; then
+    WID=${#ARGS}
+    MAX=$(( MAX - WID - 4 ))
+  fi
+  LIN="$(/usr/bin/perl -le 'my ($w,$s)=@ARGV;printf(qq{%${w}.${w}s},${s}x${w})' "${MAX}" "${SEP}")"
+  if [[ $# == 0 ]]; then
+    Printf "%s%s\n" "${LIN}" "${NONE}"
+  else
+    Printf "%s%s %s %s%s\n" "${SEP}" "${SEP}" "${ARGS}" "${LIN}" "${NONE}"
+  fi
+}
+
+# Ensure that error messages are clearly seen
+function Die() {
+  Echo -n "${CRED}"
+  Ruler '!'
+  Echo "${CRED}Fatal: $*${NONE}" 1>&2
+  exit 1
+}
+
+function Assert() {
+  # shellcheck disable=SC218
+  test "$@" && return
+  local FNC FIL LNO
+  FNC="${FUNCNAME[1]}"
+  FIL="${BASH_SOURCE[1]}"
+  LNO="${BASH_LINENO[0]}"
+  Die "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
+}
+
+function Error() {
+  if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
+  (( ++ERRORS ))
+  export ERRORS
+  Echo -n "${CRED}"
+  Ruler '!'
+  Echo "${CRED}Error #${ERRORS}: ${NONE}$*${NONE}" 1>&2
+}
+
+function Warn() {
+  if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
+  (( ++WARNINGS ))
+  export WARNINGS
+  Echo -n "${CRED}"
+  Ruler '?'
+  Echo "${CRED}Warning: ${NONE}$*${NONE}" 1>&2
+}
+
+function Summary() {
+  Assert $# != 0
+  Echo "Execution summary for ${1}:"
+  shift
+  Echo " ${WARNINGS} warnings"
+  Echo -n "  ${ERRORS} errors"
+  local RESULT
+  if [[ ${ERRORS} == 0 ]]; then Echo " - passing"; RESULT=0;
+  else                          Echo " - failing"; RESULT=1;
+  fi
+  if [[ $# != 0 ]]; then Echo "$*"; fi
+  return "${RESULT}"
+}
+
+function HelpText() {
+  local HELPSCRIPT
+  if [[ "$1" == "-md" ]]; then
+    shift
+    # shellcheck disable=SC2016
+    HELPSCRIPT='if (/begin_markdown/../end_markdown/){ next if m/(begin|end)_markdown/; print; }'
+  else
+    # shellcheck disable=SC2016
+    HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^ *#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
+  fi
+  Assert $# -gt 0
+  /usr/bin/perl -ne "${HELPSCRIPT}" "$@";
+}
+
+# vim:nospell

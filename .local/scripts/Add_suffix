@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+function Add_suffix() {
+  if [[ $# -lt 2 ]]; then Error "$0 needs at least two arguments"; return; fi
+  local suffix="$1"
+  shift
+  for element in "$@"; do
+    echo "${element}${suffix}"
+  done
+}

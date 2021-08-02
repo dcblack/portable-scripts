@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+function Unique_list() {
+  perl -e 'for $e (@ARGV){next if exists $u{$e};$u{$e}=1;push @o,$e;}print join("\n",@o),"\n";' "$@"
+}
+

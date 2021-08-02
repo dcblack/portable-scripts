@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+function Firstreal() {
+  perl -le '@_=split($;,join($;,@ARGV));for(@_){next unless -e $_;print $_;exit 0;}' "$@"
+}
+

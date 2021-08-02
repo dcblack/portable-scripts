@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+function Prepend_path() { # only if 2nd arg does not exist in first
+  # USAGE: Prepend_path VAR PATH
+  local arg plscript
+  arg="$(Realpath "$2")"
+  # shellcheck disable=SC2016
+  plscript='print qq{$ARGV[0]="$ARGV[1]:$ENV{$ARGV[0]}"; export $ARGV[0]}'
+  Has_path "$1" "$2" || \
+    eval "$(perl -le "${plscript}" "$1" "${arg}")"
+}
+
