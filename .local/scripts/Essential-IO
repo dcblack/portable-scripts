@@ -25,19 +25,44 @@ function Comment() {
 }
 
 function Realpath () {
-#@ Output the realpath name treating all arguments as a single filename specification
+  #@ Output the realpath name treating all arguments as a single filename specification
+  #| Realpath FILENAME_SPECIFICATION
   /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
 }
 
 function Color-Setup() {
+  #@ Setup variables used to create color (or not)
+  #| Color-Setup [off|on|bright]
   local USE_COLOR
   USE_COLOR=1
   case "$*" in
-    off|OFF) USE_COLOR=1;;
+    off|OFF) USE_COLOR=0;;
+    bright) USE_COLOR=2;;
     *) USE_COLOR=1;;
   esac
-  if [[ -z ${NOCOLOR+x} ]]; then USE_COLOR=1; fi
-  if [[ ${USE_COLOR} -gt 0 ]]; then
+  if [[ -n ${NOCOLOR+x} ]]; then USE_COLOR=0; fi
+  if [[ ${USE_COLOR} == 2 ]]; then
+    # shellcheck disable=SC2034
+    ESC=""
+    BOLD="${ESC}[01m" NONE="${ESC}[00m"
+    UNDR="${ESC}[04m" NONE="${ESC}[00m"
+    CBLK="${ESC}[90m" NONE="${ESC}[00m"
+    CRED="${ESC}[91m" NONE="${ESC}[00m"
+    CGRN="${ESC}[92m" NONE="${ESC}[00m"
+    CYLW="${ESC}[93m" NONE="${ESC}[00m"
+    CBLU="${ESC}[94m" NONE="${ESC}[00m"
+    CMAG="${ESC}[95m" NONE="${ESC}[00m"
+    CCYN="${ESC}[96m" NONE="${ESC}[00m"
+    CWHT="${ESC}[97m" NONE="${ESC}[00m"
+    BBLK="${ESC}[100m" NONE="${ESC}[00m"
+    BRED="${ESC}[101m" NONE="${ESC}[00m"
+    BGRN="${ESC}[102m" NONE="${ESC}[00m"
+    BYLW="${ESC}[103m" NONE="${ESC}[00m"
+    BBLU="${ESC}[104m" NONE="${ESC}[00m"
+    BMAG="${ESC}[105m" NONE="${ESC}[00m"
+    BCYN="${ESC}[106m" NONE="${ESC}[00m"
+    BWHT="${ESC}[107m" NONE="${ESC}[00m"
+  elif [[ ${USE_COLOR} -gt 0 ]]; then
     # shellcheck disable=SC2034
     ESC=""
     BOLD="${ESC}[01m" NONE="${ESC}[00m"
@@ -50,6 +75,14 @@ function Color-Setup() {
     CMAG="${ESC}[35m" NONE="${ESC}[00m"
     CCYN="${ESC}[36m" NONE="${ESC}[00m"
     CWHT="${ESC}[37m" NONE="${ESC}[00m"
+    BBLK="${ESC}[40m" NONE="${ESC}[00m"
+    BRED="${ESC}[41m" NONE="${ESC}[00m"
+    BGRN="${ESC}[42m" NONE="${ESC}[00m"
+    BYLW="${ESC}[43m" NONE="${ESC}[00m"
+    BBLU="${ESC}[44m" NONE="${ESC}[00m"
+    BMAG="${ESC}[45m" NONE="${ESC}[00m"
+    BCYN="${ESC}[46m" NONE="${ESC}[00m"
+    BWHT="${ESC}[47m" NONE="${ESC}[00m"
   else
     NONE=""
     BOLD=""
@@ -62,11 +95,36 @@ function Color-Setup() {
     CMAG=""
     CCYN=""
     CWHT=""
+    BBLK=""
+    BRED=""
+    BGRN=""
+    BYLW=""
+    BBLU=""
+    BMAG=""
+    BCYN=""
+    BWHT=""
   fi
-  export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT
+  export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
 }
 
 function Logfile() {
+  #@ Logfile - Display, establish or close the logfile
+  #| Logfile
+  #| Logfile [--append|-a] FILENAME
+  #| Logfile --off
+  #| Logfile ""
+  if [[ $# == 0 ]]; then
+    if [[ -z "${LOGFILE}" ]]; then
+      Info "Not currently logging"
+    else
+      Info "Logging to ${LOGFILE}"
+    fi
+    return
+  fi
+  if [[ "$1" =~ ^-{1,2}(off)? ]]; then
+    LOGFILE=""
+    return
+  fi
   local APPEND PREV_LOGFILE
   APPEND=0
   if [[ "$1" =~ ^-{1,2}a(ppend)?$ ]]; then
@@ -89,58 +147,71 @@ function Logfile() {
     LOGFILE="${LOGFILE}${1//.log/}.log"
   fi
   if [[ -n "${PREV_LOGFILE}" && "${PREV_LOGFILE}" != "${LOGFILE}" ]]; then
-    printf "\n# Closed %s\n" "$(date)" >> "${PREV_LOGFILE}"
-    printf "Closed %s\n" "${PREV_LOGFILE}"
+    builtin printf "\n# Closed %s\n" "$(date)" >> "${PREV_LOGFILE}"
+    builtin printf "Closed %s\n" "${PREV_LOGFILE}"
   elif [[ -z "${LOGFILE}" ]]; then
-    echo "Error: Must specify a valid logfile name" 1>&2
+    builtin echo "Error: Must specify a valid logfile name" 1>&2
     exit 1
   fi
   if [[ -n "${LOGFILE}" ]]; then
     test "${APPEND}" -eq 0 && rm -f "${LOGFILE}"
-    printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
-    printf "Logging to %s\n" "${LOGFILE}"
+    builtin printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
+    builtin printf "Logging to %s\n" "${LOGFILE}"
   fi
 }
 
 function Log() {
+  #@ Send text to current logfile if $LOGFILE is defined
+  #| Log [-n] "MESSAGE"
+  #| COMMAND | Log
+  if [[ -z "${LOGFILE}" ]]; then return; fi
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   if [[ $# == 0 ]]; then # pipe
-    if [[ -f "${LOGFILE}" ]]; then tee -a "${LOGFILE}"; else cat "${LOGFILE}"; fi
+    if [[ -f "${LOGFILE}" ]]; then tee -a "${LOGFILE}"; else cat >"${LOGFILE}"; fi
   else
     if [[ -f "${LOGFILE}" ]]; then
       if [[ "${OPT}" == "-n" ]]; then
-        echo -n "$@" >>"${LOGFILE}";
+        builtin echo -n "$@" >>"${LOGFILE}";
       else
-        echo    "$@" >>"${LOGFILE}";
+        builtin echo    "$@" >>"${LOGFILE}";
       fi
     fi
   fi
 }
 
 function Echo() {
+  #@ Echo text, but also sends to Log
+  #| Echo [-n] TEXT
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   if [[ "${OPT}" == "-n" ]]; then
-    echo -n "$*"; Log  -n "$*"
+    builtin echo -n "$*"; Log  -n "$*"
   else
-    echo "$*"; Log "$*"
+    builtin echo "$*"; Log "$*"
   fi
   }
 
-  function Printf() {
-    # shellcheck disable=SC2059
-    printf "$@"
-    # shellcheck disable=SC2059
-    if [[ -f "${LOGFILE}" ]]; then printf "$@" >>"${LOGFILE}"; fi
-  }
+function Printf() {
+  #@ Printf with logging
+  local TEXT
+  # shellcheck disable=SC2059
+  TEXT="$(builtin printf "$@")"
+  builtin echo "${TEXT}"; Log "${TEXT}"
+}
 
 function _do() {
+  #@ Echo and then execute arguments as a command
+  #| _do COMMAND [ARGS]
   local NX
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
-  Echo "${CBLU}${NX}%${NONE} ${BOLD}$*${NONE}"
-  if [[ "${NX}" == "-" ]]; then return; fi
+  if [[ "${NX}" == "-" ]]; then
+    Echo "${CBLU}${NX}%${NONE} $*"
+    return;
+  else
+    Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
+  fi
   "$@"
 }
 
@@ -153,6 +224,8 @@ function Pass() {
 }
 
 function Info() {
+  #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
+  #| Info [-(red|grn|blu|ylw|cyn|mag)] MESSAGE
   if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
   fi
@@ -182,6 +255,8 @@ function PassFail() { # Reports success or failure
 }
 
 function Debug() {
+  #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
+  #| Debug MESSAGE
   if [[ -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
     Echo "${CRED}Debug: ${NONE}$*${NONE}"
   fi
@@ -231,6 +306,8 @@ function Die() {
 }
 
 function Assert() {
+  #@ Similar to sc_assert
+  if [[ -z "${NDEBUG}" ]]; then return; fi
   # shellcheck disable=SC218
   test "$@" && return
   local FNC FIL LNO
@@ -241,6 +318,8 @@ function Assert() {
 }
 
 function Error() {
+  #@ Echo tagged error message (i.e., SC_REPORT_ERROR) - logged and counted
+  #| Error MESSAGE
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   (( ++ERRORS ))
   export ERRORS
@@ -250,6 +329,8 @@ function Error() {
 }
 
 function Warn() {
+  #@ Echo tagged warning message (i.e., SC_REPORT_WARNING) - logged and counted
+  #| Error MESSAGE
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   (( ++WARNINGS ))
   export WARNINGS
