@@ -1,283 +1,34 @@
 #!/usr/bin/env bash
 
 #-------------------------------------------------------------------------------
+# Essential building blocks
+#-------------------------------------------------------------------------------
+LOCAL="${HOME}/.local"
+source "$LOCAL/scripts/Load"
+source "$LOCAL/scripts/Essential-IO"
+
+#-------------------------------------------------------------------------------
+source "$LOCAL/scripts/args"
+source "$LOCAL/scripts/Firstreal"
+source "$LOCAL/scripts/Has_path"
+source "$LOCAL/scripts/Unique_path"
+source "$LOCAL/scripts/Remove_path"
+source "$LOCAL/scripts/Append_path"
+source "$LOCAL/scripts/Prepend_path"
+source "$LOCAL/scripts/Add_prefix"
+source "$LOCAL/scripts/Add_suffix"
+source "$LOCAL/scripts/Unique_list"
+
+#-------------------------------------------------------------------------------
 # Personal habits
 #-------------------------------------------------------------------------------
-function lx() { # Display last N files (default 30) sorted by modification time
-  N=-30
-  if [[ "$1" =~ ^-[0-9]+ ]]; then
-    N=$1
-    shift
-  fi
-  /bin/ls -lt "$@" | head $N
-}
 
-function lns() { # Display symbolic links
-  ls -lA "$@" | grep -- '->'
-}
-
-function h() { # Display most recent N history lines
-  local N=-20
-  if [[ "$1" =~ ^-[0-9]+ ]]; then
-    N=$1
-    shift
-  fi
-  history | tail $N
-}
-
-function hellocolors() {
-  echo "${BOLD}${BBLK}${CRED}Hello ${CGRN}world:${NONE}"
-  echo "    ${UNDR}${BOLD}RAW PLN BLD${NONE}"
-  echo "  - ${CBLK}blk ${BWHT}${CBLK}blk ${BOLD}BLK${NONE}"
-  echo "  - ${CRED}red ${BWHT}${CRED}red ${BOLD}RED${NONE}"
-  echo "  - ${CGRN}grn ${BBLK}${CGRN}grn ${BOLD}GRN${NONE}"
-  echo "  - ${CYLW}ylw ${BBLK}${CYLW}ylw ${BOLD}YLW${NONE}"
-  echo "  - ${CBLU}blu ${BWHT}${CBLU}blu ${BOLD}BLU${NONE}"
-  echo "  - ${CMAG}mag ${BWHT}${CMAG}mag ${BOLD}MAG${NONE}"
-  echo "  - ${CCYN}cyn ${BBLK}${CCYN}cyn ${BOLD}CYN${NONE}"
-  echo "  - ${CWHT}wht ${BBLK}${CWHT}wht ${BOLD}WHT${NONE}"
-}
-
-#-------------------------------------------------------------------------------
-# Useful
-#-------------------------------------------------------------------------------
-function realpath() {
-  # expands symbolic links and relative paths to reveal the actual location fo a file
-  # syntax: realpath FILESPEC
-  perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
-}
-
-function firstreal() {
-  # determines from a list of arguments first argument that is a real file
-  # syntax: firstreal FILESPEC1 FILESPEC2 ...
-  perl -le '@_=split($;,join($;,@ARGV));for(@_){next unless -e $_;print $_;exit 0;}' "$@"
-}
-
-function has_path() {
-  # USAGE: has_path VAR PATH
-  arg="$(realpath '$2')"
-  if [[ "$arg" == "" ]]; then return 1; fi
-  perl -M'Cwd(abs_path)' -le '$v=$ARGV[0];$p=$ARGV[1];for$d(split(":",$ENV{$v})){next if !-d $d;exit 0 if$p eq abs_path($d);}exit 1' "$1" "$arg"
-}
-
-function prepend_path() { # only if 2nd arg does not exist in first
-  # USAGE: prepend_path VAR PATH
-  arg="$(realpath '$2')"
-  has_path "$1" "$2" || \
-    eval $(perl -le 'print qq{$ARGV[0]="$ARGV[1]:$ENV{$ARGV[0]}"; export $ARGV[0]}' "$1" "$arg")
-}
-
-function append_path() { # only if 2nd arg does not exist in first
-  # USAGE: append_path VAR PATH
-  var="$1"
-  arg="$(realpath '$2')"; shift
-  has_path "$1" "$2" || \
-    eval $(perl -le 'print qq{$ARGV[0]="$ENV{$ARGV[0]}:$ARGV[1]"; export $ARGV[0]}' "$var" "$arg")
-}
-
-function unique_path() {
-  # USAGE: unique_path VAR
-  eval $(perl -M'Cwd(abs_path)' -e '$v=$ARGV[0];for$d(split(qr":",$ENV{$v})){next if !-d $d;$e=abs_path($d);if(!exists$e{$e}){$e{$e}=1;push(@e,$e);}};printf qq{%s="%s"\n},$v,join(":",@e)' "$1")
-}
-
-function remove_path() {
-  # USAGE: remove_path VAR PATH
-  eval $(perl -M'Cwd(abs_path)' -e '$v=$ARGV[0];$p=abs_path($ARGV[1]);for(split(qr":",$ENV{$v})){$e=abs_path($_);if($p ne $e){$push(@e,$e);}};print "$v=",join(":",@e)' "$1" "$2")
-}
-
-function add_prefix() {
-  local prefix="$1"
-  shift
-  for element in "$@"; do
-    echo "$prefix$element"
-  done
-}
-
-function add_suffix() {
-  local suffix="$1"
-  shift
-  for element in "$@"; do
-    echo "$element$suffix"
-  done
-}
+source "$LOCAL/scripts/j"
+source "$LOCAL/scripts/lx"
+source "$LOCAL/scripts/lns"
+source "$LOCAL/scripts/h"
+source "$LOCAL/scripts/show-colors"
 
 function use-cmake() {
-  source ~$LEAD/.local/bin/use-cmake
+  source "$LEADER/.local/bin/use-cmake"
 }
-
-function j() {
-  # Synopsis
-  #   j - more powerful alternative to cd (aka jump)
-  # Syntax
-  #   j DIR(S)
-  # Begin parsing options
-  #-----------------------------------------------------------------------------
-  local J_VERBOSE J_DEBUG
-  J_VERBOSE=0
-  J_DEBUG=0
-  if [[ "${FAVS}" == "" ]]; then
-    local fav
-    for fav in Favorites favs .favs; do
-      FAVS="$(realpath "${HOME}/${fav}")"
-      if [[ "${FAVS}" != "" ]]; then
-        break
-      fi
-    done
-    export FAVS
-  fi
-  if [[ $# != 0 ]]; then
-    while [[ "$1" =~ ^-. ]]; do
-      if [[ ${J_DEBUG} == 1 ]]; then echo "DEBUG: $1"; fi
-      case "$1" in
-      -h | -help | --help) cat 1>&2 <<EOT
-Synopsis
---------
-
-  j - slightly more flexible alternative to change directory 'cd' command (uses cd internally).
-
-Syntax
-------
-
-  j -help
-  j -list
-  j {dir_or_file}...
-
-Description
------------
-
-  For each argument, j uses case-insensitive globbing to
-  locate that element.
-
-  If it finds a directory, then *j* moves to that directory
-  (cd) and processes the next argument.
-
-  If the result is a path to a non-directory element, then
-  it jumps to the directory containing that element.
-
-Examples
---------
-
-  j tlm-? answers EX01
-  j syscfund ex01/ex01.cpp # Jumps to directory containing file
-
-EOT
-        return
-        ;;
-      -d | --debug )
-        J_DEBUG=1
-        ;;
-      -v | --verbose )
-        # shellcheck disable=SC2034
-        J_VERBOSE=1
-        ;;
-      -l | -list )
-        if [[ -n "${FAVS}" ]]; then
-          /bin/ls "${FAVS}"
-        else
-          echo "No favorites directory specified" 1>&2
-        fi
-        return
-        ;;
-      -L | -lns )
-        if [[ -n "${FAVS}" ]]; then
-          /bin/ls -l "${FAVS}"
-        else
-          echo "No favorites directory specified" 1>&2
-        fi
-        return
-        ;;
-      -[1-9])
-        ;;
-      * ) 
-        echo 1>&2 "ERROR: Unknown option $1"
-        return
-        ;;
-      esac
-      shift
-    done
-  fi
-  # End parsing options
-  #-----------------------------------------------------------------------------
-  local working_script='setup.profile'
-
-  # Last working directory
-  local prev_lwd="${lwd}"
-  lwd="$(realpath .)"
-  export lwd
-  if [[ $# == 0 ]]; then
-    # shellcheck disable=SC2164
-    cd
-  else
-    while [[ $# != 0 ]]; do
-      if [[ ${J_DEBUG} == 1 ]]; then printf "DEBUG: Arg '%s'\n" "$1"; fi
-      if [[ "$1" == '-' ]]; then
-        # shellcheck disable=SC2164
-        cd -
-      else
-        arg="$1"
-        alt="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
-        if [[ ${J_DEBUG} == 1 ]]; then
-          printf "DEBUG: arg='%s'\n" "${arg}"
-          printf "DEBUG: alt='%s'\n" "${alt}"
-        fi
-        if [[ -e "${arg}" && -f "${arg}" ]]; then
-          arg=$(dirname "${arg}")
-        fi
-        # ToDo: add case-insensitivity
-        # shellcheck disable=SC2164
-        cd "${arg}" 1>/dev/null 2>&1 \
-        || cd "${alt}" 1>/dev/null 2>&1 \
-        || break
-      fi
-      shift
-    done
-  fi
-  # New working directory
-  local next_wd
-  next_wd="$(realpath .)"
-  # shellcheck disable=SC2164
-  cd "${lwd}" 2>/dev/null 1>/dev/null
-  # shellcheck disable=SC2164
-  cd "${next_wd}"
-
-  if [[ "${next_wd}" != "${prev_lwd}" ]]; then
-    lwd="${prev_lwd}"
-  else
-    export cwd
-    cwd="${next_wd}"
-  fi
-#  echo "<${next_wd}>"
-
-  # Last working script
-  if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
-
-  # Deal with new working script if it exists
-  export nws
-  nws="$(firstreal "$(add_suffix "/${working_script}" . .. ../.. ../../..)")"
-  if [[ "${nws}" != "" ]]; then
-    nws="$(realpath "${nws}")"
-    if [[ "${lws}" != "" && "${lws}" != "${nws}" && -x "${lws}" && ! -d "${lws}" ]]; then
-      if [[ "${J_VERBOSE}" == 1 ]]; then echo "Removing ${nws}"; fi
-      export action
-      action='rm'
-      # shellcheck disable=SC1090
-      source "${lws}"
-      unset action
-    fi
-    if [[ -x "${nws}" && ! -d "${nws}" ]]; then
-      test "${J_VERBOSE}" = 1 && echo "Adding ${nws}"
-      export action
-      action='add'
-      # shellcheck disable=SC1090
-      source "${nws}"
-      unset action
-    fi
-  fi
-  if [[ -n "$(command -v set_title)" ]]; then
-    set_title "$(pwd)"
-  fi
-  if [[ -n "$(command -v set_icon)" ]]; then
-    set_icon "$(basename "$(pwd)")"
-  fi
-}
-
