@@ -7,13 +7,14 @@ SYNOPSIS
 `utils.bash` - A collection of bash functions useful for scripting.
 In particular, these are intended for use in scripts to build (fetch,
 configure, compile and install) various apps and libraries (e.g., SystemC).
+Note that a number of them have been moved into the `scripts/` directory
+parallel to this directory to facilitate easier testing and maintenance.
 
 Note: Capitalizing function names reduces collisions with scripts/executables.
 
 | FUNCTION SYNTAX            | DESCRIPTION 
 | :------------------------- | :---------- 
-| Require _SCRIPT_           | Sources a script or gives an error if missing
-| Colors ON_or_OFF           | Enables color variables (e.g., CBLU)
+| Color-Setup ON_or_OFF      | Enables color variables (e.g., CBLU)
 | Logfile [--append] _FILE_  | Establishes a logfile name
 | Log [-n] "_MESSAGE_"       | Adds message to logfile
 | Echo [-n] "_MESSAGE_"      | Displays and logs message
@@ -33,6 +34,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | ShowBuildOpts              | Display options variables
 | ConfirmBuildOpts || exit   | Asks user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
+| Create_and_Cd DIR          | Creates directory and enters it
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
 | Generate [TYPE]            | Invokes cmake or autotools
 | Cleanup_Source             | Removes source
@@ -90,84 +92,17 @@ export VERBOSITY
 export WARNINGS
 export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
-function Comment() {
-  true;
-}
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -d "${SCRIPTDIR}" ]]; then
+  printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Realpath"
 
-# Following is 'just in case you did not define this'
-function Realpath () {
-#@ Output the realpath name treating all arguments as a single filename specification
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
-}
-
-function Firstreal() {
-#@ Output the first argument that names an existing file.
-  perl -le '@_=split($;,join($;,@ARGV));for(@_){next unless -e $_;print $_;exit 0;}' "$@"
-}
-
-function Has_path() {
-  # USAGE: Has_path VAR PATH
-  local arg plscript
-  arg="$(Realpath "$2")"
-  # shellcheck disable=SC2016
-  plscript='$v=$ARGV[0]; $p=$ARGV[1]; for $d (split(qq{:},$ENV{$v})) { next if !-d $d; exit 0 if$p eq abs_path($d); } exit 1'
-  if [[ "${arg}" == "" ]]; then return 1; fi
-  perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
-}
-
-function Prepend_path() { # only if 2nd arg does not exist in first
-  # USAGE: Prepend_path VAR PATH
-  local arg plscript
-  arg="$(Realpath "$2")"
-  # shellcheck disable=SC2016
-  plscript='print qq{$ARGV[0]="$ARGV[1]:$ENV{$ARGV[0]}"; export $ARGV[0]}'
-  Has_path "$1" "$2" || \
-    eval "$(perl -le "${plscript}" "$1" "${arg}")"
-}
-
-function Append_path() { # only if 2nd arg does not exist in first
-  # USAGE: Append_path VAR PATH
-  local var arg plscript
-  var="$1"
-  arg="$(Realpath "$2")"; shift
-  # shellcheck disable=SC2016
-  plscript='print qq{$ARGV[0]="$ENV{$ARGV[0]}:$ARGV[1]"; export $ARGV[0]}'
-  Has_path "$1" "$2" || \
-    eval "$(perl -le "${plscript}" "${var}" "${arg}")"
-}
-
-function Unique_path() {
-  # USAGE: unique_path VAR
-  local plscript
-  # shellcheck disable=SC2016
-  plscript='$v=$ARGV[0]; for my $d(split(qr{:},$ENV{$v})){ next if !-d $d; $e=abs_path($d); if( ! exists $e{$e} ){ $e{$e}=1; push(@e,$e); } } printf qq{%s="%s"\n},$v,join(":",@e);'
-  eval "$(perl -M'Cwd(abs_path)' -e "${plscript}" "$1")"
-}
-
-function Remove_path() {
-  # USAGE: remove_path VAR PATH
-  local plscript
-  # shellcheck disable=SC2016
-  plscript=' $v=$ARGV[0]; $p=abs_path($ARGV[1]); for (split(qr":",$ENV{$v})) { $e=abs_path($_); if($p ne $e) { $push(@e,$e); } } print "$v=",join(":",@e) '
-  eval "$(perl -M'Cwd(abs_path)' -e "${plscript}" "$1" "$2")"
-}
-
-function Add_prefix() {
-  local prefix="$1"
-  shift
-  for element in "$@"; do
-    echo "${prefix}${element}"
-  done
-}
-
-function Add_suffix() {
-  local suffix="$1"
-  shift
-  for element in "$@"; do
-    echo "${element}${suffix}"
-  done
-}
-
+#-------------------------------------------------------------------------------
 function Require() { # FILE(S) to source
   local BINDIR SCPT REQD
   if [[ $# != 1 ]]; then
@@ -213,9 +148,9 @@ function Needs() {
 }
 
 #-------------------------------------------------------------------------------
-# Make things more visible in the output
 
-function Colors() {
+function Color-Setup() {
+  # Make things more visible in the output
   local USE_COLOR
   USE_COLOR=1
   case "$*" in
@@ -251,8 +186,9 @@ function Colors() {
     CWHT=""
     CRED=""
   fi
+  export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 }
-Colors on
+Color-Setup on
 
 function Logfile() {
   local APPEND PREV_LOGFILE
@@ -341,7 +277,7 @@ function Pass() {
 }
 
 function Info() {
-  if [[ -s "${VERBOSITY}" || "${VERBOSITY}" -lt 0 ]]; then
+  if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
   fi
   local PRE
@@ -919,12 +855,14 @@ function SetupLogdir() {
   esac
 }
 
+# Make directory and enter
 function Create_and_Cd() {
   Assert $# = 1
   _do mkdir -p "${1}" || Die "Unable to create ${1}"
   _do cd "${1}" || Die "Unable to enter ${1} directory"
 }
 
+# Download and enter directory
 function GetSource_and_Cd() {
   Assert $# = 2
   if [[ -n "${CLEAN}" && "${CLEAN}" == 1 ]]; then
@@ -941,7 +879,7 @@ function GetSource_and_Cd() {
     _do git clone "${2}" "${1}" || Die "Unable to clone into ${1}"
   fi
   cd "${1}" || Die "Unable to enter ${1}"
-  if [[ -s "${TOOL_VERS}" ]]; then
+  if [[ -n "${TOOL_VERS}" ]]; then
     _do git  checkout "${TOOL_VERS}"
   fi
 }
