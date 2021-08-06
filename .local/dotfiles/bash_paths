@@ -1,14 +1,67 @@
 #!/bin/bash
 
 function SetupPaths() {
-# Setup for quicker navigation (e.g., `cd ex1`)
-for f in "${@}"; do
-  COURSE="$(find 2>/dev/null "${HOME}" -t d "${f}")"
-  COURSE="${f}"
-done
-CDPATH="${FAVS}:${HOME}/${COURSE}:${HOME}"
-export CDPATH
+
+  #-----------------------------------------------------------------------------
+  # Setup for quicker navigation (e.g., `cd ex1`) using CDPATH
+  #-----------------------------------------------------------------------------
+  CDPATH="${HOME}"
+  for dir in "${HOME}/favs}" "${HOME}/Favorites}"; do
+    Prepend_path CDPATH "${dir}"
+  done
+  for dir in "${@}"; do
+    if [[ -z "${dir}" ]]; then continue; fi
+    COURSE="$(find "${HOME}" -type d -name "${dir}" 2>/dev/null)"
+    if [[ -d "${COURSE}" ]]; then
+      Prepend_path CDPATH "${COURSE}"
+    fi
+  done
+  CDPATH=".:${CDPATH}"
+  Unique_path CDPATH
+  export CDPATH
+
+  #-----------------------------------------------------------------------------
+  # Add local bin directories
+  #-----------------------------------------------------------------------------
+  for dir in \
+    "${HOME}/.local/bin" \
+    "${HOME}/bin" \
+    "./bin" \
+  ; do
+    Prepend_path PATH "${dir}"
+  done
+  Unique_path PATH
+
+  #-----------------------------------------------------------------------------
+  # Add local template directories (see `new` script)
+  #-----------------------------------------------------------------------------
+  for dir in \
+    "${HOME}/.local/templates" \
+    "${HOME}/templates" \
+  ; do
+    Prepend_path TEMPLATEPATH "${dir}"
+  done
+  Unique_path TEMPLATEPATH
+  if [[ -n "${TEMPLATEPATH}" ]]; then
+    export TEMPLATEPATH
+  else
+    unset TEMPLATEPATH
+  fi
+
+  #-----------------------------------------------------------------------------
+  # Add man page paths
+  #-----------------------------------------------------------------------------
+  for dir in \
+    "/usr/share/man" \
+    "/ext/linux/Ubuntu-20.04/usr/share/man" \
+    "${HOME}/.local/man" \
+    "${HOME}/man" \
+    "./man" \
+  ; do
+    Prepend_path MANPATH "${dir}"
+  done
+  Unique_path MANPATH
+  export MANPATH
 }
 
 SetupPaths syscfund tlm-2 training
-PATH="${HOME}/.local/bin:${PATH}"
