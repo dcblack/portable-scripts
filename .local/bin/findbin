@@ -32,14 +32,20 @@ sub help { #[[[2
 
 ###############################################################################
 
+BEGIN {
 use strict;
 use warnings;
 use Cwd qw(abs_path);
 use FindBin qw($RealBin $RealScript);
-my $Realdir = $RealBin;
-$Realdir =~ s{/[^/]+$}{};
+my $Realdir;
+BEGIN {
+  $Realdir = $RealBin;
+  $Realdir =~ s{/[^/]+/?$}{}; # Remove tail
+  $Realdir = "$ENV{HOME}/.local";
+}
 use lib "$Realdir/lib";
 use Envv qw{&envvopt &expand_path &reduce};
+}
 &envvopt('manual');
 
 our @PATHS = ();
