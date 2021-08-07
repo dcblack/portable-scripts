@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#
+# git-swap - Changes remote repo specification protocol to/from `https` from/to `ssh`
+#
+# SYNTAX: git swap [-v|-n]
 
 use strict;
 our %OPT;
@@ -8,6 +12,10 @@ while(scalar @ARGV) {
   my $val = 1;
   $val = $1 if $arg =~ s{=(.*)}{};
   $OPT{$arg} = $val;
+  if ( $arg eq '-C' and $val eq '1' ) {
+    $val = shift @ARGV;
+    $OPT{$arg} = $val;
+  }
 }
 $OPT{"-v"} = 1 if exists $OPT{"-n"};
 
