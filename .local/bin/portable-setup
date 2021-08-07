@@ -32,50 +32,138 @@
 #|OPTIONS
 #|-------
 #|
+#| -c only check installation
+#| -h or --help provides this text
+#| -u update to latest version (git pull)
 #| -v verbose output
 #|
+#|REQUIREMENTS
+#|------------
+#|
+#| The following are required: `bash` `perl` `git`
 
+# TODO: Check requirements
+
+function Realpath() {
+  perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+}
+
+PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
+PORTABLE_ROOT_DIR="$(git -C "$(dirname "${PORTABLE_SETUP_SCRIPT}")" rev-parse --show-toplevel)"
+export PORTABLE_SETUP_SCRIPT PORTABLE_ROOT_DIR
+
+source "${PORTABLE_ROOT_DIR}/.local/scripts/Essential-IO"
+
+function Portable_setup_help() {
+  # shellcheck disable=SC2016
+  HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
+  /usr/bin/perl -ne "${HELPSCRIPT}" "${PORTABLE_SETUP_SCRIPT}";
+}
 
 if [[ "$1" =~ ^--?h(elp)?$ ]]; then
-  HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
-  /usr/bin/perl -ne "${HELPSCRIPT}" "$0";
+  Portable_setup_help
   exit
 fi
 
 # Wrap body in function to allow local variables to avoid problems in case this script is sourced.
 function portable-setup() {
-  local PORTABLE_DIR TIMESTAMP VERBOSE
+  local PORTABLE_DIR TIMESTAMP VERBOSE CHECK UPDATE
   LOCAL=".local"
   PORTABLE_DIR="${HOME}/${LOCAL}"
   TIMESTAMP="$(date +%y%m%d-%H%M%S)";
   VERBOSE=0;
-  if [[ "$1" == "-v" ]]; then VERBOSE=1; fi
-  if [[ ${VERBOSE} == 1 ]]; then echo "Host: $(hostname)"; fi
+  CHECK=0
+  UPDATE=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -c|check)
+        Info "Checking links"
+        CHECK=1
+        ;;
+      -h|--help)
+        Portable_setup_help
+        exit
+        ;;
+      -u|--update)
+        UPDATE=1
+        ;;
+      -v|--verbose)
+        VERBOSE=1
+        ;;
+      *)
+        Error "ERROR: Unknown option '$1'"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+
+  if [[ ${VERBOSE} == 1 ]]; then Info "Hostname $(hostname)"; fi
+
+  if [[ ${UPDATE} == 1 ]]; then 
+    Info "Updating portable-scripts"
+    git -C "${PORTABLE_ROOT_DIR}" pull
+  fi
 
   if [[ ! -d "${PORTABLE_DIR}" ]]; then
-    if [[ -d "${HOME}/portable-scripts/.local" ]]; then
+    if [[ ${CHECK} != 0 ]]; then
+      Error "Missing '${PORTABLE_DIR}'"
+    elif [[ -d "${PORTABLE_ROOT_DIR}/.local" ]]; then
       bash -v -c "ln -s ${HOME}/portable-scripts/.local ${PORTABLE_DIR}"
     else
-      echo "Error: Unable to find portable-scripts/.local to link as ${PORTABLE_DIR}! Please link manually." 1>&2
+      Error "Unable to find ${PORTABLE_ROOT_DIR}/.local to link as ${PORTABLE_DIR}! Please link manually."
       return
+    fi
+  elif [[ ${CHECK} != 0 ]]; then
+    if [[ "${PORTABLE_ROOT_DIR}/.local" == "$(Realpath "${PORTABLE_DIR}")" ]]; then
+      if [[ ${VERBOSE} == 1 ]]; then
+        Info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
+      fi
+    else
+      Error "'${PORTABLE_DIR}' does NOT reference '${PORTABLE_ROOT_DIR}'"
     fi
   fi
   
   # Add symbolic links for a minimal set of selected "dot" files
+  local FROM_LINK TO_FILE
   for DOTFILE in bash_aliases vim vimrc lessfilter; do
-    if [[ -r "${PORTABLE_DIR}/dotfiles/${DOTFILE}" ]]; then
-      if [[ -h "${HOME}/.${DOTFILE}" ]]; then
-        if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place - please check/correct" 1>&2; fi
+    FROM_LINK="${HOME}/.${DOTFILE}"
+    TO_FILE="${PORTABLE_DIR}/dotfiles/${DOTFILE}"
+    if [[ -r "${TO_FILE}" ]]; then
+      if [[ -h "${FROM_LINK}" ]]; then # symbolic link found
+        if [[ "$(Realpath "${FROM_LINK}")" ==  "$(Realpath "${TO_FILE}")" ]]; then
+          if [[ ${CHECK} == 1 ]]; then
+            Info -grn "'${DOTFILE}' -> '${TO_FILE}'"
+          elif [[ ${VERBOSE} == 1 ]]; then
+            Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
+          fi
+        else
+          Warn ".${DOTFILE} does not link to '${TO_FILE}'"
+        fi
         continue;
-      elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
-        if [[ ${VERBOSE} == 1 ]]; then echo "WARNING: Leaving .${DOTFILE} in place - please check/correct" 1>&2; fi
+      elif [[ -e "${HOME}/.${DOTFILE}" ]]; then # directory found
+        if [[ ${VERBOSE} == 1 ]]; then
+          Warn ".${DOTFILE} is not symbolic link - manual intervention to link-in '${TO_FILE}'"
+        fi
         continue;
       elif [[ -f "${HOME}/.${DOTFILE}" ]]; then
-        bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
+        if [[ ${CHECK} == 1 ]]; then
+          Warn "Missing .${DOTFILE} Will be renamed"
+        else
+          Info -red "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
+          bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
+        fi
       fi
-      bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
+      if [[ ${CHECK} == 1 ]]; then
+        Info -red "Will create link ${FROM_LINK} to ${TO_FILE}"
+      else
+        if [[ ${VERBOSE} == 1 ]]; then
+          Info -grn "Linking ${FROM_LINK} -> ${TO_FILE}"
+        fi
+        bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
+      fi
     else
-      echo "Missing ${PORTABLE_DIR}/dotfiles/${DOTFILE}" 1>&2
+      Error "Missing ${PORTABLE_DIR}/dotfiles/${DOTFILE}"
     fi
   done
   
@@ -97,6 +185,7 @@ function Unique_path() {
   # DESCR: Removes duplicate paths in specified variable
   # USAGE: Unique_path VAR
   local PERL_SCRIPT
+  # shellcheck disable=SC2016
   PERL_SCRIPT='
     $v=$ARGV[0];
     for my $d(split(qr":",$ENV{$v})){
@@ -109,7 +198,7 @@ function Unique_path() {
     }
     printf qq{%s="%s"\n},$v,join(":",@e);
   '
-  eval $(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")
+  eval "$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
 }
 
 function portable-env() {
@@ -121,7 +210,7 @@ function portable-env() {
   SYSTEMC_HOME="${PORTABLE_DIR}/apps/systemc"
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
   TEMPLATEPATH="${HOME}/templates"
-  for f in "${APPS}/sc-templates"; do
+  for f in ${APPS}/sc-templates; do
     if [[ -d "${f}" ]]; then
       TEMPLATEPATH="${TEMPLATEPATH}:${f}"
     fi
