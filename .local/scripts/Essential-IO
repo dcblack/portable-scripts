@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
-# - Comment
+# - Comment MESSAGE
 # - Color-Setup
 # - Logfile
 # - Log
@@ -33,17 +33,20 @@ function Realpath () {
 function Color-Setup() {
   #@ Setup variables used to create color (or not)
   #| Color-Setup [off|on|bright]
-  local USE_COLOR
-  USE_COLOR=1
+  local USE_COLOR ESC
+  USE_COLOR=1 ;# Default ON
+  ESC=""
   case "$*" in
-    off|OFF) USE_COLOR=0;;
-    bright) USE_COLOR=2;;
-    *) USE_COLOR=1;;
+    off|OFF|no|NO|none|NONE) USE_COLOR=0;;
+    bold|bright) USE_COLOR=10;;
+    on|ON|yes|YES) USE_COLOR=2;;
+    *) echo "WARNING: Unknown color setting - using default" 1>&2;;
   esac
-  if [[ -n ${NOCOLOR+x} ]]; then USE_COLOR=0; fi
-  if [[ ${USE_COLOR} == 2 ]]; then
+  if [[ -n ${NOCOLOR+x} ]]; then
+    USE_COLOR=0;
+  fi
+  if [[ ${USE_COLOR} == 10 ]]; then
     # shellcheck disable=SC2034
-    ESC=""
     BOLD="${ESC}[01m" NONE="${ESC}[00m"
     UNDR="${ESC}[04m" NONE="${ESC}[00m"
     CBLK="${ESC}[90m" NONE="${ESC}[00m"
