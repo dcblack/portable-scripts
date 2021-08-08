@@ -16,7 +16,7 @@
 # - Fail
 # - Pass
 # - PassFail
-# - Summary
+# - Summary $0
 # - HelpText
 
 function Comment() {
