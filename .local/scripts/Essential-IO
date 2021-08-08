@@ -106,6 +106,7 @@ function Color-Setup() {
   fi
   export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
 }
+Color-Setup on
 
 function Logfile() {
   #@ Logfile - Display, establish or close the logfile
@@ -343,8 +344,11 @@ function Summary() {
   Assert $# != 0
   Echo "Execution summary for ${1}:"
   shift
-  Echo " ${WARNINGS} warnings"
-  Echo -n "  ${ERRORS} errors"
+  if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
+  if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
+  export ERRORS WARNINGS
+  Echo -n " ${WARNINGS} warnings"
+  Echo "  ${ERRORS} errors"
   local RESULT
   if [[ ${ERRORS} == 0 ]]; then Echo " - passing"; RESULT=0;
   else                          Echo " - failing"; RESULT=1;
