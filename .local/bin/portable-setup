@@ -130,23 +130,22 @@ function portable-setup() {
     FROM_LINK="${HOME}/.${DOTFILE}"
     TO_FILE="${PORTABLE_DIR}/dotfiles/${DOTFILE}"
     if [[ -r "${TO_FILE}" ]]; then
-      if [[ -h "${FROM_LINK}" ]]; then # symbolic link found
+      if [[ -h "${FROM_LINK}" ]]; then
+        # Exists as symbolic link
         if [[ "$(Realpath "${FROM_LINK}")" ==  "$(Realpath "${TO_FILE}")" ]]; then
-          if [[ ${CHECK} == 1 ]]; then
-            Info -grn "'${DOTFILE}' -> '${TO_FILE}'"
-          elif [[ ${VERBOSE} == 1 ]]; then
-            Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
-          fi
+          # Good
+          Info -grn "'${DOTFILE}' -> '${TO_FILE}'"
         else
-          Warn ".${DOTFILE} does not link to '${TO_FILE}'"
+          Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
         fi
-        continue;
-      elif [[ -e "${HOME}/.${DOTFILE}" ]]; then # directory found
-        if [[ ${VERBOSE} == 1 ]]; then
-          Warn ".${DOTFILE} is not symbolic link - manual intervention to link-in '${TO_FILE}'"
-        fi
-        continue;
-      elif [[ -f "${HOME}/.${DOTFILE}" ]]; then
+        # Nothing more to be done for this one
+        continue
+      elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
+        # Directory found - not much we can do
+        Warn ".${DOTFILE} is a directory - manual intervention needed"
+        continue
+      elif [[ -e "${HOME}/.${DOTFILE}" ]]; then
+        # Exists as something else
         if [[ ${CHECK} == 1 ]]; then
           Warn "Missing .${DOTFILE} Will be renamed"
         else
@@ -177,6 +176,10 @@ function portable-setup() {
       echo "${IGNORED}" > "${AGIGNORE}"
     fi
   done
+
+  if [[ ${CHECK} == 1 ]]; then
+    Summary "$0"
+  fi
 }
 
 portable-setup "$@"
