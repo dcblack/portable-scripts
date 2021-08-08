@@ -84,6 +84,9 @@ function portable-setup() {
         Portable_setup_help
         exit
         ;;
+      --nocolor)
+        Color-Setup none
+        ;;
       -u|--update)
         UPDATE=1
         ;;
