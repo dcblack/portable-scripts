@@ -342,17 +342,26 @@ function Warn() {
 
 function Summary() {
   Assert $# != 0
-  Echo "Execution summary for ${1}:"
+  Echo "${CCYN}Execution summary for ${1}:"
   shift
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   export ERRORS WARNINGS
-  Echo -n " ${WARNINGS} warnings"
-  Echo "  ${ERRORS} errors"
-  local RESULT
-  if [[ ${ERRORS} == 0 ]]; then Echo " - passing"; RESULT=0;
-  else                          Echo " - failing"; RESULT=1;
+  if [[ ${WARNINGS} == 0 ]]; then
+    Echo -n " ${CGRN}${WARNINGS} warnings"
+  else
+    Echo -n " ${CRED}${WARNINGS} warnings"
   fi
+  if [[ ${ERRORS} == 0 ]]; then
+    Echo -n "  ${CGRN}No errors"
+  else
+    Echo -n "  ${CRED}${ERRORS} errors"
+  fi
+  local RESULT
+  if [[ ${ERRORS} == 0 ]]; then Echo -n " - ${CGRN}passing"; RESULT=0;
+  else                          Echo -n " - ${CRED}failing"; RESULT=1;
+  fi
+  Echo -n "${NONE}"
   if [[ $# != 0 ]]; then Echo "$*"; fi
   return "${RESULT}"
 }
