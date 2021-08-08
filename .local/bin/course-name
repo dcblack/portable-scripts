@@ -1,4 +1,47 @@
 #!/usr/bin/env bash
+#
+cat >/dev/null <<'EOF' ;# Documentation begin_markdown
+SYNOPSIS
+========
+
+course-name - tells you what the standardized name for a course should be
+
+SYNTAX
+======
+
+```bash
+course-name --help
+course-name #< Simplest, just asks questions
+course-name
+```
+
+OPTIONS
+=======
+
++ --start DATESPEC or -s DATESPEC
+
+Dates may be specified as 'Tuesday' or 'Mar 10, 2021' or '3/2/21' (locale specific).
+
++ --days DURATION or -d DATESPEC
+
+Durations must include weekends if the course spans over a weekend. Calculations are just to compute the end date.
+
++ --course SHORTNAME or -c SHORTNAME
+
+Try to use standard names such as ESS4CD, SVV, CSC or official release numbers such as 2021.06.
+
++ --instructor INITIALS or -i INITIALS
+
+Be consistent. Use something to differentiate you from others if collisions exist with other instructors. Allows for five.
+
+DESCRIPTION
+===========
+
+Calculates start and end dates which are combined with a short course name and the instructor's initials to form a standardized name.
+The name may then be used for the names of course files on CoCalc.
+
+end_markdown
+EOF
 
 function Realpath() {
   perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
@@ -19,7 +62,9 @@ function Main() {
   # Test values (normally overwritten)
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --help)
+      --help|-h)
+        HelpText -md "${SCRIPT_PATH}"
+        exit 0
         ;;
       --test)
         Crs='TLM_2'
@@ -27,19 +72,19 @@ function Main() {
         Start='2/20/2041' #< works if you setup less than a week in advance; otherwise, provide m/d/y date
         Days='10' #< course duration days including weekends if any
         ;;
-      --crs)
+      --course|-c)
         shift
         Crs="$1"
         ;;
-      --who)
+      --who|--initials|--instructor|--teacher|-i)
         shift
         Who="$1"
         ;;
-      --start)
+      --start|-s)
         shift
         Start="$1"
         ;;
-      --days)
+      --days|--duration|-d)
         shift
         Days="$1"
         ;;
@@ -82,10 +127,10 @@ function Main() {
     fi
   fi
   if [[ -n "${Who}" ]]; then
-    if [[ "${Who}" =~ ^[A-Za-z]{1,4}$ ]]; then
+    if [[ "${Who}" =~ ^[A-Za-z]{1,5}$ ]]; then
       Comment "OK"
     else
-      Warn "Initials for instructor must be 2 to 4 alphabetic characters"
+      Warn "Initials for instructor must be 2 to 5 alphabetic characters"
       Who=""
     fi
   fi
@@ -123,10 +168,10 @@ function Main() {
     read -n 10 -erp 'What are the instructors initials? '
     if [[ "${REPLY}" == "quit" ]]; then return ; fi
     # Validate initials
-    if [[ "${REPLY}" =~ ^[A-Za-z]{1,4}$ ]]; then
+    if [[ "${REPLY}" =~ ^[A-Za-z]{1,5}$ ]]; then
       Who="${REPLY}"
     else
-      Warn "Must be 2 to 4 alphabetic characters"
+      Warn "Must be 2 to 5 alphabetic characters"
     fi
   done
 
