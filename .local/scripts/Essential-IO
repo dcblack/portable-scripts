@@ -342,7 +342,7 @@ function Warn() {
 
 function Summary() {
   Assert $# != 0
-  Echo "${CCYN}Execution summary for ${1}:"
+  Echo -n "${CMAG}Execution summary for ${1}:"
   shift
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
@@ -362,7 +362,8 @@ function Summary() {
   else                          Echo -n " - ${CRED}failing"; RESULT=1;
   fi
   Echo -n "${NONE}"
-  if [[ $# != 0 ]]; then Echo "$*"; fi
+  if [[ $# != 0 ]]; then Echo " $*"; fi
+  Echo ""
   return "${RESULT}"
 }
 
