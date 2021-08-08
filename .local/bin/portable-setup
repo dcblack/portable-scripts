@@ -32,10 +32,11 @@
 #|OPTIONS
 #|-------
 #|
-#| -c only check installation
-#| -h or --help provides this text
-#| -u update to latest version (git pull)
-#| -v verbose output
+#| -c  only check installation (aka --check)
+#| -h  or --help provides this text (aka --help)
+#| -u  update to latest version via git pull (aka --update)
+#| -v  verbose output (aka --verbose)
+#| -nc no color disables use of ANSI color codes (aka --nocolor)
 #|
 #|REQUIREMENTS
 #|------------
@@ -84,7 +85,7 @@ function portable-setup() {
         Portable_setup_help
         exit
         ;;
-      --nocolor)
+      --nocolor|-nocolor|-nc)
         Color-Setup none
         ;;
       -u|--update)
