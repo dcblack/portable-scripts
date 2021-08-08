@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+
+function Realpath() {
+  perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+}
+
+SCRIPT_PATH="$(Realpath "$0")"
+PORTABLE_ROOT_DIR="$(git -C "$(dirname "${SCRIPT_PATH}")" rev-parse --show-toplevel)"
+
+source "${PORTABLE_ROOT_DIR}/.local/scripts/Essential-IO"
+
+
+function Main() {
+
+  local Crs Who Start Days
+  local MAXDAYS
+  MAXDAYS=30 # Maximum days of duration for a course
+
+  # Test values (normally overwritten)
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help)
+        ;;
+      --test)
+        Crs='TLM_2'
+        Who='dcb'
+        Start='2/20/2041' #< works if you setup less than a week in advance; otherwise, provide m/d/y date
+        Days='10' #< course duration days including weekends if any
+        ;;
+      --crs)
+        shift
+        Crs="$1"
+        ;;
+      --who)
+        shift
+        Who="$1"
+        ;;
+      --start)
+        shift
+        Start="$1"
+        ;;
+      --days)
+        shift
+        Days="$1"
+        ;;
+      *) Error "Unknown option or argument"
+        ;;
+    esac
+    shift
+  done
+
+  #-----------------------------------------------------------------------------
+  # Validate any defaults
+  #-----------------------------------------------------------------------------
+  if [[ -n "${Start}" ]]; then
+    Start="$(date -d "${Start}" +%s 2>/dev/null)"
+    # Validate Start date
+    if [[ -z "${Start}" ]]; then
+      Warn "Bad starting date specification"
+    fi
+  fi
+  if [[ -n "${Days}" ]]; then
+    # Validate duration Days
+    if [[ "${Days}" =~ ^[1-9][0-9]?$ ]]; then
+      Comment "OK"
+    else
+      Warn "Days must be a counting number between 1 and ${MAXDAYS}."
+      Days=""
+    fi
+    if [[ ${Days} -gt ${MAXDAYS} ]]; then
+      Warn "Days must be a counting number between 1 and ${MAXDAYS}."
+      Days=""
+    fi
+  fi
+  if [[ -n "${Crs}" ]]; then
+    # Validate course abbreviation
+    if [[ "${Crs}" =~ ^[A-Za-z][_.A-Za-z0-9]{1,8}$ ]]; then
+      Comment "OK"
+    else
+      Warn "Course abbreviation must be 2 to 9 alphanumeric characters (underscores and periods allowed)"
+      Crs=""
+    fi
+  fi
+  if [[ -n "${Who}" ]]; then
+    if [[ "${Who}" =~ ^[A-Za-z]{1,4}$ ]]; then
+      Comment "OK"
+    else
+      Warn "Initials for instructor must be 2 to 4 alphabetic characters"
+      Who=""
+    fi
+  fi
+
+  #-----------------------------------------------------------------------------
+  # Obtain input as needed
+  #-----------------------------------------------------------------------------
+  while [[ -z "${Start}" ]]; do
+    read -n 40 -erp 'What is the first day of the course? '
+    if [[ "${REPLY}" == "quit" ]]; then return ; fi
+    # Validate Start date
+    Start="$(date -d "${REPLY}" +%s 2>/dev/null)"
+  done
+  while [[ -z "${Days}" ]]; do
+    read -n 10 -erp 'How many days will this course run (include weekends if any)? '
+    if [[ "${REPLY}" == "quit" ]]; then return ; fi
+    # Validate duration Days
+    if [[ "${REPLY}" =~ ^[1-9][0-9]?$ && ${REPLY} -lt ${MAXDAYS} ]]; then
+      Days="${REPLY}"
+    else
+      Warn "Must be a counting number between 1 and ${MAXDAYS}."
+    fi
+  done
+  while [[ -z "${Crs}" ]]; do
+    read -n 10 -erp 'What is the course number or abbreviated name (e.g., CPP4ES or 2021.06)? '
+    if [[ "${REPLY}" == "quit" ]]; then return ; fi
+    # Validate course abbreviation
+    if [[ "${REPLY}" =~ ^[A-Za-z][_.A-Za-z0-9]{1,8}$ ]]; then
+      Crs="${REPLY}"
+    else
+      Warn "Must be 2 to 9 alphanumeric characters (underscores and periods allowed)"
+    fi
+  done
+  while [[ -z "${Who}" ]]; do
+    read -n 10 -erp 'What are the instructors initials? '
+    if [[ "${REPLY}" == "quit" ]]; then return ; fi
+    # Validate initials
+    if [[ "${REPLY}" =~ ^[A-Za-z]{1,4}$ ]]; then
+      Who="${REPLY}"
+    else
+      Warn "Must be 2 to 4 alphabetic characters"
+    fi
+  done
+
+  #-----------------------------------------------------------------------------
+  # Formatting
+  #-----------------------------------------------------------------------------
+  Crs="$(echo "${Crs}" | tr "[:lower:]" "[:upper:]")"
+  Who="$(echo "${Who}" | tr "[:upper:]" "[:lower:]")"
+
+  local SecPerDay
+  SecPerDay="$(( 24 * 60 * 60 ))"
+  Year="$(date -d @"${Start}" +%Y)" #< 4 digit of current year (e.g., 2021)
+  SMon="$(date -d @"${Start}" +%b)" #< starting month
+  SDay="$(date -d @"${Start}" +%d)"; #< starting day
+  EMon="$(date -d @"$(( Start + "${SecPerDay}*(${Days}-1)" ))" +%b)"
+  EDay="$(date -d @"$(( Start + "${SecPerDay}*(${Days}-1)" ))" +%d)"
+  if [[ "${SMon}" == "${EMon}" ]]; then
+    if [[ "${SDay}" == "${EDay}" ]]; then # Single day class
+      Dates="${Year}-${SMon}${SDay}"
+    else # Single month class
+      Dates="${Year}-${SMon}${SDay}to${EDay}"
+    fi
+  else # Multiple month class
+    Dates="${Year}-${SMon}${SDay}to${EMon}${EDay}"
+  fi
+  CourseName="${Dates}-${Crs}-${Who}"
+
+  Info "Course name to use ${CourseName}"
+}
+
+Main "$@"
