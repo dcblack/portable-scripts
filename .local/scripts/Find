@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+function Find() {
+  local DIR_LIST
+  while [[ -d "$1" ]]; do
+    if [[ "$1" =~ ^- ]]; then
+      break
+    fi
+    DIR_LIST="${DIR_LIST} $1"
+    shift
+  done
+  if [[ -z "${DIR_LIST}" ]]; then
+    DIR_LIST="."
+  fi
+  find ${DIR_LIST} -path ~/.snapshots -prune -false -o "$@"
+}
