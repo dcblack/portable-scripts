@@ -12,5 +12,9 @@ function Find() {
   if [[ -z "${DIR_LIST}" ]]; then
     DIR_LIST="."
   fi
-  find ${DIR_LIST} -path ~/.snapshots -prune -false -o "$@"
+  if [[ $# == 0 ]]; then
+    find ${DIR_LIST} -type d -path '**/.snapshots' -prune -false -o -true
+  else
+    find ${DIR_LIST} -type d -path '**/.snapshots' -prune -false -o "$@"
+  fi
 }
