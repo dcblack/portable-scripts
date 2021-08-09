@@ -10,6 +10,22 @@ use Cwd;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
+if( $ARGV[0] =~ m/^-{1,2}h(elp)?$/ ) {
+  my $documentation = <<"EOT";
+Syntax
+
+  $0 [-ssh|-who=_PATT_] _COURSEFILE(S)_...
+  $0 _EMAIL_
+
+Description
+
+TO BE SUPPLIED
+
+EOT
+  print $documentation;
+  exit 1;
+}
+
 my %OPT;
 while( $ARGV[0] =~ m/^-/ ) {
   my $opt = shift @ARGV;
@@ -18,18 +34,6 @@ while( $ARGV[0] =~ m/^-/ ) {
   } else {
     $OPT{$opt}=1;
   }#endif
-}
-
-if( $ARGV[0] =~ m/^-{1,2}h(elp)?$/ ) {
-  my $documentation = <<"EOT";
-Syntax
-
-  $0 [-ssh|-who=_PATT_] _COURSEFILE(S)_...\n";
-  $0 _EMAIL_
-
-EOT
-  print $documentation;
-  exit 1;
 }
 
 if( @ARGV == 0 ) {
