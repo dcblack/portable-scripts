@@ -10,6 +10,7 @@ source "$LOCAL/scripts/Essential-IO"
 #-------------------------------------------------------------------------------
 source "$LOCAL/scripts/args"
 source "$LOCAL/scripts/Firstreal"
+source "$LOCAL/scripts/Find"
 source "$LOCAL/scripts/Has_path"
 source "$LOCAL/scripts/Unique_path"
 source "$LOCAL/scripts/Remove_path"
