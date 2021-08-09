@@ -1,23 +1,28 @@
 #!/usr/bin/env bash
 #
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
-# - Comment MESSAGE
-# - Color-Setup
-# - Logfile
-# - Log
-# - Echo
-# _do
-# - Ruler
-# - Info
-# - Warn
-# - Die
-# - Debug
-# - Assert
-# - Fail
-# - Pass
-# - PassFail
-# - Summary $0
-# - HelpText
+#
+#| FUNCTION SYNTAX            | DESCRIPTION 
+#| :------------------------- | :---------- 
+#| Color-Setup ON_or_OFF      | Enables color variables (e.g., CBLU)
+#| Comment "_MESSAGE_"        | Does nothing but provide NOP comment
+#| Debug "_MESSAGE_"          | Echo a debug message
+#| Die "_MESSAGE_"            | Echo a fatal message and exit with fail
+#| Echo [-n] "_MESSAGE_"      | Displays and logs message
+#| Error "_MESSAGE_"          | Echo an error message
+#| Fail                       | Sets error status (1)
+#| HelpText [-md] "$0"        | Displays help for specified file
+#| Info "_MESSAGE_"           | Echo an informational message
+#| Log [-n] "_MESSAGE_"       | Adds message to logfile
+#| Logfile [--append] _FILE_  | Establishes a logfile name
+#| Pass                       | Sets success status (0)
+#| PassFail "_MESSAGE_"       | Displays message with pass/fail status
+#| Realpath FILESPEC          | Echo the real pathname for a file specification
+#| Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
+#| ShowVars VARLIST           | Echo values of variables
+#| Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
+#| Warn "_MESSAGE_"           | Echo a warning message
+#| _do _COMMAND_              | Displays and executes
 
 function Comment() {
   # Allow and ignore all arguments
@@ -251,10 +256,12 @@ function Info() {
 
 function PassFail() { # Reports success or failure
   # shellcheck disable=SC2181
+  local status
+  status="$?"
   if [[ $# == 0 ]]; then
-    if [[ $? == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
+    if [[ ${status} == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
   else
-    if [[ $? == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
+    if [[ ${status} == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
   fi
 }
 
@@ -382,6 +389,17 @@ function HelpText() {
   fi
   Assert $# -gt 0
   /usr/bin/perl -ne "${HELPSCRIPT}" "$@";
+}
+
+function ShowVars() {
+  local DLR VAR VAL
+  for VAR in "$@"; do
+    DLR='$'
+    VAL="$(eval "echo ${DLR}${VAR}")"
+    if [[ -n "${VAL}" ]]; then
+      Echo "${VAR}='${VAL}'"
+    fi
+  done
 }
 
 # vim:nospell
