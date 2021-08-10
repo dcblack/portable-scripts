@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 #-------------------------------------------------------------------------------
 # Documentation
@@ -25,7 +25,9 @@ export SCRIPT_NAME SCRIPT_PATH
 for SCRIPT_NAME in bash_debug bash_env; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
+    # shellcheck disable=SC2154
     if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
 done
@@ -41,7 +43,9 @@ alias la='ls -A'
 alias ll='ls -l'
 alias dir='dir --color=auto'
 alias m='less'
+alias agl='ag -l --nocolor'
 alias cls='clear'
+# shellcheck disable=SC2154
 alias vivado-setup='source "${APPS}"/xilinx/2020.1/Vivado/2020.1/settings64.sh'
 export VI='vim'
 function dotfile() {
@@ -79,7 +83,10 @@ for SCRIPT_NAME in bash_functions bash_paths; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
 done
 unset SCRIPT_NAME SCRIPT_PATH
+
+# vim:nospell
