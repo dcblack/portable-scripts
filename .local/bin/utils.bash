@@ -92,6 +92,9 @@ export VERBOSITY
 export WARNINGS
 export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+}
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -d "${SCRIPTDIR}" ]]; then
   printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
@@ -99,8 +102,6 @@ if [[ ! -d "${SCRIPTDIR}" ]]; then
 fi
 # shellcheck disable=SC2250,SC1091
 source "$SCRIPTDIR/Essential-IO"
-# shellcheck disable=SC2250,SC1091
-source "$SCRIPTDIR/Realpath"
 
 #-------------------------------------------------------------------------------
 function Require() { # FILE(S) to source
