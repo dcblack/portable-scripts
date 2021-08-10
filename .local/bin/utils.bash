@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-cat >/dev/null <<'EOF' ;# Documentation begin_markdown
+cat >/dev/null <<'EOF' ;# Documentation begin_markdown {
 SYNOPSIS
 ========
 
@@ -58,7 +58,7 @@ else
 fi
 SetupLogdir "$0"
 ```
-end_markdown
+} end_markdown
 EOF
 
 declare -a ARGV
