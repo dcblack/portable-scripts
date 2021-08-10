@@ -13,11 +13,20 @@ else
 fi
 
 #-------------------------------------------------------------------------------
+function Valid_name() {
+  if [[ "${REPLY}" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+#-------------------------------------------------------------------------------
 function Get_name() {
   YOURNAME=""
   while [[ "${YOURNAME}" == "" ]]; do
     read -r -p 'Your full name: '
-    if [[ "${REPLY}" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
+    if Valid_name "${REPLY}"; then
       YOURNAME="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
       return
@@ -27,12 +36,20 @@ function Get_name() {
   done
 }
 
+function Valid_email() {
+  if [[ "$1" =~ [-.a-zA-Z0-9]+@[-.a-zA-Z0-9]+[.][a-zA-Z]{3} ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
 #-------------------------------------------------------------------------------
 function Get_email() {
   YOURMAIL=""
   while [[ "${YOURMAIL}" == "" ]]; do
     read -r -p 'Your email address: '
-    if [[ "${REPLY}" =~ [-.a-zA-Z0-9]+@[-.a-zA-Z0-9]+[.][a-zA-Z]{3} ]]; then
+    if Valid_email "${REPLY}"; then
       YOURMAIL="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
       return
@@ -42,7 +59,8 @@ function Get_email() {
   done
 }
 
-function Choose() { # QUESTION CHOICES...
+function Choose() {
+  # SYNTAX: Choose "QUESTION" CHOICE1 CHOICE2...
   if [[ $# -lt 3 ]]; then
     echo "Error: Must have a question and at least two choices." 1>&2
     exit 1
@@ -67,52 +85,70 @@ function Choose() { # QUESTION CHOICES...
 # Main
 #-------------------------------------------------------------------------------
 function Git_setup() {
-  GITCFG="${HOME}/.gitconfig"
+  # SYNTAX: Git_setup [OPTIONS]
+  # OPTIONS:
+  #   --name  NAME
+  #   --email ADDR
+  #   --force
   YOURNAME=""
   YOURMAIL=""
   FORCE=0
   while [[ $# -gt 0 ]]; do
-    if [[ "$1" =~ ^-{1,2}n(ame)?$  && $# -gt 1 ]]; then YOURNAME="$2"; shift; fi
-    if [[ "$1" =~ ^-{1,2}e(mail)?$ && $# -gt 1 ]]; then YOURMAIL="$2"; shift; fi
-    if [[ "$1" =~ ^-{1,2}f(orce)?$ && $# -gt 1 ]]; then FORCE=1; fi
+    if [[ "$1" =~ ^-{1,2}n(ame)?$  && $# -gt 1 ]]; then
+      if Valid_name "$2"; then
+        YOURNAME="$2";
+        shift;
+      else
+        Error "Name is not valid. Use 'First Last'"
+      fi
+    fi
+    if [[ "$1" =~ ^-{1,2}e(mail)?$ && $# -gt 1 ]]; then
+      if Valid_email "$2"; then
+        YOURMAIL="$2";
+        shift;
+      else
+        Error "Email address is not valid. Use 'first@domain'"
+      fi
+    fi
+    if [[ "$1" =~ ^-{1,2}f(orce)?$ && $# -gt 1 ]]; then
+      FORCE=1;
+    fi
     shift
   done
 
-  if [[ ! -f "${GITCFG}" ]]; then
-
-    if test "${FORCE}" -eq 1 -o -z "$(git config --global user.name)"; then
-      Get_name
-      git config --global user.name "${YOURNAME}"
-      printf "Setup user.name=%s\n" "${YOURNAME}"
-    else
-      printf "Leaving user.name=%s\n" "${YOURNAME}"
-    fi
-    if test "${FORCE}" -eq 1 -o -z "$(git config --global user.email)"; then
-      Get_email
-      git config --global user.email "${YOURMAIL}"
-      printf "Setup user.email=%s\n" "${YOURMAIL}"
-    else
-      printf "Leaving user.email=%s\n" "${YOURMAIL}"
-    fi
-
-    git config --global push.followTags true
-    git config --global color.pager true
-    git config --global color.ui auto
-    git config --global core.pager "less -FRSX"
-    git config --global push.default current
-
-    # Useful aliases
-    git config --global alias.changes  'status -s -uno'
-    git config --global alias.changed  'ls-files -m'
-    git config --global alias.tags     'tag -l'
-    git config --global alias.unstage  'reset HEAD'
-    git config --global alias.untrack  'rm --cached'
-    git config --global alias.hash     'hash-object'
-    git config --global alias.branches 'log --pretty=format:'%h %s' --graph'
-    git config --global alias.ignored  'ls-files -o'
-    git config --global alias.co       'checkout'
- 
+  if test "${FORCE}" -eq 1 -o -z "$(git config --global user.name)"; then
+    Get_name
+    git config --global user.name "${YOURNAME}"
+    printf "Setup user.name=%s\n" "${YOURNAME}"
+  else
+    printf "Leaving user.name=%s\n" "$(git config --global user.name)"
   fi
+  if test "${FORCE}" -eq 1 -o -z "$(git config --global user.email)"; then
+    Get_email
+    git config --global user.email "${YOURMAIL}"
+    printf "Setup user.email=%s\n" "${YOURMAIL}"
+  else
+    printf "Leaving user.email=%s\n" "$(git config --global user.email)"
+  fi
+
+  git config --global push.followTags true
+  git config --global color.pager true
+  git config --global color.ui auto
+  git config --global core.pager "less -FRSX"
+  git config --global push.default current
+
+  # Useful aliases
+  git config --global alias.changes  'status -s -uno'
+  git config --global alias.changed  'ls-files -m'
+  git config --glogal alias.missed   'ls-files -o --exclude-standard'
+  git config --global alias.tags     'tag -l'
+  git config --global alias.unstage  'reset HEAD'
+  git config --global alias.untrack  'rm --cached'
+  git config --global alias.hash     'hash-object'
+  git config --global alias.history  'log --pretty=format:'%h %s' --graph'
+  git config --global alias.ignored  'ls-files -o'
+  git config --global alias.br       'branch'
+  git config --global alias.co       'checkout'
 
   for COURSE in syscfund tlm-2; do
     if [[ -d "${HOME}/${COURSE}" && ! -d "${HOME}/${COURSE}/.git" ]]; then
@@ -126,6 +162,8 @@ function Git_setup() {
   Info "Git set up"
 }
 
-Git_setup "$@"
+if [[ "$*" != "-n" ]]; then
+  Git_setup "$@"
+fi
 
 #-------------------------------------------------------------------------------
