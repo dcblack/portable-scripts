@@ -11,7 +11,8 @@ function j() {
   local J_VERBOSE J_DEBUG
   J_VERBOSE=0
   J_DEBUG=0
-  if [[ "${FAVS}" == "" ]]; then
+  # Setup favorites list if not defined via exported FAVS variable
+  if [[ -z "${FAVS}" ]]; then
     local fav
     for fav in Favorites favs .favs; do
       FAVS="$(realpath "${HOME}/${fav}")"
@@ -22,8 +23,9 @@ function j() {
     export FAVS
   fi
   if [[ $# != 0 ]]; then
+    # Parse command-line options
     while [[ "$1" =~ ^-. ]]; do
-      if [[ ${J_DEBUG} == 1 ]]; then echo "DEBUG: $1"; fi
+      if [[ ${J_DEBUG} == 1 ]]; then Debug -f "$1"; fi
       case "$1" in
       -h | -help | --help) cat 1>&2 <<EOT
 Synopsis
@@ -92,9 +94,16 @@ EOT
       shift
     done
   fi
+  test "${J_DEBUG}" = 1 && Debug -f "Debug on"
+  test "${J_VERBOSE}" = 1 && Info "Verbose on"
   # End parsing options
   #-----------------------------------------------------------------------------
   local working_script='setup.profile'
+
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+    test "${J_DEBUG}" = 1 && Debug -f "Splitting"
+  fi
 
   # Last working directory
   local prev_lwd="${lwd}"
@@ -105,7 +114,7 @@ EOT
     cd
   else
     while [[ $# != 0 ]]; do
-      if [[ ${J_DEBUG} == 1 ]]; then printf "DEBUG: Arg '%s'\n" "$1"; fi
+      test "${J_DEBUG}" = 1 && Debug -f "Arg '%s'" "$1"
       if [[ "$1" == '-' ]]; then
         # shellcheck disable=SC2164
         cd -
@@ -113,8 +122,8 @@ EOT
         arg="$1"
         alt="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
         if [[ ${J_DEBUG} == 1 ]]; then
-          printf "DEBUG: arg='%s'\n" "${arg}"
-          printf "DEBUG: alt='%s'\n" "${alt}"
+          Debug -f "DEBUG: arg='%s'" "${arg}"
+          Debug -f "DEBUG: alt='%s'" "${alt}"
         fi
         if [[ -e "${arg}" && -f "${arg}" ]]; then
           arg=$(dirname "${arg}")
@@ -128,9 +137,11 @@ EOT
       shift
     done
   fi
-  # New working directory
+  test "${J_DEBUG}" = 1 && Debug -f "Saving working directory"
+  # Save current location as the working directory
   local next_wd
   next_wd="$(Realpath .)"
+  # Go back to original directory then forward to simulate a single jump
   # shellcheck disable=SC2164
   cd "${lwd}" 2>/dev/null 1>/dev/null
   # shellcheck disable=SC2164
@@ -142,31 +153,59 @@ EOT
     export cwd
     cwd="${next_wd}"
   fi
-#  echo "<${next_wd}>"
+  test "${J_DEBUG}" = 1 && Debug -f "Landed %s" "$(pwd)"
 
-  # Last working script
+  # Save last working script if it was previously set
   if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
 
   # Deal with new working script if it exists
   export nws
   nws="$(Firstreal "$(Add_suffix "/${working_script}" . .. ../.. ../../..)")"
-  if [[ "${nws}" != "" ]]; then
+  test "${J_DEBUG}" = 1 && Debug -f "Checking for working script nws=%s" "'${nws}'"
+  if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
-    if [[ "${lws}" != "" && "${lws}" != "${nws}" && -x "${lws}" && ! -d "${lws}" ]]; then
-      if [[ "${J_VERBOSE}" == 1 ]]; then echo "Removing ${nws}"; fi
-      export action
-      action='rm'
-      # shellcheck disable=SC1090
-      source "${lws}"
-      unset action
+    local LASTOK NEXTOK
+    LASTOK=1 NEXTOK=1
+    # Qualifications to use a working script:
+    # 1. Must not be the same as the last working script
+    # 2. Must be executable and not a directory
+    # 3. Last script must support ACTION variable
+    if [[ -n "${lws}" && "${lws}" == "${nws}" ]]; then
+      test "${J_DEBUG}" = 1 && Debug -f "lws set and equal to nws ${nws}"
+      LASTOK=0
+      NEXTOK=0
     fi
-    if [[ -x "${nws}" && ! -d "${nws}" ]]; then
-      test "${J_VERBOSE}" = 1 && echo "Adding ${nws}"
-      export action
-      action='add'
+    if [[ ! -x "${lws}" || -d "${lws}" ]]; then
+      LASTOK=0
+    fi
+    if [[ ${LASTOK} == 1 ]]; then
+      if grep -q ACTION "${lws}"; then
+        LASTOK=1
+      else
+        LASTOK=0
+      fi
+    fi
+    if [[ ! -x "${nws}" || -d "${nws}" ]]; then
+      NEXTOK=0
+      test "${J_DEBUG}" = 1 && Debug -f "nws not executable or is a directory ${nws}"
+    fi
+    # Source old working script with ACTION='rm'
+    if [[ ${LASTOK} == 1 ]]; then
+      test "${J_VERBOSE}" = 1 && Info "Removing ${nws}"
+      export ACTION
+      ACTION='rm'
       # shellcheck disable=SC1090
       source "${nws}"
-      unset action
+      unset ACTION
+    fi
+    # Source new working script
+    if [[ ${NEXTOK} == 1 ]]; then
+      test "${J_VERBOSE}" = 1 && Info "Adding ${nws}"
+      export ACTION
+      ACTION='add'
+      # shellcheck disable=SC1090
+      source "${nws}"
+      unset ACTION
     fi
   fi
   if [[ -n "$(command -v set_title)" ]]; then
