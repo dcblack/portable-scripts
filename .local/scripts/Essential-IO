@@ -8,8 +8,10 @@
 #| Comment "_MESSAGE_"        | Does nothing but provide NOP comment
 #| Debug "_MESSAGE_"          | Echo a debug message
 #| Die "_MESSAGE_"            | Echo a fatal message and exit with fail
+#| _do _COMMAND_              | Displays and executes a command
 #| Echo [-n] "_MESSAGE_"      | Displays and logs message
 #| Error "_MESSAGE_"          | Echo an error message
+#| Errors                     | Display number of errors
 #| Fail                       | Sets error status (1)
 #| HelpText [-md] "$0"        | Displays help for specified file
 #| Info "_MESSAGE_"           | Echo an informational message
@@ -18,11 +20,12 @@
 #| Pass                       | Sets success status (0)
 #| PassFail "_MESSAGE_"       | Displays message with pass/fail status
 #| Realpath FILESPEC          | Echo the real pathname for a file specification
+#| Reset-errors               | Reset error and warning counts to zero
 #| Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
 #| ShowVars VARLIST           | Echo values of variables
 #| Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
 #| Warn "_MESSAGE_"           | Echo a warning message
-#| _do _COMMAND_              | Displays and executes
+#| Warnings                   | Display number of errors
 
 function Comment() {
   # Allow and ignore all arguments
@@ -174,6 +177,9 @@ function Log() {
   #| Log [-n] "MESSAGE"
   #| COMMAND | Log
   if [[ -z "${LOGFILE}" ]]; then return; fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   if [[ $# == 0 ]]; then # pipe
@@ -203,6 +209,9 @@ function Echo() {
 
 function Printf() {
   #@ Printf with logging
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   local TEXT
   # shellcheck disable=SC2059
   TEXT="$(builtin printf "$@")"
@@ -220,6 +229,9 @@ function _do() {
     return;
   else
     Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
+  fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
   fi
   "$@"
 }
@@ -268,9 +280,30 @@ function PassFail() { # Reports success or failure
 function Debug() {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Debug MESSAGE
-  if [[ -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
-    Echo "${CRED}Debug: ${NONE}$*${NONE}"
+  if [[ "$1" == "-f" || -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
+    if [[ "${SHELL}" == /bin/zsh ]]; then
+      set -o shwordsplit
+    fi
+    if [[ "$1" == "-f" ]]; then shift; fi
+    if [[ "$1" =~ % ]]; then
+      local FMT
+      FMT="$1"
+      shift
+      Printf "${CRED}Debug: ${NONE}${FMT}${NONE}" "$@"
+    else
+      Echo "${CRED}Debug: ${NONE}$*${NONE}"
+    fi
   fi
+}
+
+function Debug-on() {
+  export DEBUG
+  DEBUG="-f"
+}
+
+function Debug-off() {
+  export DEBUG
+  DEBUG=""
 }
 
 function Ruler() {
@@ -315,10 +348,14 @@ function Die() {
   Echo "${CRED}Fatal: $*${NONE}" 1>&2
   exit 1
 }
+alias Fatal=Die
 
 function Assert() {
   #@ Similar to sc_assert
   if [[ -z "${NDEBUG}" ]]; then return; fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   # shellcheck disable=SC218
   test "$@" && return
   local FNC FIL LNO
@@ -350,25 +387,39 @@ function Warn() {
   Echo "${CRED}Warning: ${NONE}$*${NONE}" 1>&2
 }
 
+export ERRORS WARNINGS
+
+function Reset-errors() {
+  ERRORS=0
+  WARNINGS=0
+}
+
+function Errors() {
+  if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
+  echo "${ERRORS}";
+}
+
+function Warnings() {
+  if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
+  echo "${WARNINGS}";
+}
+
 function Summary() {
   Assert $# != 0
   Echo -n "${CMAG}Execution summary for ${1}:"
   shift
-  if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
-  if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
-  export ERRORS WARNINGS
-  if [[ ${WARNINGS} == 0 ]]; then
-    Echo -n " ${CGRN}${WARNINGS} warnings"
+  if [[ "$(Warnings)" == 0 ]]; then
+    Echo -n " ${CGRN}No warnings"
   else
-    Echo -n " ${CRED}${WARNINGS} warnings"
+    Echo -n " ${CRED}$(Warnings) warnings"
   fi
-  if [[ ${ERRORS} == 0 ]]; then
+  if [[ "$(Errors)" == 0 ]]; then
     Echo -n "  ${CGRN}No errors"
   else
-    Echo -n "  ${CRED}${ERRORS} errors"
+    Echo -n "  ${CRED}$(Errors) errors"
   fi
   local RESULT
-  if [[ ${ERRORS} == 0 ]]; then Echo -n " - ${CGRN}passing"; RESULT=0;
+  if [[ "$(Errors)" == 0 ]]; then Echo -n " - ${CGRN}passing"; RESULT=0;
   else                          Echo -n " - ${CRED}failing"; RESULT=1;
   fi
   Echo -n "${NONE}"
@@ -378,6 +429,9 @@ function Summary() {
 }
 
 function HelpText() {
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   local HELPSCRIPT
   if [[ "$1" == "-md" ]]; then
     shift
@@ -392,6 +446,9 @@ function HelpText() {
 }
 
 function ShowVars() {
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   local DLR VAR VAL
   for VAR in "$@"; do
     DLR='$'
