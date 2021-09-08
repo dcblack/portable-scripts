@@ -2,6 +2,9 @@
 
 function Add_prefix() {
   if [[ $# -lt 2 ]]; then Error "$0 needs at least two arguments"; return; fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   local prefix="$1"
   shift
   for element in "$@"; do
