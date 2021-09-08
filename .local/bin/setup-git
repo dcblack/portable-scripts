@@ -6,7 +6,7 @@ function Realpath () {
 SCRIPT="$(Realpath "$0")"
 SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
 if [[ -r "${SCRIPT}" ]]; then
-  # shellcheck source=utils.bash
+  # shellcheck source=~/.local/bin/utils.bash disable=SC1090
   source "${SCRIPT}" "$0"
 else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
