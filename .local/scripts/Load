@@ -10,6 +10,9 @@ function Load() {
     VERBOSE=1
     shift
   fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   if [[ -z "${SCRIPT_PATH+x}" ]]; then
     # Missing SCRIPT_PATH! Attempt default locations.
     for DIR in "${HOME}/scripts" "${HOME}/.local/scripts" ; do
@@ -26,6 +29,13 @@ function Load() {
   local prev_IFS
   prev_IFS="${IFS}"
   IFS=':'
+  local prev_NOAUTORUN
+  prev_NOAUTORUN=""
+  if [[ -n "${NOAUTORUN}" ]]; then
+    prev_NOAUTORUN="${NOAUTORUN}"
+  fi
+  NOAUTORUN=1
+  export NOAUTORUN
   for DIR in ${SCRIPT_PATH}; do
     IFS="${prev_IFS}"
     SCRIPT="${DIR}/$1"
@@ -38,5 +48,10 @@ function Load() {
       return $?
     fi
   done
+  if [[ -n "${prev_NOAUTORUN}" ]]; then
+    NOAUTORUN="${prev_NOAUTORUN}"
+  else
+    unset NOAUTORUN
+  fi
   Error "Unable to find suitable script '$1'"
 }
