@@ -8,6 +8,9 @@ function Unique_path() {
     VERBOSE=1
     shift
   fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   # shellcheck disable=SC2016
   PLSCRIPT='$v=$ARGV[0]; for my $d(split(qr{:},$ENV{$v})){ next if ! -d $d; $e=abs_path($d); if( ! exists $e{$e} ){ $e{$e}=1; push(@e,$e); } } printf qq{%s="%s"\n},$v,join(":",@e);'
   ASSIGNMENT="$(perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "$1")"
