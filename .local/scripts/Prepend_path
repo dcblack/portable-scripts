@@ -2,6 +2,9 @@
 
 function Prepend_path() { # only if 2nd arg does not exist in first
   # USAGE: Prepend_path VAR PATH
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
   local arg plscript
   arg="$(Realpath "$2")"
   # shellcheck disable=SC2016
