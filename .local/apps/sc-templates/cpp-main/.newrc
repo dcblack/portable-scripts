@@ -1,0 +1,58 @@
+#!new # vim:syntax=sh:tw=72
+
+# DEFAULTS
+# --require DIRECTORY_PATTERN           # install location
+# --require PLACEHOLDER=VALUE_PATTERN   # parameter requirement
+# --require -e=FILENAME_PATTERN         # file must exist
+# --require -r=FILENAME_PATTERN         # file must be readable
+# --hard                                # links treated as hard
+
+# BRIEF
+#! Bare bones file to implement main program for C++
+
+=pod
+
+=head1 NAME
+
+B<cpp-main template> - Bare bones file to implement main program for C++
+
+=head1 SYNOPSIS
+
+new cpp-main {:NAME:}
+
+=head1 DESCRIPTION
+
+Creates a standard main function and assumes inclusion of {:NAME:}.hpp,
+which is easy to modify as needed.
+
+=head1 REQUIREMENTS
+
+C++17 assumed
+
+=head1 FILES
+
+    {:NAME:}.cpp -- implementation
+
+=head1 AUTHOR
+
+David C Black <david.black@doulos.com>
+
+=head1 COPYRIGHT & LICENSE
+
+'cpp-main' template is copyright (C) 2020 Doulos Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
+# END  $Id$

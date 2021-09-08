@@ -3,8 +3,21 @@
 # Makefile for SystemC courses
 #
 # This version is beefed up slightly.
+#
+# Lines starting with #| are documentation for help target
+# All targets are documented with comments formatted as #| * TAGNAME - DESCRIPTION
 
-# -*- make -*- vim:syntax=make:fdm=marker:fmr=<<<,>>>:tw=80:sw=2:et
+#|------------------------------------------------------------------------------
+#|
+#| Description
+#| -----------
+#|
+#| This Makefile provides for compiling SystemC projects as simply as possible
+#| to keep distractions low.
+#|
+#| Targets
+#| -------
+#|
 ###############################################################################
 #
 #   ####   ####  #     # ##### ###  ####  #    # #####  #####                   
@@ -17,7 +30,8 @@
 #
 ###############################################################################
 # Find path to THIS file
-THIS_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
+THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
+PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
 
 ## Variable that points to SystemC-2.3 installation path (or use environment variable)
 # SYSTEMC_HOME = /your/override/systemc
@@ -29,15 +43,22 @@ ifndef SYSTEMC_HOME
     SYSTEMC_HOME := $(firstword $(wildcard $(addsuffix apps/systemc,${HOME}/.local/ ${HOME}/ /)))
   endif
 endif
-$(info INFO: Using SYSTEMC_HOME = ${SYSTEMC_HOME})
+$(info INFO: Using SYSTEMC_HOME=${SYSTEMC_HOME})
 ifeq "$(words $(wildcard ${SYSTEMC_HOME}/include))" "0"
   $(error SYSTEMC_HOME does not refer to a valid directory!)
 endif
 ifndef MODULE
   $(warning Makefile should specify MODULE. Defaulting to use 'run')
   MODULE := run
+else
+  MODULE := $(basename ${MODULE})
 endif
 
+ifndef OBJS
+  OBJS:=${SRCS}
+  OBJS:=$(patsubst %.cpp,%.o,${OBJS})
+  OBJS:=$(patsubst %.c,  %.o,${OBJS})
+endif
 # Tool-chain options
 ifndef CPPSTD
   CPPSTD := 17
@@ -55,20 +76,34 @@ OPT += -std=c++${CPPSTD}
 DEBUG  := -g
 ## Build with maximum gcc warning level
 CFLAGS := --pedantic -Wall -Wextra -Wno-unused-parameter
-CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
+ifdef CDEFS
+  CFLAGS += $(addprefix -D,$(patsubst -D%,%,${CDEFS}))
+endif
+#CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
 CFLAGS += ${DEBUG} ${OPT} ${EXTRACFLAGS}
 
 #-------------------------------------------------------------------------------
 # For autotools installations
 #-------------------------------------------------------------------------------
 TARGET_ARCH=linux64
--include $(dir THIS_MAKEFILE)/Makefile.arch
+-include $(dir ${THIS_MAKEFILE})Makefile.arch
 
 # Refer to the include/ and (appropriate) lib/ directories
 SYSDIR  := ${SYSTEMC_HOME}/include
 LIBDIRS := $(wildcard ${SYSTEMC_HOME}/lib ${SYSTEMC_HOME}/lib-${TARGET_ARCH})
 ifeq "$(words ${LIBDIRS})" "1"
   LIBDIR  := $(firstword ${LIBDIRS})
+  SETUP_PROFILE := $(dir ${THIS_MAKEFILE})setup.profile
+  ifeq "$(wildcard ${SETUP_PROFILE})" ""
+    $(shell echo "#!/bin/sh"                                              >"${SETUP_PROFILE}")
+    $(shell echo ""                                                      >>"${SETUP_PROFILE}")
+    $(shell echo 'SYSTEMC_HOME="${SYSTEMC_HOME}"'                        >>"${SETUP_PROFILE}")
+    $(shell echo 'LD_LIBRARY_PATH="${LIBDIR}:$${LD_LIBRARY_PATH}"'       >>"${SETUP_PROFILE}")
+    $(shell echo 'DYLD_LIBRARY_PATH="${LIBDIR}:$${DYLD_LIBRARY_PATH}"'   >>"${SETUP_PROFILE}")
+    $(shell echo 'export SYSTEMC_HOME LD_LIBRARY_PATH DYLD_LIBRARY_PATH' >>"${SETUP_PROFILE}")
+    $(shell perl -pi -e '$$d=chr(36);s{${HOME}/}{$${d}{HOME}/}g' "${SETUP_PROFILE}")
+    $(info INFO: Optionally you may choose to source ${SETUP_PROFILE})
+  endif
 else
   $(error Unable to determine systemc library directory - possibly bad SYSTEMC_HOME reference or SystemC installation.)
 endif
@@ -78,7 +113,9 @@ LIBOPTS := -L. -L.. -L${LIBDIR}
 
 LIBS   :=  -lstdc++ -lm ${EXTRA_LIBS} -lsystemc
 
+ifndef EXE
 EXE    := ${MODULE}.x
+endif
 
 ###############################################################################
 #
@@ -92,17 +129,31 @@ EXE    := ${MODULE}.x
 #
 ###############################################################################
 .DEFAULT_GOAL := all
-.PHONY: all compile link build run clean
+.PHONY: $(PHONIES)
 
 all: run
+
+#| * help - display documentation
+help:
+	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
+
+#| * compile - simply compile all source files into object files
 compile: ${OBJS}
+
+#| * link - links objects into an executable
 link: ${EXE}
 
 #-------------------------------------------------------------------------------
-# Use cmake
+#| * cmake - uses to cmake to create an executable.
 #-------------------------------------------------------------------------------
-build:
-	mkdir -p build; cd build; cmake ..; make
+#|           NOTE: This is a new optional approach and not yet documented in the
+#|           workbook. Ask your instructor if interested.
+BUILD_DIR ?= build-cmake
+cmake:
+	@rm -f "${EXE}"
+	mkdir -p ${BUILD_DIR}; cd ${BUILD_DIR}; cmake ..; make
+	@ln -s "${BUILD_DIR}/${EXE}"
+
 #-------------------------------------------------------------------------------
 # Link
 #-------------------------------------------------------------------------------
@@ -139,25 +190,38 @@ endif
 	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 	rm -f $*.d
 
+-include $(SRCS:.cpp=.P)
+
 #-------------------------------------------------------------------------------
-# Execute
+#| * run - Executes the simulation. (Recompiles and links as needed)
+#|         Allows for definition of ARGS, STDIN, STDOUT, STDERR, STDLOG
 #-------------------------------------------------------------------------------
 run: ${EXE}
 
 ifdef VERBOSE
 	@echo "# Executing $<"
 endif
-	time env LD_LIBRARY_PATH=${LIBDIR}:$$LD_LIBRARY_PATH ./${EXE}
+	time env LD_LIBRARY_PATH="${LIBDIR}:$$LD_LIBRARY_PATH" "./${EXE}"$(if ${ARGS}, "${ARGS}")$(if ${STDIN}, <"${STDIN}")$(if ${STDERR}, >"${STDERR}")$(if ${STDIN}, ">${STDIN}")$(if ${STDLOG}, |tee "${STDLOG}")
 
 #-------------------------------------------------------------------------------
-# Clean up
+#| * gdb - Use gdb debugger on the simulation. (Recompiles and links as needed)
 #-------------------------------------------------------------------------------
+gdb: ${EXE}
+
+ifdef VERBOSE
+	@echo "# Executing $<"
+endif
+	env LD_LIBRARY_PATH="${LIBDIR}:$$LD_LIBRARY_PATH" gdb "./${EXE}"
+
+#-------------------------------------------------------------------------------
+#| * clean - Cleans up the directory by removing all generated files.
+#-------------------------------------------------------------------------------
+#|           NOTE: Do not clean before every compile because that defeats the
+#|           purpose of make. Only use this in exceptional circumstances.
 clean:
-	-rm -f ${OBJS} *~ ${EXE} *.vcd *.wif *.isdb *.dmp *.P *.log
+	-rm -fr ${OBJS} *~ "${EXE}" *.vcd *.wif *.isdb *.dmp *.P *.log ${BUILD_DIR}
 
-#help: not yet implemented
-
-
--include $(SRCS:.cpp=.P)
-
-# vim:syntax=make
+# vim:syntax=make:nospell
+#|
+#|------------------------------------------------------------------------------
+# The end

@@ -39,3 +39,6 @@ ifndef HOST_ARCH
 endif
 
 TARGET_ARCH:=${HOST_ARCH}
+ifdef VERBOSE
+$(info INFO: TARGET_ARCH is '${TARGET_ARCH}')
+endif
