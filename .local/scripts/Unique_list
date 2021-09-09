@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 function Unique_list() {
+  Comment Unique_list V1 V2... returns unique values only
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
   fi
