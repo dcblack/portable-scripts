@@ -18,15 +18,15 @@ struct {:sc:NAME:}_module
   // Ports - NONE
 
   // Constructor
-  {:sc:NAME:}_module( sc_core::sc_module_name instance_name );
+  explicit {:sc:NAME:}_module( const sc_core::sc_module_name& instance_name );
 
   // Destructor
   virtual ~{:sc:NAME:}_module();
 
+private:
   // Processes
   void {:lc:NAME:}_thread();
 
-private:
   // Local methods - NONE
 
   // Local channels - NONE

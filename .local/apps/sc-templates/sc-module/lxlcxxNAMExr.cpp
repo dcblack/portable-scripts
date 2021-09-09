@@ -13,14 +13,14 @@ using namespace sc_core;
 
 //------------------------------------------------------------------------------
 // Constructor
-{:sc:NAME:}_module::{:sc:NAME:}_module(sc_module_name instance_name)
-: sc_module(instance_name)
+{:sc:NAME:}_module::{:sc:NAME:}_module( const sc_module_name& instance_name)
+: sc_module( instance_name )
 //, {:OBJECT_CONSTRUCTION:}
 {
   // Connectivity - NONE
   // Register processes
-  SC_HAS_PROCESS({:sc:NAME:}_module);
-  SC_THREAD({:lc:NAME:}_thread);
+  SC_HAS_PROCESS( {:sc:NAME:}_module );
+  SC_THREAD( {:lc:NAME:}_thread );
 }//endconstructor
 
 //------------------------------------------------------------------------------
