@@ -69,18 +69,25 @@ endif
 ifndef CC
   CC   := gcc
 endif
+ifndef LD
+  LD   := g++
+endif
 ifndef OPT
-  OPT  := -O0
+  OPT  := -O2
 endif
 OPT += -std=c++${CPPSTD}
 DEBUG  := -g
 ## Build with maximum gcc warning level
-CFLAGS := --pedantic -Wall -Wextra -Wno-unused-parameter
+CFLAGS := --pedantic -Wall -Wextra
+CFLAGS += -Wno-unused-parameter
+CFLAGS += -fstack-usage
 ifdef CDEFS
   CFLAGS += $(addprefix -D,$(patsubst -D%,%,${CDEFS}))
 endif
-#CFLAGS += -Wno-deprecated -Wno-return-type -Wno-char-subscripts 
 CFLAGS += ${DEBUG} ${OPT} ${EXTRACFLAGS}
+# Link with extra info
+MAPFLAGS := -Wl,-Map=${MODULE}.map,--print-map,--cref,--print-gc-sections,--print-memory-usage
+LDFLAGS := ${MAPFLAGS}
 
 #-------------------------------------------------------------------------------
 # For autotools installations
@@ -161,7 +168,7 @@ ${EXE}: ${OBJS}
 ifdef VERBOSE
 	@echo "# Linking $?"
 endif
-	${CXX} ${CFLAGS} ${INCOPTS} ${LIBOPTS} -o $@ ${OBJS} ${LIBS} 2>&1 | c++filt
+	${LD} ${CFLAGS} ${LDFLAGS} ${LIBOPTS} -o $@ ${OBJS} ${LIBS} 2>&1 | c++filt
 
 #-------------------------------------------------------------------------------
 # Compile C++
@@ -184,7 +191,7 @@ endif
 ifdef VERBOSE
 	@echo "# Compiling C $<"
 endif
-	${CXX} ${CFLAGS} ${INCOPTS} -c -MMD -o $@ $<
+	${CC} ${CFLAGS} ${INCOPTS} -c -MMD -o $@ $<
 	@cp $*.d $*.P; \
 	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
