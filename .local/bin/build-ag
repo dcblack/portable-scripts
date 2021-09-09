@@ -7,8 +7,8 @@ TOOL_INFO="Use 'ag --help' for more information."
 TOOL_SRC="the_silver_searcher"
 TOOL_URL="https://github.com/ggreer/the_silver_searcher.git"
 
-function Realpath () {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
 SCRIPT="$(Realpath "$0")"

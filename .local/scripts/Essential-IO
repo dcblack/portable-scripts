@@ -32,10 +32,10 @@ function Comment() {
   true;
 }
 
-function Realpath () {
+function Realpath() {
   #@ Output the realpath name treating all arguments as a single filename specification
   #| Realpath FILENAME_SPECIFICATION
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*))"
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
 function Color-Setup() {

@@ -2,7 +2,7 @@
 #
 # Script to build and install fmtlib (useful prior to C++20)
 TOOL_NAME="C++ formatting library (fmt)"
-TOOL_INFO="Go to 'https://fmt.dev/latest/index.html' for more information."
+TOOL_INFO="Go to https://fmt.dev/latest/index.html for more information."
 TOOL_SRC='fmt'
 TOOL_URL="https://github.com/fmtlib/fmt.git"
 GENERATOR="cmake"
@@ -44,11 +44,11 @@ GENERATOR="cmake"
 #|  --suffix=TEXT      |  -suf TEXT        | set suffix for installation name
 #|
 
-function Realpath () {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
-SCRIPT="$(dirname $(Realpath "$0"))/utils.bash"
+SCRIPT="$(dirname "$(Realpath "$0")")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash
   source "${SCRIPT}" "$0"

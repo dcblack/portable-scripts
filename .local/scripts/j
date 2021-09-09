@@ -15,8 +15,8 @@ function j() {
   if [[ -z "${FAVS}" ]]; then
     local fav
     for fav in Favorites favs .favs; do
-      FAVS="$(realpath "${HOME}/${fav}")"
-      if [[ "${FAVS}" != "" ]]; then
+      FAVS="$(Realpath "${HOME}/${fav}")"
+      if [[ -n "${FAVS}" ]]; then
         break
       fi
     done
@@ -38,6 +38,8 @@ Syntax
 
   j -help
   j -list
+  j -mk FAV PATH
+  j -rm FAV
   j {dir_or_file}...
 
 Description
@@ -65,20 +67,51 @@ EOT
         J_DEBUG=1
         ;;
       -v | --verbose )
-        # shellcheck disable=SC2034
         J_VERBOSE=1
         ;;
-      -l | -list )
+      -l | -list | --list | -favs )
+        shift
         if [[ -n "${FAVS}" ]]; then
-          /bin/ls "${FAVS}"
+          if [[ $# -gt 0 ]]; then
+            /bin/ls "$(Add_prefix "${FAVS}/" "$@")"
+          else
+            /bin/ls "${FAVS}"
+          fi
+          Info "Use -lns for actual links"
         else
           echo "No favorites directory specified" 1>&2
         fi
         return
         ;;
+      -mk )
+        shift
+        if [[ $# != 2 ]]; then Error "Requires two arguments: j -mk FAV DIRPATH"; return 1; fi
+        if [[ "$1" =~ .*/.* ]]; then Error "First argument must be a simple name"; return 1; fi
+        if [[ "$1" =~ [^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ -e "${FAVS}/$1" ]]; then Error "$1 already exists"; return 1; fi
+        if [[ ! -d "$2" ]]; then Error "'$2/.' does not refer to a directory"; return 1; fi
+        ln -s "$(Realpath "$2/.")" "${FAVS}/$1" && echo "Created favorite $1" ;
+        return 0;
+        ;;
+      -rm )
+        shift
+        if [[ $# != 1 ]]; then Error "Requires exactly one argument: j -rm FAV"; return 1; fi
+        if [[ "$1" =~ .*/.* ]]; then Error "First argument must be a simple name"; return 1; fi
+        if [[ "$1" =~ [^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ ! -e "${FAVS}/$1" ]]; then Error "$1 does not exist"; return 1; fi
+        local old
+        old="$(Realpath "$1")"
+        rm "${FAVS}/$1" && echo "Removed favorite $1 -> ${old}" ;
+        return 0;
+        ;;
       -L | -lns )
+        shift
         if [[ -n "${FAVS}" ]]; then
-          /bin/ls -l "${FAVS}"
+          if [[ $# -gt 0 ]]; then
+            lns "$(Add_prefix "${FAVS}/" "$@")"
+          else
+            lns "${FAVS}"
+          fi
         else
           echo "No favorites directory specified" 1>&2
         fi

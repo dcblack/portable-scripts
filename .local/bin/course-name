@@ -44,12 +44,13 @@ end_markdown
 EOF
 
 function Realpath() {
-  perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
 SCRIPT_PATH="$(Realpath "$0")"
 PORTABLE_ROOT_DIR="$(git -C "$(dirname "${SCRIPT_PATH}")" rev-parse --show-toplevel)"
 
+# shellcheck source=../scripts/Essential-IO
 source "${PORTABLE_ROOT_DIR}/.local/scripts/Essential-IO"
 
 

@@ -45,8 +45,8 @@ USAGE
 Source this as follows inside your bash script:
 
 ```sh
-function Realpath () {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 SCRIPT="$(Realpath "$0")"
 SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
