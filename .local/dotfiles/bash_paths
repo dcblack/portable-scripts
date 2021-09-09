@@ -53,6 +53,8 @@ function SetupPaths() {
   #-----------------------------------------------------------------------------
   for dir in \
     "/usr/share/man" \
+    "/opt/local/share/man" \
+    "/usr/local/share/man" \
     "/ext/linux/Ubuntu-20.04/usr/share/man" \
     "${HOME}/.local/man" \
     "${HOME}/man" \
