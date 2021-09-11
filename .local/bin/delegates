@@ -19,7 +19,11 @@ Syntax
 
 Description
 
-TO BE SUPPLIED
+Extracts hostname and email information from CoCalc course files (JSON format).
+
+-ssh option generates \$HOME/.ssh/config entries instead of a simple list
+
+-who option allow filtering by delegate e-mail address.
 
 EOT
   print $documentation;
