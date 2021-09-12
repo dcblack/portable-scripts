@@ -8,6 +8,7 @@ function j() {
   #   j DIR(S)
   # Begin parsing options
   #-----------------------------------------------------------------------------
+  export lwd nwd cws nws
   local J_VERBOSE J_DEBUG
   J_VERBOSE=0
   J_DEBUG=0
@@ -141,7 +142,6 @@ EOT
   # Last working directory
   local prev_lwd="${lwd}"
   lwd="$(Realpath .)"
-  export lwd
   if [[ $# == 0 ]]; then
     # shellcheck disable=SC2164
     cd
@@ -180,7 +180,7 @@ EOT
   # shellcheck disable=SC2164
   cd "${next_wd}"
 
-  if [[ "${next_wd}" != "${prev_lwd}" ]]; then
+  if [[ -n "${prev_lwd}" && "${next_wd}" != "${prev_lwd}" ]]; then
     lwd="${prev_lwd}"
   else
     export cwd
@@ -228,7 +228,7 @@ EOT
       export ACTION
       ACTION='rm'
       # shellcheck disable=SC1090
-      source "${nws}"
+      source "${lws}"
       unset ACTION
     fi
     # Source new working script
