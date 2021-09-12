@@ -5,13 +5,12 @@ eval 'exec /usr/bin/perl -S $0 ${1+"$@"}' # vim600:sw=2:tw=0:fdm=marker
 # @(#)$Info: table - Creates tabular output. $
 #
 # @(#)$Copyright: 2001,2007 All rights reserved. $
-# @(#)$Email: <dcblack@hldwizard.com>. $
+# @(#)$Email: <dcblack@mac.com>. $
 require 5.0;
 use English;
 use FindBin qw($RealBin $RealScript);
 use vars qw($exe);
-use lib "$ENV{HLDW}/lib";
-use HLDW qw(%OPT &Version);
+use pscr qw(%OPT &Version);
 #use strict;
 
 ###############################################################################
@@ -19,7 +18,7 @@ $exe = "$RealBin/$RealScript";
 exec "perldoc $exe" if "@ARGV" =~ m/^--?help$/;
 # Initialization <<<
 #------------------------------------------------------------------------------
-our $auth = 'David C Black <dcblack@hldwizard.com>';
+our $auth = 'David C Black <dcblack@mac.com>';
 our ($tool,$revn,$TOOL,$Tool) = &Version('@(#)$Id: table 1167 2011-04-22 08:15:47Z dcblack $');
 
 our $ISEP = qr{\s+};
@@ -309,7 +308,6 @@ sub fmt_line { #<<<
   }
   return @F;
 }#endsub fmt_line
-
 ############################################################################>>>
 sub fmt_table { #<<<
   my ($hdr) = shift @_;
@@ -445,7 +443,7 @@ TBS
 
 =head1 AUTHOR
 
-David C. Black <dcblack@hldwizard.com>
+David C. Black <dcblack@mac.com>
 
 =cut
 

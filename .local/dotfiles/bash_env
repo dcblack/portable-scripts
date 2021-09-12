@@ -6,6 +6,7 @@ function Unique_path() {
   # DESCR: Removes duplicate paths in specified variable
   # USAGE: Unique_path VAR
   local PERL_SCRIPT
+  # shellcheck disable=SC2016
   PERL_SCRIPT='
     $v=$ARGV[0];
     for my $d(split(qr":",$ENV{$v})){
@@ -18,20 +19,21 @@ function Unique_path() {
     }
     printf qq{%s="%s"\n},$v,join(":",@e);
   '
-  eval $(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")
+  eval "$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
 }
 
 # Locations
 function portable-env() {
   # Environment
-  PORTABLE_DIR="${HOME}/.local"
-  APPS="${PORTABLE_DIR}/apps"
-  DOTBIN="${PORTABLE_DIR}/bin"
-  APPSBIN="${PORTABLE_DIR}/apps/bin"
-  SYSTEMC_HOME="${PORTABLE_DIR}/apps/systemc"
+  PSCR="${HOME}/.local"
+  APPS="${PSCR}/apps"
+  DOTBIN="${PSCR}/bin"
+  APPSBIN="${PSCR}/apps/bin"
+  SYSTEMC_HOME="${PSCR}/apps/systemc"
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
+  PERL5LIB="${PSCR}/lib"
   TEMPLATEPATH="${HOME}/templates"
-  for f in "${APPS}/sc-templates"; do
+  for f in "${APPS}/sc-templates" "${HOME}/templates"; do
     if [[ -d "${f}" ]]; then
       TEMPLATEPATH="${TEMPLATEPATH}:${f}"
     fi
@@ -40,7 +42,7 @@ function portable-env() {
   Unique_path PATH
   Unique_path TEMPLATEPATH
 
-  export PORTABLE_DIR APPS TEMPLATEPATH SYSTEMC_HOME PATH
+  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME PATH PERL5LIB
 
   # Favorites
   FAVS="${HOME}"/Favorites
