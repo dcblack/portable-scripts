@@ -21,7 +21,7 @@ function SetupPaths() {
   export CDPATH
 
   #-----------------------------------------------------------------------------
-  # Add local bin directories
+  # Add local bin directories to PATH
   #-----------------------------------------------------------------------------
   for dir in \
     "${HOME}/.local/bin" \
@@ -33,7 +33,7 @@ function SetupPaths() {
   Unique_path PATH
 
   #-----------------------------------------------------------------------------
-  # Add local template directories (see `new` script)
+  # Add local template directories (see `new` script) to TEMPLATEPATH
   #-----------------------------------------------------------------------------
   for dir in \
     "${HOME}/.local/templates" \
@@ -64,6 +64,7 @@ function SetupPaths() {
   done
   Unique_path MANPATH
   export MANPATH
+
 }
 
 SetupPaths syscfund tlm-2 training
