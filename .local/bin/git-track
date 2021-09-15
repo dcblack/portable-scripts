@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+case $# in
+  1) REMOTE=origin BRANCH="$1" ;;
+  2) REMOTE="R1"   BRANCH="$2" ;;
+  *) echo "Syntax: git track [REMOTE] BRANCH" ; exit ;;
+esac
+
+git branch --set-upstream-to="${REMOTE}/${BRANCH}" "${BRANCH}"
