@@ -1,9 +1,28 @@
 #!/usr/bin/env bash
 
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -v|--verbose) VERBOSE=1 ;;
+    -n|--notreally) NOTREALLY=1 VERBOSE=1 ;;
+    -q|--quiet) VERBOSE=0 ;;
+    *) echo "WARNING: Ignoring $1" ;;
+  esac
+  shift
+done
+
 case $# in
   1) REMOTE=origin BRANCH="$1" ;;
-  2) REMOTE="R1"   BRANCH="$2" ;;
+  2) REMOTE="$1"   BRANCH="$2" ;;
   *) echo "Syntax: git track [REMOTE] BRANCH" ; exit ;;
 esac
 
-git branch --set-upstream-to="${REMOTE}/${BRANCH}" "${BRANCH}"
+if [[ "$(dirname "${REMOTE}")" == "." ]]; then
+  REMOTE="${REMOTE}/${BRANCH}"
+fi
+
+if [[ ${VERBOSE} == 1 ]]; then
+  echo "% git branch --set-upstream-to=${REMOTE} ${BRANCH}"
+fi
+if [[ -z ${NOTREALLY} ]]; then
+  git branch --set-upstream-to="${REMOTE}" "${BRANCH}"
+fi
