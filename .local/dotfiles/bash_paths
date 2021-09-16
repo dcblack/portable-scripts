@@ -9,6 +9,7 @@ function SetupPaths() {
   for dir in "${HOME}/favs}" "${HOME}/Favorites}"; do
     Prepend_path CDPATH "${dir}"
   done
+  CDPATH=".:${CDPATH}"
   for dir in "${@}"; do
     if [[ -z "${dir}" ]]; then continue; fi
     COURSE="$(find "${HOME}" -type d -name "${dir}" 2>/dev/null)"
