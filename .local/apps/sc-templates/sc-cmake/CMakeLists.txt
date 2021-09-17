@@ -14,34 +14,22 @@ cmake_minimum_required( VERSION 3.11 )
 project(      {:NAME:}
   VERSION     {:VERS:} # n.n[.n[.n]]
   DESCRIPTION "{:DESCRIPTION:}"
-  LANGUAGES   CXX C
+  LANGUAGES   CXX
   )
 
-set( TARGET_NAME {:lc:NAME:} )
 set( default_build_type "Debug" )
-
+set( CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to build all targets." )
+set( CMAKE_CXX_STANDARD_REQUIRED 17 CACHE BOOL "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement." )
 include( $ENV{SCC_APPS}/cmake/SystemC.cmake )
 include( $ENV{SCC_APPS}/cmake/strict.cmake )
 include( $ENV{SCC_APPS}/cmake/BuildTypes.cmake )
+
+# Packages
+find_package( fmt REQUIRED )
 #find_package( yaml-cpp CONFIG REQUIRED )
-#find_package( Boost 1.65 REQUIRED filesystem )
+#find_package( Boost REQUIRED filesystem )
 
 add_compile_definitions( SC_INCLUDE_FX SC_INCLUDE_DYNAMIC_PROCESSES )
-
-add_executable( {:lc:NAME:} )
-target_include_directories( {:lc:NAME:} PRIVATE . )
-target_sources( {:lc:NAME:} PRIVATE
-  {:if:SRCS:}
-  {:sp:SRCS:}
-  {:else:SRCS:}
-  {:qx:ls -1 *.cpp:}
-  {:endif:SRCS:}
-)
-# Uncomment the following only if specifically needed
-#> target_compile_definitions( {:NAME:} PRIVATE MYEXAMPLE )
-#> target_link_libraries( {:NAME:} yaml-cpp )
-#> target_compile_features( {:NAME:} PUBLIC cxx_std_11 )
-#> target_include_directories( {:NAME:} includes )
 
 # add a target to generate API documentation with Doxygen
 find_package( Doxygen REQUIRED dot )
@@ -56,4 +44,19 @@ if( DOXYGEN_FOUND )
   doxygen_add_docs( docs )
 endif( DOXYGEN_FOUND )
 
-# TAF! vim:syntax=cmake:nospell
+add_executable( {:lc:NAME:} )
+target_include_directories( {:lc:NAME:} PRIVATE . )
+target_sources( {:lc:NAME:} PRIVATE
+  {:if:SRCS:}
+  {:sp:SRCS:}
+  {:else:SRCS:}
+  {:qx:ls -1 *.cpp:}
+  {:endif:SRCS:}
+)
+# Uncomment the following only as needed
+#> target_compile_definitions( {:NAME:} PRIVATE MYEXAMPLE )
+#> target_link_libraries( {:NAME:} yaml-cpp )
+#> target_compile_features( {:NAME:} PUBLIC cxx_std_11 )
+#> target_include_directories( {:NAME:} includes )
+
+# vim:syntax=cmake:nospell
