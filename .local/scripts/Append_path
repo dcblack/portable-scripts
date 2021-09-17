@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Append_path() { # only if 2nd arg does not exist in first
+function Append_path() # only if 2nd arg does not exist in first
+{
   # USAGE: Append_path VAR PATH
   local var arg plscript
   var="$1"

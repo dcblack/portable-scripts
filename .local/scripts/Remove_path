@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Remove_path() {
+function Remove_path()
+{
   # USAGE: remove_path VAR PATH
   local plscript
   # shellcheck disable=SC2016

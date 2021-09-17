@@ -2,43 +2,47 @@
 #
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
 #
-#| FUNCTION SYNTAX            | DESCRIPTION 
-#| :------------------------- | :---------- 
-#| Color-Setup ON_or_OFF      | Enables color variables (e.g., CBLU)
-#| Comment "_MESSAGE_"        | Does nothing but provide NOP comment
-#| Debug "_MESSAGE_"          | Echo a debug message
-#| Die "_MESSAGE_"            | Echo a fatal message and exit with fail
-#| _do _COMMAND_              | Displays and executes a command
-#| Echo [-n] "_MESSAGE_"      | Displays and logs message
-#| Error "_MESSAGE_"          | Echo an error message
-#| Errors                     | Display number of errors
-#| Fail                       | Sets error status (1)
-#| HelpText [-md] "$0"        | Displays help for specified file
-#| Info "_MESSAGE_"           | Echo an informational message
-#| Log [-n] "_MESSAGE_"       | Adds message to logfile
-#| Logfile [--append] _FILE_  | Establishes a logfile name
-#| Pass                       | Sets success status (0)
-#| PassFail "_MESSAGE_"       | Displays message with pass/fail status
-#| Realpath FILESPEC          | Echo the real pathname for a file specification
-#| Reset-errors               | Reset error and warning counts to zero
-#| Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
-#| ShowVars VARLIST           | Echo values of variables
-#| Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
-#| Warn "_MESSAGE_"           | Echo a warning message
-#| Warnings                   | Display number of errors
+#| FUNCTION SYNTAX               | DESCRIPTION 
+#| :---------------------------- | :---------- 
+#| Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
+#| Comment "_MESSAGE_"           | Does nothing but provide NOP comment
+#| Debug "_MESSAGE_"             | Echo a debug message
+#| Die "_MESSAGE_"               | Echo a fatal message and exit with fail
+#| _do _COMMAND_                 | Displays and executes a command
+#| Echo [-n] "_MESSAGE_"         | Displays and logs message
+#| Error "_MESSAGE_"             | Echo an error message
+#| Errors                        | Display number of errors
+#| Fail                          | Sets error status (1)
+#| HelpText [-md] "$0"           | Displays help for specified file
+#| Info "_MESSAGE_"              | Echo an informational message
+#| Log [-n] "_MESSAGE_"          | Adds message to logfile
+#| Logfile [--append] _FILE_     | Establishes a logfile name
+#| Pass                          | Sets success status (0)
+#| PassFail "_MESSAGE_"          | Displays message with pass/fail status
+#| Realpath FILESPEC             | Echo the real pathname for a file specification
+#| Reset-errors                  | Reset error and warning counts to zero
+#| Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
+#| ShowVars VARLIST              | Echo values of variables
+#| Summary PROG ["_MESSAGE_"]    | Echo a summary of errors and warnings
+#| Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
+#| Warn "_MESSAGE_"              | Echo a warning message
+#| Warnings                      | Display number of errors
 
-function Comment() {
+function Comment()
+{
   # Allow and ignore all arguments
   true;
 }
 
-function Realpath() {
+function Realpath()
+{
   #@ Output the realpath name treating all arguments as a single filename specification
   #| Realpath FILENAME_SPECIFICATION
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
-function Color-Setup() {
+function Color-Setup()
+{
   #@ Setup variables used to create color (or not)
   #| Color-Setup [off|on|bright]
   local USE_COLOR ESC
@@ -119,7 +123,8 @@ function Color-Setup() {
 }
 Color-Setup on
 
-function Logfile() {
+function Logfile()
+{
   #@ Logfile - Display, establish or close the logfile
   #| Logfile
   #| Logfile [--append|-a] FILENAME
@@ -172,7 +177,8 @@ function Logfile() {
   fi
 }
 
-function Log() {
+function Log()
+{
   #@ Send text to current logfile if $LOGFILE is defined
   #| Log [-n] "MESSAGE"
   #| COMMAND | Log
@@ -195,7 +201,8 @@ function Log() {
   fi
 }
 
-function Echo() {
+function Echo()
+{
   #@ Echo text, but also sends to Log
   #| Echo [-n] TEXT
   local OPT
@@ -207,7 +214,8 @@ function Echo() {
   fi
   }
 
-function Printf() {
+function Printf()
+{
   #@ Printf with logging
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
@@ -218,7 +226,8 @@ function Printf() {
   builtin echo "${TEXT}"; Log "${TEXT}"
 }
 
-function _do() {
+function _do()
+{
   #@ Echo and then execute arguments as a command
   #| _do COMMAND [ARGS]
   local NX
@@ -236,15 +245,18 @@ function _do() {
   "$@"
 }
 
-function Fail() {
+function Fail()
+{
   return 1
 }
 
-function Pass() {
+function Pass()
+{
   return 0
 }
 
-function Info() {
+function Info()
+{
   #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
   #| Info [-(red|grn|blu|ylw|cyn|mag)] MESSAGE
   if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
@@ -266,18 +278,20 @@ function Info() {
   Echo "${CGRN}Info: ${PRE}$*${NONE}"
 }
 
-function PassFail() { # Reports success or failure
+function PassFail()
+{ # Reports success or failure
   # shellcheck disable=SC2181
-  local status
-  status="$?"
+  local STATUS
+  STATUS="$?"
   if [[ $# == 0 ]]; then
-    if [[ ${status} == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
+    if [[ ${STATUS} == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
   else
-    if [[ ${status} == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
+    if [[ ${STATUS} == 0 ]]; then Info "$* ${BOLD}${CGRN}success${NONE}"; else Info "$* ${BOLD}${CRED}failure${NONE}"; fi
   fi
 }
 
-function Debug() {
+function Debug()
+{
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Debug MESSAGE
   if [[ "$1" == "-f" || -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
@@ -296,17 +310,20 @@ function Debug() {
   fi
 }
 
-function Debug-on() {
+function Debug-on()
+{
   export DEBUG
   DEBUG="-f"
 }
 
-function Debug-off() {
+function Debug-off()
+{
   export DEBUG
   DEBUG=""
 }
 
-function Ruler() {
+function Ruler()
+{
   local ARGS SEP MAX LIN WID
   SEP="-" # Default
   MAX=80 # TODO: Change to match terminal width
@@ -342,7 +359,8 @@ function Ruler() {
 }
 
 # Ensure that error messages are clearly seen
-function Die() {
+function Die()
+{
   Echo -n "${CRED}"
   Ruler '!'
   Echo "${CRED}Fatal: $*${NONE}" 1>&2
@@ -350,7 +368,8 @@ function Die() {
 }
 alias Fatal=Die
 
-function Assert() {
+function Assert()
+{
   #@ Similar to sc_assert
   if [[ -z "${NDEBUG}" ]]; then return; fi
   if [[ "${SHELL}" == /bin/zsh ]]; then
@@ -365,7 +384,8 @@ function Assert() {
   Die "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
-function Error() {
+function Error()
+{
   #@ Echo tagged error message (i.e., SC_REPORT_ERROR) - logged and counted
   #| Error MESSAGE
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
@@ -376,7 +396,8 @@ function Error() {
   Echo "${CRED}Error #${ERRORS}: ${NONE}$*${NONE}" 1>&2
 }
 
-function Warn() {
+function Warn()
+{
   #@ Echo tagged warning message (i.e., SC_REPORT_WARNING) - logged and counted
   #| Error MESSAGE
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
@@ -389,22 +410,26 @@ function Warn() {
 
 export ERRORS WARNINGS
 
-function Reset-errors() {
+function Reset-errors()
+{
   ERRORS=0
   WARNINGS=0
 }
 
-function Errors() {
+function Errors()
+{
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   echo "${ERRORS}";
 }
 
-function Warnings() {
+function Warnings()
+{
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   echo "${WARNINGS}";
 }
 
-function Summary() {
+function Summary()
+{
   Assert $# != 0
   Echo -n "${CMAG}Execution summary for ${1}:"
   shift
@@ -428,7 +453,14 @@ function Summary() {
   return "${RESULT}"
 }
 
-function HelpText() {
+function Usage()
+{
+  # Usage: Usage "$1" "{:SYNTAX:}" || return
+  if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Syntax: $*"; return 1; fi
+}
+
+function HelpText()
+{
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
   fi
@@ -445,7 +477,8 @@ function HelpText() {
   /usr/bin/perl -ne "${HELPSCRIPT}" "$@";
 }
 
-function ShowVars() {
+function ShowVars()
+{
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
   fi

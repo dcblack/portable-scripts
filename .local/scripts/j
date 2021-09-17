@@ -193,7 +193,7 @@ EOT
 
   # Deal with new working script if it exists
   export nws
-  nws="$(Firstreal "$(Add_suffix "/${working_script}" . .. ../.. ../../..)")"
+  nws="$(Firstreal "$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)")"
   test "${J_DEBUG}" = 1 && Debug -f "Checking for working script nws=%s" "'${nws}'"
   if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
@@ -239,6 +239,7 @@ EOT
       # shellcheck disable=SC1090
       source "${nws}"
       unset ACTION
+      cws="${nws}"
     fi
   fi
   if [[ -n "$(command -v set_title)" ]]; then

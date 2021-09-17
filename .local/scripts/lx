@@ -9,5 +9,5 @@ function lx() { # Display last N files (default 30) sorted by modification time
     N="$1"
     shift
   fi
-  /bin/ls -lt "$@" | head "${N}"
+  ls -lt "$@" | head "${N}"
 }

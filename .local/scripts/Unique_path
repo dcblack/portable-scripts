@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Unique_path() {
+function Unique_path()
+{
   # USAGE: unique_path [-v] VAR
   local VERBOSE PLSCRIPT ASSIGNMENT
   VERBOSE=0

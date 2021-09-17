@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function Has_path() {
-  # USAGE: Has_path VAR PATH
+  #| USAGE: Has_path VAR PATH
   local arg plscript
   arg="$(Realpath "$2")"
   # shellcheck disable=SC2016

@@ -2,8 +2,12 @@
 #
 # Load a script (do NOT execute)
 
+export LOADED
+
+function Syntax() { if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Syntax: $*"; return 1; fi }
+
 function Load() {
-  #| SYNTAX: Load [-v] SCRIPTNAME
+  Syntax "$1" "Load [-v] SCRIPTNAME" || return
   local VERBOSE DIR SCRIPT
   VERBOSE=0
   if [[ "$1" == "-v" ]]; then
@@ -54,4 +58,14 @@ function Load() {
     unset NOAUTORUN
   fi
   Error "Unable to find suitable script '$1'"
+}
+
+function Unload()
+{
+  true
+}
+
+function Reload()
+{
+  true
 }
