@@ -88,20 +88,21 @@ EOT
         shift
         if [[ $# != 2 ]]; then Error "Requires two arguments: j -mk FAV DIRPATH"; return 1; fi
         if [[ "$1" =~ .*/.* ]]; then Error "First argument must be a simple name"; return 1; fi
-        if [[ "$1" =~ [^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
         if [[ -e "${FAVS}/$1" ]]; then Error "$1 already exists"; return 1; fi
         if [[ ! -d "$2" ]]; then Error "'$2/.' does not refer to a directory"; return 1; fi
-        ln -s "$(Realpath "$2/.")" "${FAVS}/$1" && echo "Created favorite $1" ;
+        ln -s "$(Realpath "$2/.")" "${FAVS}/$1" && echo "Created favorite $1 -> $(Realpath "${FAVS}/$1")" ;
         return 0;
         ;;
       -rm )
         shift
         if [[ $# != 1 ]]; then Error "Requires exactly one argument: j -rm FAV"; return 1; fi
-        if [[ "$1" =~ .*/.* ]]; then Error "First argument must be a simple name"; return 1; fi
-        if [[ "$1" =~ [^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
         if [[ ! -e "${FAVS}/$1" ]]; then Error "$1 does not exist"; return 1; fi
         local old
-        old="$(Realpath "$1")"
+        old="$(Realpath "${FAVS}/$1")"
         rm "${FAVS}/$1" && echo "Removed favorite $1 -> ${old}" ;
         return 0;
         ;;
@@ -197,8 +198,8 @@ EOT
   test "${J_DEBUG}" = 1 && Debug -f "Checking for working script nws=%s" "'${nws}'"
   if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
-    local LASTOK NEXTOK
-    LASTOK=1 NEXTOK=1
+    local LASTOK NEXTOK REPEAT
+    LASTOK=1 NEXTOK=1 REPEAT=0
     # Qualifications to use a working script:
     # 1. Must not be the same as the last working script
     # 2. Must be executable and not a directory
@@ -207,6 +208,7 @@ EOT
       test "${J_DEBUG}" = 1 && Debug -f "lws set and equal to nws ${nws}"
       LASTOK=0
       NEXTOK=0
+      REPEAT=1
     fi
     if [[ ! -x "${lws}" || -d "${lws}" ]]; then
       LASTOK=0
@@ -220,6 +222,7 @@ EOT
     fi
     if [[ ! -x "${nws}" || -d "${nws}" ]]; then
       NEXTOK=0
+      REPEAT=0
       test "${J_DEBUG}" = 1 && Debug -f "nws not executable or is a directory ${nws}"
     fi
     # Source old working script with ACTION='rm'
@@ -240,6 +243,16 @@ EOT
       source "${nws}"
       unset ACTION
       cws="${nws}"
+    elif [[ ${REPEAT} == 1 ]]; then
+      if grep -q ACTION "${nws}"; then
+        test "${J_VERBOSE}" = 1 && Info "Repeating ${nws}"
+        export ACTION
+        ACTION='repeat'
+        # shellcheck disable=SC1090
+        source "${nws}"
+        unset ACTION
+        cws="${nws}"
+      fi
     fi
   fi
   if [[ -n "$(command -v set_title)" ]]; then
