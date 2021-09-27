@@ -23,6 +23,8 @@ Extracts hostname and email information from CoCalc course files (JSON format).
 
 -ssh option generates \$HOME/.ssh/config entries instead of a simple list
 
+-ssh/config option greps your ~/.ssh/config file for delegates
+
 -who option allow filtering by delegate e-mail address.
 
 EOT
@@ -39,14 +41,47 @@ while( $ARGV[0] =~ m/^-/ ) {
     $OPT{$opt}=1;
   }#endif
 }
+my $sshconfig = "$ENV{HOME}/.ssh/config";
+$sshconfig = $OPT{-ssh} if exists $OPT{-ssh} and $OPT{-ssh} ne '1';
+$sshconfig = $OPT{'-ssh/config'} if exists $OPT{'-ssh/config'} and $OPT{'-ssh/config'} ne '1';
 
-if( @ARGV == 0 ) {
-  system("/usr/bin/egrep '# delegate[0-9]' $ENV{HOME}/.ssh/config");
+our %name;
+for my $debrief (glob("debrief_*.md")) {
+  open DEBRIEF,'<',$debrief;
+  while(not eof DEBRIEF) {
+    my $line = <DEBRIEF>;
+    next unless $line =~ m{^(\w[^<@\|]+\w) +<([^>@ ]+[@][^ @>]+)>};
+    my ($name,$email) = ($1,lc $2);
+    $name=~ s/\s+/ /g;
+    $email=~ s/\s+/ /g;
+    $name{$email} = $name;
+  }
+  close DEBRIEF;
+}
+if( exists $OPT{-names} ) {
+  my @found;
+  for my $key (keys %name) {
+    push @found,"$name{$key} <$key>;";
+  }
+  printf "Names:\n  %s\n",join("\n  ",sort @found);
   exit 0;
 }
 
+if( scalar @ARGV == 0 and exists $OPT{'-ssh/config'}) {
+  printf "From ~/.ssh/config:\n";
+  system("/usr/bin/egrep '^Host delegate[0-9]' $sshconfig");
+  exit 0;
+}
+
+if( scalar @ARGV == 0 ) {
+  for my $course (sort glob("*.course")) {
+    push @ARGV,$course;
+  }
+}
+
+
 if( $ARGV[0] =~ m/[@]/ ) {
-  open PIPE,qq{/usr/bin/egrep '^# delegate[0-9].*$ARGV[0]' "$ENV{HOME}/.ssh/config"|};
+  open PIPE,qq{/usr/bin/egrep '^Host delegate[0-9].*$ARGV[0]' "$sshconfig"|};
   while(<PIPE>) {
     my @F = split;
     printf "ssh %s\n", $F[1];
@@ -56,8 +91,10 @@ if( $ARGV[0] =~ m/[@]/ ) {
 }
 
 if( exists $OPT{-ssh} ) {
+  $sshconfig = "config" if $sshconfig eq "$ENV{HOME}/.ssh/config";
+  open SSHCONFIG,'>',$sshconfig;
   my $date = `date`;
-  print << "EOT";
+  print SSHCONFIG << "EOT";
 # ssh config file (place under $ENV{HOME}/.ssh/ as 'config')
 # created on $date
 
@@ -72,49 +109,59 @@ for my $course_file ( @ARGV ) {
     printf STDERR "Error: file $course_file does not end with .course -- ignored\n";
     next;
   }
-  printf "#{ %s\n\n", $course_file if exists $OPT{-ssh};
+  printf SSHCONFIG "#{ Delegates from %s\n\n", $course_file if exists $OPT{-ssh};
+  unless ( exists $OPT{-ssh} or exists $OPT{-who} ) {
+    printf " N  | Name | Email | Cocalc User\n";
+    printf "--- | ---- | ----- | -----------\n";
+  }
   open COURSE,'<',$course_file;
   my $idx = 0;
   while(<COURSE>) {
     my $course_json = decode_json($_);
     next unless defined $course_json->{"email_address"};
     ++$idx;
-    my $email = $course_json->{"email_address"};
+    my $email = lc $course_json->{"email_address"};
     my $user  = $course_json->{"project_id"};
     $user =~ s/-//g;
+    my $name = $name{$email};
     if( exists $OPT{-ssh} ) {
-      printf "# delegate%d %s\n", $idx, $email;
-      printf "Host delegate%d\n", $idx;
-      printf "    User   %s\n", $user;
-      printf "    Hostname ssh.cocalc.com\n";
-      printf "\n";
+      printf SSHCONFIG "Host delegate%d # %s <%s>;\n", $idx, $name, $email;
+      printf SSHCONFIG "    User   %s\n", $user;
+      printf SSHCONFIG "    Hostname ssh.cocalc.com\n";
+      printf SSHCONFIG "\n";
     } elsif( exists $OPT{-who} ) {
       my $who = $OPT{-who};
-      next unless $email =~ m/$who/;
-      printf "ssh %s\@ssh.cocalc.com ;# %d %s\n", $user, $idx, $email;
+      next unless $email =~ m/$who/i or $name{$email} =~ m/$who/i;
+      printf "ssh %s\@ssh.cocalc.com ;# %d %s <%s>\n", $user, $idx, $name, $email;
     } else {
-      printf "%d %s %s\@ssh.cocalc.com\n", $idx, $email, $user;
+      printf "%d | %s | %s | %s\@ssh.cocalc.com\n", $idx, $name, $email, $user;
     }
   }#endwhile
-  printf "#}\n" if exists $OPT{-ssh};
+  printf SSHCONFIG "#} Delegates above here from  %s\n", $course_file if exists $OPT{-ssh};
   close COURSE;
 
 }#endfor
 
 if( exists $OPT{-ssh} ) {
-print << "EOT";
+  print SSHCONFIG << "EOT";
 
 # Site-wide defaults for various options
 Host *
     PubkeyAcceptedKeyTypes=+ssh-dss
     Ciphers aes128-ctr,aes192-ctr,aes256-ctr
-    ForwardX11 yes
+    ForwardX11 no
     ForwardX11Trusted yes
     ForwardAgent yes
     ServerAliveCountMax 10
     ServerAliveInterval 45
     SendEnv SSHUSER_*
+
+# vim:nospell:syntax=sshconfig
 EOT
+  close SSHCONFIG;
+  printf "Created %s\n", $sshconfig;
 }
 
 exit 0;
+
+# vim:syntax=perl
