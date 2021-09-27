@@ -13,6 +13,13 @@ thumb.db
 CVS
 RCS
 
+# Special directories
+lib
+share
+scratch
+src
+tmp
+
 GNUmakefile
 
 # CMake junk
