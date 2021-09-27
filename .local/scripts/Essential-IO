@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
-#
+
+export Essential_IO_VERSION=1.2
+
 #| FUNCTION SYNTAX               | DESCRIPTION 
 #| :---------------------------- | :---------- 
 #| Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
@@ -59,49 +61,56 @@ function Color-Setup()
   fi
   if [[ ${USE_COLOR} == 10 ]]; then
     # shellcheck disable=SC2034
-    BOLD="${ESC}[01m" NONE="${ESC}[00m"
-    UNDR="${ESC}[04m" NONE="${ESC}[00m"
+    BOLD="${ESC}[01m" UBLD="${ESC}[21m"
+    DARK="${ESC}[02m" UDRK="${ESC}[22m"
+    UNDR="${ESC}[04m" UNUN="${ESC}[24m"
+    INVS="${ESC}[07m" UNVS="${ESC}[27m"
     CBLK="${ESC}[90m" NONE="${ESC}[00m"
-    CRED="${ESC}[91m" NONE="${ESC}[00m"
-    CGRN="${ESC}[92m" NONE="${ESC}[00m"
-    CYLW="${ESC}[93m" NONE="${ESC}[00m"
-    CBLU="${ESC}[94m" NONE="${ESC}[00m"
-    CMAG="${ESC}[95m" NONE="${ESC}[00m"
-    CCYN="${ESC}[96m" NONE="${ESC}[00m"
-    CWHT="${ESC}[97m" NONE="${ESC}[00m"
-    BBLK="${ESC}[100m" NONE="${ESC}[00m"
-    BRED="${ESC}[101m" NONE="${ESC}[00m"
-    BGRN="${ESC}[102m" NONE="${ESC}[00m"
-    BYLW="${ESC}[103m" NONE="${ESC}[00m"
-    BBLU="${ESC}[104m" NONE="${ESC}[00m"
-    BMAG="${ESC}[105m" NONE="${ESC}[00m"
-    BCYN="${ESC}[106m" NONE="${ESC}[00m"
-    BWHT="${ESC}[107m" NONE="${ESC}[00m"
+    CRED="${ESC}[91m" 
+    CGRN="${ESC}[92m" 
+    CYLW="${ESC}[93m" 
+    CBLU="${ESC}[94m" 
+    CMAG="${ESC}[95m" 
+    CCYN="${ESC}[96m" 
+    CWHT="${ESC}[97m" 
+    BBLK="${ESC}[100m"
+    BRED="${ESC}[101m"
+    BGRN="${ESC}[102m"
+    BYLW="${ESC}[103m"
+    BBLU="${ESC}[104m"
+    BMAG="${ESC}[105m"
+    BCYN="${ESC}[106m"
+    BWHT="${ESC}[107m"
   elif [[ ${USE_COLOR} -gt 0 ]]; then
     # shellcheck disable=SC2034
     ESC=""
-    BOLD="${ESC}[01m" NONE="${ESC}[00m"
-    UNDR="${ESC}[04m" NONE="${ESC}[00m"
+    BOLD="${ESC}[01m" UBLD="${ESC}[21m"
+    DARK="${ESC}[02m" UDRK="${ESC}[22m"
+    UNDR="${ESC}[04m" UNUN="${ESC}[24m"
+    INVS="${ESC}[07m" UNVS="${ESC}[27m"
     CBLK="${ESC}[30m" NONE="${ESC}[00m"
-    CRED="${ESC}[31m" NONE="${ESC}[00m"
-    CGRN="${ESC}[32m" NONE="${ESC}[00m"
-    CYLW="${ESC}[33m" NONE="${ESC}[00m"
-    CBLU="${ESC}[34m" NONE="${ESC}[00m"
-    CMAG="${ESC}[35m" NONE="${ESC}[00m"
-    CCYN="${ESC}[36m" NONE="${ESC}[00m"
-    CWHT="${ESC}[37m" NONE="${ESC}[00m"
-    BBLK="${ESC}[40m" NONE="${ESC}[00m"
-    BRED="${ESC}[41m" NONE="${ESC}[00m"
-    BGRN="${ESC}[42m" NONE="${ESC}[00m"
-    BYLW="${ESC}[43m" NONE="${ESC}[00m"
-    BBLU="${ESC}[44m" NONE="${ESC}[00m"
-    BMAG="${ESC}[45m" NONE="${ESC}[00m"
-    BCYN="${ESC}[46m" NONE="${ESC}[00m"
-    BWHT="${ESC}[47m" NONE="${ESC}[00m"
+    CRED="${ESC}[31m"
+    CGRN="${ESC}[32m"
+    CYLW="${ESC}[33m"
+    CBLU="${ESC}[34m"
+    CMAG="${ESC}[35m"
+    CCYN="${ESC}[36m"
+    CWHT="${ESC}[37m"
+    BBLK="${ESC}[40m"
+    BRED="${ESC}[41m"
+    BGRN="${ESC}[42m"
+    BYLW="${ESC}[43m"
+    BBLU="${ESC}[44m"
+    BMAG="${ESC}[45m"
+    BCYN="${ESC}[46m"
+    BWHT="${ESC}[47m"
   else
+    # shellcheck disable=SC2034
     NONE=""
-    BOLD=""
-    UNDR=""
+    BOLD="" UBLD=""
+    DARK="" UDRK=""
+    INVS="" UNVS=""
+    UNDR="" UNUN=""
     CBLK=""
     CRED=""
     CGRN=""
@@ -119,7 +128,7 @@ function Color-Setup()
     BCYN=""
     BWHT=""
   fi
-  export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
+  export NONE BOLD UBLD UNDR UNUN DARK UDRK INVS UNVS CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
 }
 Color-Setup on
 
@@ -258,24 +267,31 @@ function Pass()
 function Info()
 {
   #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
-  #| Info [-(red|grn|blu|ylw|cyn|mag)] MESSAGE
+  #| Info [-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
   if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
   fi
-  local PRE
-  # Test for color prefix
-  case "$1" in
-    -pre) PRE="${2}"    ; shift  ; shift ;;
-    -cyn) PRE="${CCYN}" ; shift ;;
-    -red) PRE="${CRED}" ; shift ;;
-    -grn) PRE="${CGRN}" ; shift ;;
-    -ylw) PRE="${CYLW}" ; shift ;;
-    -blu) PRE="${CBLU}" ; shift ;;
-    -mag) PRE="${CMAG}" ; shift ;;
-    -wht) PRE="${CWHT}" ; shift ;;
-    *) PRE="${NONE}" ;;
-  esac
-  Echo "${CGRN}Info: ${PRE}$*${NONE}"
+  local PRE TAG
+  PRE="${NONE}"
+  TAG="Info: "
+  while [[ "$1" =~ ^-[[:alpha:]]{3}$ ]]; do
+    case "$1" in
+      -pre) PRE="${2}"    ; shift  ; shift ;;
+      -cyn) PRE="${CCYN}" ; shift ;;
+      -red) PRE="${CRED}" ; shift ;;
+      -grn) PRE="${CGRN}" ; shift ;;
+      -ylw) PRE="${CYLW}" ; shift ;;
+      -blu) PRE="${CBLU}" ; shift ;;
+      -mag) PRE="${CMAG}" ; shift ;;
+      -wht) PRE="${CWHT}" ; shift ;;
+      -tag) TAG="${2}";
+            if [[ "${#TAG}" -gt 1 ]]; then TAG="${TAG}:" ; fi
+            if [[ "${#TAG}" -gt 0 ]]; then TAG="${TAG} " ; fi
+            shift ; shift ;;
+      *) PRE="${NONE}" ;;
+    esac
+  done
+  Echo "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
 }
 
 function PassFail()
@@ -363,7 +379,7 @@ function Die()
 {
   Echo -n "${CRED}"
   Ruler '!'
-  Echo "${CRED}Fatal: $*${NONE}" 1>&2
+  Echo "${CRED}${BOLD}Fatal:${UBLD} $*${NONE}" 1>&2
   exit 1
 }
 alias Fatal=Die
@@ -393,7 +409,7 @@ function Error()
   export ERRORS
   Echo -n "${CRED}"
   Ruler '!'
-  Echo "${CRED}Error #${ERRORS}: ${NONE}$*${NONE}" 1>&2
+  Echo "${CRED}${BOLD}Error #${ERRORS}:${UBLD} ${NONE}$*${NONE}" 1>&2
 }
 
 function Warn()
@@ -405,7 +421,7 @@ function Warn()
   export WARNINGS
   Echo -n "${CRED}"
   Ruler '?'
-  Echo "${CRED}Warning: ${NONE}$*${NONE}" 1>&2
+  Echo "${CRED}${BOLD}Warning:${UBLD} ${NONE}$*${NONE}" 1>&2
 }
 
 export ERRORS WARNINGS
