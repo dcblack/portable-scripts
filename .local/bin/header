@@ -36,6 +36,7 @@ OPTIONS:
  -b ------------- bold
  -box ----------- put a box around the message
  -c ------------- suitable for inclusion in C code
+ -C [on|off] ---- color
  -ce[=COLS] ----- center text (optionally specify total width)
  -char=CHAR ----- user CHAR to create large character
  -cpp ----------- suitable for inclusion in C++ code
@@ -46,6 +47,7 @@ OPTIONS:
  -lsep[=CHAR] --- draw a horizontal line between rows if multiline
  -s</-s# -------- specify alternate character set
  -hsep[=CHAR] --- draw a horizontal bar above
+ -sc ------------ force to Sentence case
  -sh ------------ suitable for inclusion in sh/bash/csh/perl/tcl scripts
  -spacing=COLS -- add COLS columns of space between letters
  -trim ---------- remove trailing whitespace (default leaves spaces)
@@ -72,6 +74,18 @@ Bold output
 =item B<-char>=I<CHAR>
 
 specify character for banner
+
+=item B<-c>
+
+Format for inclusion in C source-code.
+
+=item B<-cpp>
+
+Format for inclusion in C++ source-code.
+
+=item B<-C> [on|off]
+
+Enable or disable color.
 
 =item B<-ce>
 
@@ -154,6 +168,19 @@ our %BIG;  # character set data
 our $cs=0; # character set index
 our $beg = 1;
 our $end = 1;
+our %COLOR =
+  ( 'off'  => "\x1B[00m"
+  , 'bold' => "\x1B[01m"
+  , 'undr' => "\x1B[04m"
+  , 'blk'  => "\x1B[30m"
+  , 'red'  => "\x1B[31m"
+  , 'grn'  => "\x1B[32m"
+  , 'ylw'  => "\x1B[33m"
+  , 'blu'  => "\x1B[34m"
+  , 'mag'  => "\x1B[35m"
+  , 'cyn'  => "\x1B[36m"
+  , 'wht'  => "\x1B[37m"
+  );
 
 #-----------------------------------------------------------------------------
 # Determine terminal width
@@ -177,6 +204,7 @@ $OPT{-vx} = 1;
 $OPT{-hx} = 1;
 $OPT{-spacing} = 0;
 $OPT{-wrap} = 0; # no wrapping
+$OPT{-color} = '';
 
 #-----------------------------------------------------------------------------
 # Process command line
@@ -224,6 +252,9 @@ while ($ARGV[0] =~ /^-/) {
     $OPT{-vbar} = $OPT{-box};
     $OPT{-hbar} = $OPT{-box};
   #---------------------------------------------------------------------------
+  } elsif ($opt =~ m{^-{1,2}sc$}) {
+    $OPT{-sc}  = 1;
+  #---------------------------------------------------------------------------
   } elsif ($opt =~ m{^-{1,2}uc$}) {
     $OPT{-uc}  = 1;
   #---------------------------------------------------------------------------
@@ -234,6 +265,14 @@ while ($ARGV[0] =~ /^-/) {
     $OPT{-hbar} = '*';
     $OPT{-vbar} = '*';
     $OPT{-box}  = '*';
+  #---------------------------------------------------------------------------
+  } elsif ($opt =~ m{^-{1,2}C(olor)?$}) {
+    if($ARGV[0] =~ m{^(off|no|disable|none|blk|red|grn|blu|ylw|mag|cyn|wht)$}) {
+      $OPT{-color} = shift @ARGV;
+      $OPT{-color} = '' if $OPT{-color} =~  m{(off|no|disable|none)};
+    } elsif ( $OPT{-color} eq '' ) {
+      $OPT{-color} = 'blu';
+    }
   #---------------------------------------------------------------------------
   } elsif ($opt =~ m{^-{1,2}fit$}) {
     $OPT{-fit} = 1;
@@ -534,6 +573,11 @@ if (exists $OPT{-uc}) {
   $msgs = uc $msgs;
   $msgs =~ s{\\N}{\\n}g;
 }
+if (exists $OPT{-sc}) {
+  $msgs = lc $msgs;
+  substr($msgs,0,1) = uc substr($msgs,0,1);
+  $msgs =~ s{\\N}{\\n}g;
+}
 my @msgs = ();
 for my $msg (split(/\\n/,$msgs)) {
   if ($msg ne '' and $OPT{-wrap}) {
@@ -561,6 +605,10 @@ foreach my $msg (@msgs) {
 }
 if (exists $OPT{-trim}) {
   $final =~ s{ +$}{}mg;
+}
+if ($OPT{-color} ne '') {
+  $final =~ s{^}{$COLOR{bold}$COLOR{$OPT{-color}}};
+  $final .= $COLOR{none};
 }
 print $final;
 print "\e[0m" if $OPT{-bold};
