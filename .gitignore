@@ -14,12 +14,15 @@ CVS
 RCS
 
 # Special directories
+include
 lib
 share
 scratch
 src
+systemc
 tmp
 
+# Special files
 GNUmakefile
 
 # CMake junk
