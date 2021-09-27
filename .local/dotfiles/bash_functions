@@ -4,6 +4,7 @@
 # Essential building blocks
 #-------------------------------------------------------------------------------
 LOCAL="${HOME}/.local"
+source "$LOCAL/scripts/FindScript"
 source "$LOCAL/scripts/Load"
 source "$LOCAL/scripts/Essential-IO"
 
@@ -33,3 +34,5 @@ source "$LOCAL/scripts/show-colors"
 function use-cmake() {
   source "$LEADER/.local/bin/use-cmake"
 }
+
+# vim:nospell
