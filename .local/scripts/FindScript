@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# Locate all instances of named script(s)
+
+export FINDSCRIPT_COUNT
+
+function FindScript()
+{
+  if [[ $# == 0 ]]; then
+    Error "Syntax: FindScript SCRIPTNAME(S)"
+    return 1
+  fi
+  export FINDSCRIPT_COUNT
+  FINDSCRIPT_COUNT=0
+  local DIR SCRIPT
+  if [[ "${SHELL}" =~ zsh ]]; then
+    set -o shwordsplit
+  fi
+  #-----------------------------------------------------------------------------
+  # Make sure we have directories to search
+  #-----------------------------------------------------------------------------
+  if [[ -z "${SCRIPT_PATH}" ]]; then
+    # Missing SCRIPT_PATH! Attempt default locations.
+    for DIR in "." "./scripts" "../scripts" "${HOME}/scripts" "${HOME}/.local/scripts" ; do
+      if [[ -d "${DIR}" ]]; then
+        if [[ -n "${SCRIPT_PATH}" ]]; then
+          SCRIPT_PATH="${SCRIPT_PATH}:${DIR}"
+        else
+          SCRIPT_PATH="${DIR}"
+        fi
+      fi
+    done
+  fi
+  export SCRIPT_PATH
+  #-----------------------------------------------------------------------------
+  # Search
+  #-----------------------------------------------------------------------------
+  local prev_IFS
+  prev_IFS="${IFS}"
+  IFS=':'
+  for DIR in ${SCRIPT_PATH}; do
+    IFS="${prev_IFS}"
+    while [[ $# != 0 ]]; do
+      SCRIPT="$(Realpath "${DIR}/$1")"
+      if [[ -x "${SCRIPT}" ]]; then
+        (( ++FINDSCRIPT_COUNT ))
+        echo "${SCRIPT}"
+      fi
+      shift
+    done
+  done
+  IFS="${prev_IFS}"
+}
+
