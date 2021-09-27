@@ -4,11 +4,57 @@
 
 export LOADED
 
-function Syntax() { if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Syntax: $*"; return 1; fi }
+function Usage() { if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Usage: $*"; return 1; fi }
 
 function Load() {
-  Syntax "$1" "Load [-v] SCRIPTNAME" || return
-  local VERBOSE DIR SCRIPT
+  Usage "$1" "Load [-v][-n] SCRIPTNAME" || return
+  local VERBOSE NOTREALLY DIR SCRIPT
+  VERBOSE=0
+  NOTREALLY=0
+  while [[ "$1" =~ ^- ]]; do
+    case "$1" in
+      -n) NOTREALLY=1 ;;
+      -v) VERBOSE=1 ;;
+       *) return 1 ;;
+    esac
+    shift
+  done
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
+  SCRIPT="$(Firstreal "$(FindScript "$1")")"
+  if [[ -z "${SCRIPT}" ]]; then
+    Error "Unable to find suitable script '$1'"
+    return 1
+  fi
+  local prev_NOAUTORUN STATUS
+  prev_NOAUTORUN=""
+  if [[ -n "${NOAUTORUN}" ]]; then prev_NOAUTORUN="${NOAUTORUN}" ; fi
+  NOAUTORUN=1
+  export NOAUTORUN
+  if [[ "${VERBOSE}" == 1 ]]; then
+    Info "source ${SCRIPT}"
+  fi
+  if [[ ${NOTREALLY} == 1 ]]; then
+    Info -tag % "source ${SCRIPT}" ;
+    return 0
+  fi
+  # shellcheck disable=SC1090
+  source "${SCRIPT}" "$@"
+  STATUS="$?"
+  if [[ -n "${prev_NOAUTORUN}" ]]; then NOAUTORUN="${prev_NOAUTORUN}" ; else unset NOAUTORUN ; fi
+  return "${STATUS}"
+}
+
+function Unload()
+{
+  true
+}
+
+function Reload()
+{
+  Usage "$1" "Reload [-v]" || return
+  local VERBOSE DIR NAME SCRIPT
   VERBOSE=0
   if [[ "$1" == "-v" ]]; then
     VERBOSE=1
@@ -17,6 +63,8 @@ function Load() {
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
   fi
+  local FUNCS
+  FUNCS=$(declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]')
   if [[ -z "${SCRIPT_PATH+x}" ]]; then
     # Missing SCRIPT_PATH! Attempt default locations.
     for DIR in "${HOME}/scripts" "${HOME}/.local/scripts" ; do
@@ -42,30 +90,20 @@ function Load() {
   export NOAUTORUN
   for DIR in ${SCRIPT_PATH}; do
     IFS="${prev_IFS}"
-    SCRIPT="${DIR}/$1"
-    if [[ -x "${SCRIPT}" ]]; then
-      if [[ "${VERBOSE}" == 1 ]]; then
-        Info "Loading ${SCRIPT}"
+    for NAME in ${FUNCS}; do
+      SCRIPT="${DIR}/${NAME}"
+      if [[ -x "${SCRIPT}" ]]; then
+        if [[ "${VERBOSE}" == 1 ]]; then
+          Info "Loading ${SCRIPT}"
+        fi
+        # shellcheck disable=SC1090
+        source "${SCRIPT}"
       fi
-      # shellcheck disable=SC1090
-      source "${SCRIPT}" "$@"
-      return $?
-    fi
+    done
   done
   if [[ -n "${prev_NOAUTORUN}" ]]; then
     NOAUTORUN="${prev_NOAUTORUN}"
   else
     unset NOAUTORUN
   fi
-  Error "Unable to find suitable script '$1'"
-}
-
-function Unload()
-{
-  true
-}
-
-function Reload()
-{
-  true
 }
