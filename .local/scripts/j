@@ -137,7 +137,6 @@ EOT
 
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
-    test "${J_DEBUG}" = 1 && Debug -f "Splitting"
   fi
 
   # Last working directory
