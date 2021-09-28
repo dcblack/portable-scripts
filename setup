@@ -1,1 +1,234 @@
-.local/bin/portable-setup
+#!/usr/bin/env bash
+#
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#| project_init.sh - executed on startup by CoCalc in $HOME directory to ensure proper setup.
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [OPTIONS...]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#| Set-up symbolic links for the portable scripts tools. If done successfully, the following
+#| additional hierarchy will exist:
+#| 
+#| $HOME/
+#|      |-- .local@ ---------> portable-scripts/.local/
+#|      |-- .vimrc@ ---------> portable-scripts/.local/dotfiles/vimrc
+#|      |-- .vim@ -----------> portable-scripts/.local/dotfiles/vim/
+#|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
+#|      |-- .lessfilter@ ---->portable-scripts/.local/dotfiles/lessfilter
+#|      |-- .agignore
+#|      |-- portable-scripts/
+#|
+#|OPTIONS
+#|-------
+#|
+#| -c  only check installation (aka --check)
+#| -h  or --help provides this text (aka --help)
+#| -u  update to latest version via git pull (aka --update)
+#| -v  verbose output (aka --verbose)
+#| -nc no color disables use of ANSI color codes (aka --nocolor)
+#|
+#|REQUIREMENTS
+#|------------
+#|
+#| The following are required: `bash` `perl` `git`
+
+# TODO: Check requirements
+
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
+PORTABLE_ROOT_DIR="$(git -C "$(dirname "${PORTABLE_SETUP_SCRIPT}")" rev-parse --show-toplevel)"
+export PORTABLE_SETUP_SCRIPT PORTABLE_ROOT_DIR
+
+# shellcheck source=../scripts/Essential-IO
+source "${PORTABLE_ROOT_DIR}/.local/scripts/Essential-IO"
+
+function Portable_setup_help() {
+  # shellcheck disable=SC2016
+  HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
+  /usr/bin/perl -ne "${HELPSCRIPT}" "${PORTABLE_SETUP_SCRIPT}";
+}
+
+if [[ "$1" =~ ^--?h(elp)?$ ]]; then
+  Portable_setup_help
+  exit
+fi
+
+# Wrap body in function to allow local variables to avoid problems in case this script is sourced.
+function portable-setup() {
+  local PORTABLE_DIR TIMESTAMP VERBOSE CHECK UPDATE
+  LOCAL=".local"
+  PORTABLE_DIR="${HOME}/${LOCAL}"
+  TIMESTAMP="$(date +%y%m%d-%H%M%S)";
+  VERBOSE=0;
+  CHECK=0
+  UPDATE=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -c|check)
+        Info "Checking links"
+        CHECK=1
+        ;;
+      -h|--help)
+        Portable_setup_help
+        exit
+        ;;
+      --nocolor|-nocolor|-nc)
+        Color-Setup none
+        ;;
+      -u|--update)
+        UPDATE=1
+        ;;
+      -v|--verbose)
+        VERBOSE=1
+        ;;
+      *)
+        Error "ERROR: Unknown option '$1'"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+
+  if [[ ${VERBOSE} == 1 ]]; then Info "Hostname $(hostname)"; fi
+
+  if [[ ${UPDATE} == 1 ]]; then 
+    Info "Updating portable-scripts"
+    git -C "${PORTABLE_ROOT_DIR}" pull
+  fi
+
+  if [[ ! -d "${PORTABLE_DIR}" ]]; then
+    if [[ ${CHECK} != 0 ]]; then
+      Error "Missing '${PORTABLE_DIR}'"
+    elif [[ -d "${PORTABLE_ROOT_DIR}/.local" ]]; then
+      bash -v -c "ln -s ${HOME}/portable-scripts/.local ${PORTABLE_DIR}"
+    else
+      Error "Unable to find ${PORTABLE_ROOT_DIR}/.local to link as ${PORTABLE_DIR}! Please link manually."
+      return
+    fi
+  elif [[ ${CHECK} != 0 ]]; then
+    if [[ "${PORTABLE_ROOT_DIR}/.local" == "$(Realpath "${PORTABLE_DIR}")" ]]; then
+      if [[ ${VERBOSE} == 1 ]]; then
+        Info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
+      fi
+    else
+      Error "'${PORTABLE_DIR}' does NOT reference '${PORTABLE_ROOT_DIR}'"
+    fi
+  fi
+  
+  # Add symbolic links for a minimal set of selected "dot" files
+  local FROM_LINK TO_FILE
+  for DOTFILE in bash_aliases vim vimrc lessfilter; do
+    FROM_LINK="${HOME}/.${DOTFILE}"
+    TO_FILE="${PORTABLE_DIR}/dotfiles/${DOTFILE}"
+    if [[ -r "${TO_FILE}" ]]; then
+      if [[ -h "${FROM_LINK}" ]]; then
+        # Exists as symbolic link
+        if [[ "$(Realpath "${FROM_LINK}")" ==  "$(Realpath "${TO_FILE}")" ]]; then
+          # Good
+          Info -grn "'${DOTFILE}' -> '${TO_FILE}'"
+        else
+          Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
+        fi
+        # Nothing more to be done for this one
+        continue
+      elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
+        # Directory found - not much we can do
+        Warn ".${DOTFILE} is a directory - manual intervention needed"
+        continue
+      elif [[ -e "${HOME}/.${DOTFILE}" ]]; then
+        # Exists as something else
+        if [[ ${CHECK} == 1 ]]; then
+          Warn "Missing .${DOTFILE} Will be renamed"
+        else
+          Info -red "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
+          bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
+        fi
+      fi
+      if [[ ${CHECK} == 1 ]]; then
+        Info -red "Will create link ${FROM_LINK} to ${TO_FILE}"
+      else
+        if [[ ${VERBOSE} == 1 ]]; then
+          Info -grn "Linking ${FROM_LINK} -> ${TO_FILE}"
+        fi
+        bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
+      fi
+    else
+      Error "Missing ${PORTABLE_DIR}/dotfiles/${DOTFILE}"
+    fi
+  done
+  
+  # Make sure `ag` (aka silver-searcher) doesn't search .snapshots
+  AGIGNORE="${HOME}/.agignore"
+  for IGNORED in .snapshots .hide; do
+    if [[ -r "${AGIGNORE}" ]]; then
+      grep -sqF "${IGNORED}" "${AGIGNORE}" \
+      || echo "${IGNORED}" >> "${AGIGNORE}"
+    else
+      echo "${IGNORED}" > "${AGIGNORE}"
+    fi
+  done
+
+  if [[ ${CHECK} == 1 ]]; then
+    Summary "$0"
+  fi
+}
+
+portable-setup "$@"
+
+function Unique_path() {
+  # DESCR: Removes duplicate paths in specified variable
+  # USAGE: Unique_path VAR
+  local PERL_SCRIPT
+  # shellcheck disable=SC2016
+  PERL_SCRIPT='
+    $v=$ARGV[0];
+    for my $d(split(qr":",$ENV{$v})){
+      next if !-d $d;
+      $e=abs_path($d);
+      if( ! exists $e{$e} ){
+        $e{$e}=1;
+        push(@e,$e);
+      }
+    }
+    printf qq{%s="%s"\n},$v,join(":",@e);
+  '
+  eval "$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+}
+
+function portable-env() {
+  # Environment
+  PORTABLE_DIR="${HOME}/.local"
+  APPS="${PORTABLE_DIR}/apps"
+  DOTBIN="${PORTABLE_DIR}/bin"
+  APPSBIN="${PORTABLE_DIR}/apps/bin"
+  SYSTEMC_HOME="${PORTABLE_DIR}/apps/systemc"
+  PATH="${DOTBIN}:${APPSBIN}:${PATH}"
+  TEMPLATEPATH="${HOME}/templates"
+  for f in ${APPS}/sc-templates; do
+    if [[ -d "${f}" ]]; then
+      TEMPLATEPATH="${TEMPLATEPATH}:${f}"
+    fi
+  done
+
+  Unique_path PATH
+  Unique_path TEMPLATEPATH
+
+  export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME PATH
+
+}
+
+# TAF!
