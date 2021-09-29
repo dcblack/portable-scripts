@@ -65,19 +65,19 @@ function Reload()
   fi
   local FUNCS
   FUNCS=$(declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]')
-  if [[ -z "${SCRIPT_PATH+x}" ]]; then
-    # Missing SCRIPT_PATH! Attempt default locations.
+  if [[ -z "${SCRIPTDIRS+x}" ]]; then
+    # Missing SCRIPTDIRS! Attempt default locations.
     for DIR in "${HOME}/scripts" "${HOME}/.local/scripts" ; do
       if [[ -d "${DIR}" ]]; then
-        if [[ "${SCRIPT_PATH}" =~ : ]]; then
-          SCRIPT_PATH="${SCRIPT_PATH}:${DIR}"
+        if [[ "${SCRIPTDIRS}" =~ : ]]; then
+          SCRIPTDIRS="${SCRIPTDIRS}:${DIR}"
         else
-          SCRIPT_PATH="${DIR}"
+          SCRIPTDIRS="${DIR}"
         fi
       fi
     done
   fi
-  export SCRIPT_PATH
+  export SCRIPTDIRS
   local prev_IFS
   prev_IFS="${IFS}"
   IFS=':'
@@ -88,7 +88,7 @@ function Reload()
   fi
   NOAUTORUN=1
   export NOAUTORUN
-  for DIR in ${SCRIPT_PATH}; do
+  for DIR in ${SCRIPTDIRS}; do
     IFS="${prev_IFS}"
     for NAME in ${FUNCS}; do
       SCRIPT="${DIR}/${NAME}"

@@ -19,26 +19,26 @@ function FindScript()
   #-----------------------------------------------------------------------------
   # Make sure we have directories to search
   #-----------------------------------------------------------------------------
-  if [[ -z "${SCRIPT_PATH}" ]]; then
-    # Missing SCRIPT_PATH! Attempt default locations.
+  if [[ -z "${SCRIPTDIRS}" ]]; then
+    # Missing SCRIPTDIRS! Attempt default locations.
     for DIR in "." "./scripts" "../scripts" "${HOME}/scripts" "${HOME}/.local/scripts" ; do
       if [[ -d "${DIR}" ]]; then
-        if [[ -n "${SCRIPT_PATH}" ]]; then
-          SCRIPT_PATH="${SCRIPT_PATH}:${DIR}"
+        if [[ -n "${SCRIPTDIRS}" ]]; then
+          SCRIPTDIRS="${SCRIPTDIRS}:${DIR}"
         else
-          SCRIPT_PATH="${DIR}"
+          SCRIPTDIRS="${DIR}"
         fi
       fi
     done
   fi
-  export SCRIPT_PATH
+  export SCRIPTDIRS
   #-----------------------------------------------------------------------------
   # Search
   #-----------------------------------------------------------------------------
   local prev_IFS
   prev_IFS="${IFS}"
   IFS=':'
-  for DIR in ${SCRIPT_PATH}; do
+  for DIR in ${SCRIPTDIRS}; do
     IFS="${prev_IFS}"
     while [[ $# != 0 ]]; do
       SCRIPT="$(Realpath "${DIR}/$1")"
