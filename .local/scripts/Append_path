@@ -2,13 +2,13 @@
 
 function Append_path() # only if 2nd arg does not exist in first
 {
-  # USAGE: Append_path VAR PATH
+  Usage "$1" "Append_path VAR PATH" || return 1
+  if [[ $# != 2 ]]; then Error "Append_path requires two arguments"; return 1; fi
   local var arg plscript
   var="$1"
   arg="$(Realpath "$2")"; shift
   # shellcheck disable=SC2016
-  plscript='print qq{$ARGV[0]="$ENV{$ARGV[0]}:${ARGV[1]}"; export ${ARGV[0]}}'
-  Has_path "$1" "$2" || \
-    eval "$(perl -le "${plscript}" "${var}" "${arg}")"
+  plscript='$v=shift;$p=shift;$e=$ENV{$v};$e=~s/.$/$&:/;printf qq{%s="%s%s"; export %s},$v,$e,$p,$v;print ""'
+  Has_path "${var}" "${arg}" || eval "$(perl -le "${plscript}" "${var}" "${arg}")"
 }
 
