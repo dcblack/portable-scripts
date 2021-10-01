@@ -2,7 +2,7 @@
 #
 # Locate all instances of named script(s)
 
-export FINDSCRIPT_COUNT
+export FINDSCRIPT_COUNT SCRIPTDIRS
 
 function FindScript()
 {
@@ -21,14 +21,8 @@ function FindScript()
   #-----------------------------------------------------------------------------
   if [[ -z "${SCRIPTDIRS}" ]]; then
     # Missing SCRIPTDIRS! Attempt default locations.
-    for DIR in "." "./scripts" "../scripts" "${HOME}/scripts" "${HOME}/.local/scripts" ; do
-      if [[ -d "${DIR}" ]]; then
-        if [[ -n "${SCRIPTDIRS}" ]]; then
-          SCRIPTDIRS="${SCRIPTDIRS}:${DIR}"
-        else
-          SCRIPTDIRS="${DIR}"
-        fi
-      fi
+    for DIR in "../scripts" "${HOME}/scripts" "${HOME}/.local/scripts" ; do
+      Append_path SCRIPTDIRS "${DIR}"
     done
   fi
   export SCRIPTDIRS
@@ -40,13 +34,12 @@ function FindScript()
   IFS=':'
   for DIR in ${SCRIPTDIRS}; do
     IFS="${prev_IFS}"
-    while [[ $# != 0 ]]; do
-      SCRIPT="$(Realpath "${DIR}/$1")"
+    for SCRIPT in "$@"; do
+      SCRIPT="$(Realpath "${DIR}/${SCRIPT}")"
       if [[ -x "${SCRIPT}" ]]; then
         (( ++FINDSCRIPT_COUNT ))
         echo "${SCRIPT}"
       fi
-      shift
     done
   done
   IFS="${prev_IFS}"
