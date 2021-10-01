@@ -16,7 +16,7 @@ A collection of useful functions for bash/zsh.
 | Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
 | Debug "_MESSAGE_"             | Echo a debug message
-| Die "_MESSAGE_"               | Echo a fatal message and exit with fail
+| Die "_MESSAGE_"               | Echo a fatal message and return with fail
 | _do _COMMAND_                 | Displays and executes a command
 | Echo [-n] "_MESSAGE_"         | Displays and logs message
 | Error "_MESSAGE_"             | Echo an error message
@@ -287,7 +287,7 @@ function Pass()
   return 0
 }
 
-function Info()
+function Report_info()
 {
   #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
   #| Info [-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
@@ -316,6 +316,7 @@ function Info()
   done
   Echo "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
 }
+alias Info=Report_info
 
 function PassFail()
 { # Reports success or failure
@@ -329,7 +330,7 @@ function PassFail()
   fi
 }
 
-function Debug()
+function Report_debug()
 {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Debug MESSAGE
@@ -348,6 +349,7 @@ function Debug()
     fi
   fi
 }
+alias Debug=Report_debug
 
 function Debug-on()
 {
@@ -398,14 +400,15 @@ function Ruler()
 }
 
 # Ensure that error messages are clearly seen
-function Die()
+function Report_fatal()
 {
   Echo -n "${CRED}"
   Ruler '!'
   Echo "${CRED}${BOLD}Fatal:${UBLD} $*${NONE}" 1>&2
   return 1
 }
-alias Fatal=Die
+alias Fatal=Report_fatal
+alias Die=Report_fatal
 
 function Assert()
 {
@@ -423,7 +426,7 @@ function Assert()
   Die "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
-function Error()
+function Report_error()
 {
   #@ Echo tagged error message (i.e., SC_REPORT_ERROR) - logged and counted
   #| Error MESSAGE
@@ -434,8 +437,9 @@ function Error()
   Ruler '!'
   Echo "${CRED}${BOLD}Error #${ERRORS}:${UBLD} ${NONE}$*${NONE}" 1>&2
 }
+alias Error=Report_error
 
-function Warn()
+function Report_warning()
 {
   #@ Echo tagged warning message (i.e., SC_REPORT_WARNING) - logged and counted
   #| Error MESSAGE
@@ -446,6 +450,7 @@ function Warn()
   Ruler '?'
   Echo "${CRED}${BOLD}Warning:${UBLD} ${NONE}$*${NONE}" 1>&2
 }
+alias Warn=Report_warning
 
 export ERRORS WARNINGS
 
