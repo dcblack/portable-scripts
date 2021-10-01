@@ -3,32 +3,55 @@
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
 
 export Essential_IO_VERSION=1.2
+function Essential-IO()
+{
+  if [[ $# == 1 && "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    cat <<TEXT
+# Essential-IO
 
-#| FUNCTION SYNTAX               | DESCRIPTION 
-#| :---------------------------- | :---------- 
-#| Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
-#| Comment "_MESSAGE_"           | Does nothing but provide NOP comment
-#| Debug "_MESSAGE_"             | Echo a debug message
-#| Die "_MESSAGE_"               | Echo a fatal message and exit with fail
-#| _do _COMMAND_                 | Displays and executes a command
-#| Echo [-n] "_MESSAGE_"         | Displays and logs message
-#| Error "_MESSAGE_"             | Echo an error message
-#| Errors                        | Display number of errors
-#| Fail                          | Sets error status (1)
-#| HelpText [-md] "$0"           | Displays help for specified file
-#| Info "_MESSAGE_"              | Echo an informational message
-#| Log [-n] "_MESSAGE_"          | Adds message to logfile
-#| Logfile [--append] _FILE_     | Establishes a logfile name
-#| Pass                          | Sets success status (0)
-#| PassFail "_MESSAGE_"          | Displays message with pass/fail status
-#| Realpath FILESPEC             | Echo the real pathname for a file specification
-#| Reset-errors                  | Reset error and warning counts to zero
-#| Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
-#| ShowVars VARLIST              | Echo values of variables
-#| Summary PROG ["_MESSAGE_"]    | Echo a summary of errors and warnings
-#| Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
-#| Warn "_MESSAGE_"              | Echo a warning message
-#| Warnings                      | Display number of errors
+A collection of useful functions for bash/zsh.
+
+| FUNCTION SYNTAX               | DESCRIPTION 
+| :---------------------------- | :---------- 
+| Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
+| Comment "_MESSAGE_"           | Does nothing but provide NOP comment
+| Debug "_MESSAGE_"             | Echo a debug message
+| Die "_MESSAGE_"               | Echo a fatal message and exit with fail
+| _do _COMMAND_                 | Displays and executes a command
+| Echo [-n] "_MESSAGE_"         | Displays and logs message
+| Error "_MESSAGE_"             | Echo an error message
+| Errors                        | Display number of errors
+| Essential-IO [--help]         | Display version or this help text
+| Fail                          | Sets error status (1)
+| HelpText [-md] "_FILE_"       | Displays help for specified file
+| Info "_MESSAGE_"              | Echo an informational message
+| Log [-n] "_MESSAGE_"          | Adds message to logfile
+| Logfile [--append] _FILE_     | Establishes a logfile name
+| Pass                          | Sets success status (0)
+| PassFail "_MESSAGE_"          | Displays message with pass/fail status
+| Realpath FILESPEC             | Echo the real pathname for a file specification
+| Reset-errors                  | Reset error and warning counts to zero
+| Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
+| ShowVars VARLIST              | Echo values of variables
+| Summary PROG ["_MESSAGE_"]    | Echo a summary of errors and warnings
+| Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
+| Warn "_MESSAGE_"              | Echo a warning message
+| Warnings                      | Display number of errors
+
+TEXT
+  elif [[ $# == 0 ]]; then
+    printf "$0 version %s\n" "${Essential_IO_VERSION}"
+  else
+    Error "Unexpected syntax"
+    Usage -h "Essential-IO [--help]"
+  fi
+}
+
+function Usage()
+{
+  # Usage: Usage "$1" "{:SYNTAX:}" || return
+  if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Syntax: $*"; return 1; fi
+}
 
 function Comment()
 {
@@ -380,7 +403,7 @@ function Die()
   Echo -n "${CRED}"
   Ruler '!'
   Echo "${CRED}${BOLD}Fatal:${UBLD} $*${NONE}" 1>&2
-  exit 1
+  return 1
 }
 alias Fatal=Die
 
@@ -467,12 +490,6 @@ function Summary()
   if [[ $# != 0 ]]; then Echo " $*"; fi
   Echo ""
   return "${RESULT}"
-}
-
-function Usage()
-{
-  # Usage: Usage "$1" "{:SYNTAX:}" || return
-  if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Syntax: $*"; return 1; fi
 }
 
 function HelpText()
