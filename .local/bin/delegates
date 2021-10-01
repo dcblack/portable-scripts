@@ -35,28 +35,40 @@ EOT
 my %OPT;
 while( $ARGV[0] =~ m/^-/ ) {
   my $opt = shift @ARGV;
+  $opt =~ s{^--+}{-};
   if( $opt =~ m/=/ ) {
     $OPT{$`} = $';
   } else {
     $OPT{$opt}=1;
   }#endif
 }
+# Shortcuts
+$OPT{-verbose} = $OPT{-v} if exists $OPT{-v};
+$OPT{-list}    = $OPT{-l} if exists $OPT{-l};
+
 my $sshconfig = "$ENV{HOME}/.ssh/config";
 $sshconfig = $OPT{-ssh} if exists $OPT{-ssh} and $OPT{-ssh} ne '1';
 $sshconfig = $OPT{'-ssh/config'} if exists $OPT{'-ssh/config'} and $OPT{'-ssh/config'} ne '1';
 
 our %name;
 for my $debrief (glob("debrief_*.md")) {
+  printf "Parsing %s\n", $debrief if exists $OPT{-verbose};
   open DEBRIEF,'<',$debrief;
   while(not eof DEBRIEF) {
     my $line = <DEBRIEF>;
-    next unless $line =~ m{^(\w[^<@\|]+\w) +<([^>@ ]+[@][^ @>]+)>};
+    # Remove leading/trailing whitespace
+    chomp $line;
+    chomp $line;
+    $line =~ s/^\s+//;
+    $line =~ s/\s+$//;
+    next unless $line =~ m{^(\w[^<\@\|]+\w) +<([^>\@ ]+[\@][^ \@>]+)>};
     my ($name,$email) = ($1,lc $2);
     $name=~ s/\s+/ /g;
     $email=~ s/\s+/ /g;
     $name{$email} = $name;
   }
   close DEBRIEF;
+  printf "Found %d names\n", scalar keys %name if exists $OPT{-verbose};
 }
 if( exists $OPT{-names} ) {
   my @found;
@@ -109,8 +121,9 @@ for my $course_file ( @ARGV ) {
     printf STDERR "Error: file $course_file does not end with .course -- ignored\n";
     next;
   }
+  printf "Parsing %s\n", $course_file if exists $OPT{-verbose};
   printf SSHCONFIG "#{ Delegates from %s\n\n", $course_file if exists $OPT{-ssh};
-  unless ( exists $OPT{-ssh} or exists $OPT{-who} ) {
+  unless ( exists $OPT{-ssh} or exists $OPT{-who} or exists $OPT{-list} ) {
     printf " N  | Name | Email | Cocalc User\n";
     printf "--- | ---- | ----- | -----------\n";
   }
@@ -133,10 +146,13 @@ for my $course_file ( @ARGV ) {
       my $who = $OPT{-who};
       next unless $email =~ m/$who/i or $name{$email} =~ m/$who/i;
       printf "ssh %s\@ssh.cocalc.com ;# %d %s <%s>\n", $user, $idx, $name, $email;
+    } elsif( exists $OPT{-list} ) {
+      printf "%s\@ssh.cocalc.com\n", $user;
     } else {
       printf "%d | %s | %s | %s\@ssh.cocalc.com\n", $idx, $name, $email, $user;
     }
   }#endwhile
+  printf "Found %d students in course file\n", $idx if exists $OPT{-verbose};
   printf SSHCONFIG "#} Delegates above here from  %s\n", $course_file if exists $OPT{-ssh};
   close COURSE;
 
