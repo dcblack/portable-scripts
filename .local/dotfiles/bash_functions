@@ -4,35 +4,36 @@
 # Essential building blocks
 #-------------------------------------------------------------------------------
 LOCAL="${HOME}/.local"
-source "$LOCAL/scripts/FindScript"
-source "$LOCAL/scripts/Load"
-source "$LOCAL/scripts/Essential-IO"
+export LOCAL
+source "${LOCAL}/scripts/FindScript"
+source "${LOCAL}/scripts/Load"
+source "${LOCAL}/scripts/Essential-IO"
 
 #-------------------------------------------------------------------------------
-source "$LOCAL/scripts/args"
-source "$LOCAL/scripts/Firstreal"
-source "$LOCAL/scripts/Find"
-source "$LOCAL/scripts/Has_path"
-source "$LOCAL/scripts/Unique_path"
-source "$LOCAL/scripts/Remove_path"
-source "$LOCAL/scripts/Append_path"
-source "$LOCAL/scripts/Prepend_path"
-source "$LOCAL/scripts/Add_prefix"
-source "$LOCAL/scripts/Add_suffix"
-source "$LOCAL/scripts/Unique_list"
+source "${LOCAL}/scripts/args"
+source "${LOCAL}/scripts/Firstreal"
+source "${LOCAL}/scripts/Find"
+source "${LOCAL}/scripts/Has_path"
+source "${LOCAL}/scripts/Unique_path"
+source "${LOCAL}/scripts/Remove_path"
+source "${LOCAL}/scripts/Append_path"
+source "${LOCAL}/scripts/Prepend_path"
+source "${LOCAL}/scripts/Add_prefix"
+source "${LOCAL}/scripts/Add_suffix"
+source "${LOCAL}/scripts/Unique_list"
 
 #-------------------------------------------------------------------------------
 # Personal habits
 #-------------------------------------------------------------------------------
 
-source "$LOCAL/scripts/j"
-source "$LOCAL/scripts/lx"
-source "$LOCAL/scripts/lns"
-source "$LOCAL/scripts/h"
-source "$LOCAL/scripts/show-colors"
+source "${LOCAL}/scripts/j"
+source "${LOCAL}/scripts/lx"
+source "${LOCAL}/scripts/lns"
+source "${LOCAL}/scripts/h"
+source "${LOCAL}/scripts/show-colors"
 
 function use-cmake() {
-  source "$LEADER/.local/bin/use-cmake"
+  source "${LEADER}/.local/bin/use-cmake"
 }
 
 # vim:nospell

@@ -5,13 +5,13 @@
 #-------------------------------------------------------------------------------
 cat <<'EOD' >/dev/null
 
-There's more than aliases there and invoke some other files under $HOME/.local/dotfiles:
+There's more than aliases here and we invoke some other files under $HOME/.local/dotfiles:
 
 1. bash_debug -- if executable
-2. bash_env -- sets environment variables
-3. -- body of aliases happens after the above
-4. bash_functions -- sets environment variables
-5. bash_paths -- sets environment variables
+2. bash_functions -- sets functions for use in scripting
+3. bash_env -- sets environment variables
+4. -- body of aliases happens after the above
+5. bash_paths -- sets additional environment variables (usually with dependencies)
 
 EOD
 #-------------------------------------------------------------------------------
@@ -79,7 +79,8 @@ alias egrep='egrep --color=auto'
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
 #-------------------------------------------------------------------------------
-for SCRIPT_NAME in bash_functions bash_paths; do
+# shellcheck disable=SC2043
+for SCRIPT_NAME in bash_paths; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi

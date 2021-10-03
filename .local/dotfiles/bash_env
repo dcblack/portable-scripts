@@ -1,26 +1,10 @@
 #!/bin/bash
 
+# Must source bash_functions first
+
 set -o vi
 
-function Unique_path() {
-  # DESCR: Removes duplicate paths in specified variable
-  # USAGE: Unique_path VAR
-  local PERL_SCRIPT
-  # shellcheck disable=SC2016
-  PERL_SCRIPT='
-    $v=$ARGV[0];
-    for my $d(split(qr":",$ENV{$v})){
-      next if !-d $d;
-      $e=abs_path($d);
-      if( ! exists $e{$e} ){
-        $e{$e}=1;
-        push(@e,$e);
-      }
-    }
-    printf qq{%s="%s"\n},$v,join(":",@e);
-  '
-  eval "$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
-}
+# Require Append_path Prepend_path Unique_path
 
 # Locations
 function portable-env() {
@@ -34,15 +18,14 @@ function portable-env() {
   PERL5LIB="${PSCR}/lib"
   TEMPLATEPATH="${HOME}/templates"
   for f in "${APPS}/sc-templates" "${HOME}/templates"; do
-    if [[ -d "${f}" ]]; then
-      TEMPLATEPATH="${TEMPLATEPATH}:${f}"
-    fi
+    Append_path TEMPLATE_PATH "${f}"
   done
 
   Unique_path PATH
+  Unique_path MANPATH
   Unique_path TEMPLATEPATH
 
-  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME PATH PERL5LIB
+  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME PATH MANPATH PERL5LIB
 
   # Favorites
   FAVS="${HOME}"/Favorites
