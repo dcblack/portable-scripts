@@ -334,7 +334,7 @@ function Report_debug()
 {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Debug MESSAGE
-  if [[ "$1" == "-f" || -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
+  if [[ "$1" == "-f" || -n "${DEBUG}" && "${DEBUG}" -gt 0 ]]; then
     if [[ "${SHELL}" == /bin/zsh ]]; then
       set -o shwordsplit
     fi
@@ -387,7 +387,7 @@ function Ruler()
     shift
   fi
   ARGS="$*"
-  if [[ $# != 0 ]]; then
+  if [[ $# -gt 0 ]]; then
     WID=${#ARGS}
     MAX=$(( MAX - WID - 4 ))
   fi
@@ -413,16 +413,12 @@ alias Die=Report_fatal
 function Assert()
 {
   #@ Similar to sc_assert
-  if [[ -z "${NDEBUG}" ]]; then return; fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
-    set -o shwordsplit
-  fi
-  # shellcheck disable=SC218
+  if [[ -n "${NDEBUG}" ]]; then return; fi
   test "$@" && return
   local FNC FIL LNO
   FNC="${FUNCNAME[1]}"
   FIL="${BASH_SOURCE[1]}"
-  LNO="${BASH_LINENO[0]}"
+  LNO="${BASH_LINENO[1]}"
   Die "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
@@ -474,7 +470,7 @@ function Warnings()
 
 function Summary()
 {
-  Assert $# != 0
+  Assert $# -gt 0
   Echo -n "${CMAG}Execution summary for ${1}:"
   shift
   if [[ "$(Warnings)" == 0 ]]; then
@@ -492,7 +488,7 @@ function Summary()
   else                          Echo -n " - ${CRED}failing"; RESULT=1;
   fi
   Echo -n "${NONE}"
-  if [[ $# != 0 ]]; then Echo " $*"; fi
+  if [[ $# -gt 0 ]]; then Echo " $*"; fi
   Echo ""
   return "${RESULT}"
 }
