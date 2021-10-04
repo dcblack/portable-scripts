@@ -9,14 +9,15 @@ function SetupPaths() {
   for dir in "${HOME}/favs}" "${HOME}/Favorites}"; do
     Prepend_path CDPATH "${dir}"
   done
-  CDPATH=".:${CDPATH}"
-  for dir in "${@}"; do
-    if [[ -z "${dir}" ]]; then continue; fi
-    COURSE="$(find "${HOME}" -type d -name "${dir}" 2>/dev/null)"
-    if [[ -d "${COURSE}" ]]; then
-      Prepend_path CDPATH "${COURSE}"
-    fi
-  done
+  if [[ $# -gt 0 ]]; then
+      for dir in "${@}"; do
+        if [[ -z "${dir}" ]]; then continue; fi
+        COURSE="$(find "${HOME}" -type d -path '**/.snapshots' -prune -false -o "${dir}" 2>/dev/null)"
+        if [[ -d "${COURSE}" ]]; then
+          Prepend_path CDPATH "${COURSE}"
+        fi
+      done
+  fi
   CDPATH=".:${CDPATH}"
   Unique_path CDPATH
   export CDPATH
@@ -69,4 +70,4 @@ function SetupPaths() {
 
 }
 
-SetupPaths syscfund tlm-2 training
+SetupPaths esscpp syscfund tlm-2
