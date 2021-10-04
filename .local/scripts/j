@@ -152,20 +152,28 @@ EOT
         # shellcheck disable=SC2164
         cd -
       else
-        arg="$1"
-        alt="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
+        local PART GLOB
+        PART="$1"
+        GLOB="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
         if [[ ${J_DEBUG} == 1 ]]; then
-          Debug -f "DEBUG: arg='%s'" "${arg}"
-          Debug -f "DEBUG: alt='%s'" "${alt}"
+          Debug -f "DEBUG: PART='%s'" "${PART}"
+          Debug -f "DEBUG: GLOB='%s'" "${GLOB}"
         fi
-        if [[ -e "${arg}" && -f "${arg}" ]]; then
-          arg=$(dirname "${arg}")
+        if [[ -e "${PART}" && -f "${PART}" ]]; then
+          PART=$(dirname "${PART}")
         fi
         # ToDo: add case-insensitivity
-        # shellcheck disable=SC2164
-        cd "${arg}" 1>/dev/null 2>&1 \
-        || cd "${alt}" 1>/dev/null 2>&1 \
-        || break
+        # zhellcheck disable=SC2164
+        local DEST
+        DEST=""
+        if   cd "${PART}" 1>/dev/null 2>&1 ; then DEST="$(Realpath .)" ;
+        elif cd "${GLOB}" 1>/dev/null 2>&1 ; then DEST="$(Realpath .)" ; fi
+        if [[ -n "${DEST}" ]]; then
+          cd "${DEST}" 1>/dev/null 2>&1 || Error "Bug in script j"
+        else
+          Warn "Unable to locate ${PART}"
+          break
+        fi
       fi
       shift
     done
