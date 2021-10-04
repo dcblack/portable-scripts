@@ -72,6 +72,7 @@ function portable-setup() {
   local PORTABLE_DIR TIMESTAMP VERBOSE CHECK UPDATE
   LOCAL=".local"
   PORTABLE_DIR="${HOME}/${LOCAL}"
+  source "${HOME}/portable-scripts/.local/scripts/Essential-IO"
   TIMESTAMP="$(date +%y%m%d-%H%M%S)";
   VERBOSE=0;
   CHECK=0
@@ -139,9 +140,9 @@ function portable-setup() {
         # Exists as symbolic link
         if [[ "$(Realpath "${FROM_LINK}")" ==  "$(Realpath "${TO_FILE}")" ]]; then
           # Good
-          Info -grn "'${DOTFILE}' -> '${TO_FILE}'"
+          echo "'${DOTFILE}' -> '${TO_FILE}'"
         else
-          Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
+          echo ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
         fi
         # Nothing more to be done for this one
         continue
@@ -152,17 +153,17 @@ function portable-setup() {
       elif [[ -e "${HOME}/.${DOTFILE}" ]]; then
         # Exists as something else
         if [[ ${CHECK} == 1 ]]; then
-          Warn "Missing .${DOTFILE} Will be renamed"
+          echo "Missing .${DOTFILE} Will be renamed"
         else
-          Info -red "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
+          echo "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
           bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
         fi
       fi
       if [[ ${CHECK} == 1 ]]; then
-        Info -red "Will create link ${FROM_LINK} to ${TO_FILE}"
+        echo "Will create link ${FROM_LINK} to ${TO_FILE}"
       else
         if [[ ${VERBOSE} == 1 ]]; then
-          Info -grn "Linking ${FROM_LINK} -> ${TO_FILE}"
+          echo "Linking ${FROM_LINK} -> ${TO_FILE}"
         fi
         bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
       fi
@@ -186,8 +187,6 @@ function portable-setup() {
     Summary "$0"
   fi
 }
-
-portable-setup "$@"
 
 function Unique_path() {
   # DESCR: Removes duplicate paths in specified variable
@@ -230,5 +229,8 @@ function portable-env() {
   export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME PATH
 
 }
+
+portable-env
+portable-setup "$@"
 
 # TAF!
