@@ -48,13 +48,17 @@
 function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
+export WARNINGS ERRORS
+WARNINGS=0
+ERRORS=0
+function Info() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Info: $*" ; }
+function Warn() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Warning: $*" ; (( ++WARNINGS )) ; }
+function Error() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Error: $*" ; (( ++ERRORS )) ; }
+function Summary() { echo "${ERRORS} errors. ${WARNINGS} warnings." ; }
 
 PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
 PORTABLE_ROOT_DIR="$(git -C "$(dirname "${PORTABLE_SETUP_SCRIPT}")" rev-parse --show-toplevel)"
 export PORTABLE_SETUP_SCRIPT PORTABLE_ROOT_DIR
-
-# shellcheck source=../scripts/Essential-IO
-source "${PORTABLE_ROOT_DIR}/.local/scripts/Essential-IO"
 
 function Portable_setup_help() {
   # shellcheck disable=SC2016
@@ -72,7 +76,6 @@ function portable-setup() {
   local PORTABLE_DIR TIMESTAMP VERBOSE CHECK UPDATE
   LOCAL=".local"
   PORTABLE_DIR="${HOME}/${LOCAL}"
-  source "${HOME}/portable-scripts/.local/scripts/Essential-IO"
   TIMESTAMP="$(date +%y%m%d-%H%M%S)";
   VERBOSE=0;
   CHECK=0
@@ -140,9 +143,9 @@ function portable-setup() {
         # Exists as symbolic link
         if [[ "$(Realpath "${FROM_LINK}")" ==  "$(Realpath "${TO_FILE}")" ]]; then
           # Good
-          echo "'${DOTFILE}' -> '${TO_FILE}'"
+          Info "'${DOTFILE}' -> '${TO_FILE}'"
         else
-          echo ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
+          Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
         fi
         # Nothing more to be done for this one
         continue
@@ -153,17 +156,17 @@ function portable-setup() {
       elif [[ -e "${HOME}/.${DOTFILE}" ]]; then
         # Exists as something else
         if [[ ${CHECK} == 1 ]]; then
-          echo "Missing .${DOTFILE} Will be renamed"
+          Warn "Missing .${DOTFILE} Will be renamed"
         else
-          echo "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
+          Info "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
           bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
         fi
       fi
       if [[ ${CHECK} == 1 ]]; then
-        echo "Will create link ${FROM_LINK} to ${TO_FILE}"
+        Info "Will create link ${FROM_LINK} to ${TO_FILE}"
       else
         if [[ ${VERBOSE} == 1 ]]; then
-          echo "Linking ${FROM_LINK} -> ${TO_FILE}"
+          Info "Linking ${FROM_LINK} -> ${TO_FILE}"
         fi
         bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
       fi
