@@ -22,7 +22,7 @@ if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
 fi
 
 export SCRIPT_NAME SCRIPT_PATH
-for SCRIPT_NAME in bash_debug bash_env; do
+for SCRIPT_NAME in bash_debug bash_functions bash_env; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154

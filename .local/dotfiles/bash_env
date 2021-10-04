@@ -9,14 +9,14 @@ set -o vi
 # Locations
 function portable-env() {
   # Environment
-  PSCR="${HOME}/.local"
-  APPS="${PSCR}/apps"
-  DOTBIN="${PSCR}/bin"
+  PSCR="$(Realpath "${HOME}/.local")"
+  APPS="$(Realpath "${PSCR}/apps")"
+  DOTBIN="$(Realpath "${PSCR}/bin")"
   APPSBIN="${PSCR}/apps/bin"
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
-  PERL5LIB="${PSCR}/lib"
-  TEMPLATEPATH="${HOME}/templates"
+  PERL5LIB="$(Realpath "${PSCR}/lib")"
+  TEMPLATEPATH="$(Realpath "${HOME}/templates")"
   for f in "${APPS}/sc-templates" "${HOME}/templates"; do
     Append_path TEMPLATE_PATH "${f}"
   done
