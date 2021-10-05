@@ -55,6 +55,22 @@ function Info() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Info: $*" ; }
 function Warn() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Warning: $*" ; (( ++WARNINGS )) ; }
 function Error() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Error: $*" ; (( ++ERRORS )) ; }
 function Summary() { echo "${ERRORS} errors. ${WARNINGS} warnings." ; }
+function Append_path() {
+function Has_path() {
+  local arg plscript
+  arg="$(Realpath "$2")"
+  # shellcheck disable=SC2016
+  plscript='$v=$ARGV[0]; $p=$ARGV[1]; for $d (split(qq{:},$ENV{$v})) { next if !-d $d; exit 0 if$p eq abs_path($d); } exit 1'
+  if [[ "${arg}" == "" ]]; then return 1; fi
+  perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
+}
+  local var arg plscript
+  var="$1"
+  arg="$(Realpath "$2")"; shift
+  # shellcheck disable=SC2016
+  plscript='$v=shift;$p=shift;$e=$ENV{$v};$e=~s/.$/$&:/;printf qq{%s="%s%s"; export %s},$v,$e,$p,$v;print ""'
+  Has_path "${var}" "${arg}" || eval "$(perl -le "${plscript}" "${var}" "${arg}")"
+}
 
 PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
 PORTABLE_ROOT_DIR="$(git -C "$(dirname "${PORTABLE_SETUP_SCRIPT}")" rev-parse --show-toplevel)"
@@ -201,7 +217,7 @@ function Unique_path() {
     for my $d(split(qr":",$ENV{$v})){
       next if !-d $d;
       $e=abs_path($d);
-      if( ! exists $e{$e} ){
+      if( not exists $e{$e} ){
         $e{$e}=1;
         push(@e,$e);
       }
@@ -221,9 +237,7 @@ function portable-env() {
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
   TEMPLATEPATH="${HOME}/templates"
   for f in ${APPS}/sc-templates; do
-    if [[ -d "${f}" ]]; then
-      TEMPLATEPATH="${TEMPLATEPATH}:${f}"
-    fi
+    Append_path TEMPLATEPATH "${f}"
   done
 
   Unique_path PATH
