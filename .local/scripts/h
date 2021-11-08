@@ -4,10 +4,11 @@ function h() { # Display most recent N history lines
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
   fi
-  local N=-20
+  local N
+  (( N = 4 - $(Rows) ))
   if [[ "$1" =~ ^-[0-9]+ ]]; then
     N="$1"
     shift
   fi
-  history "$@" | tail "${N}"
+  history | perl -e 'for(reverse <>){next unless m/^ *\d+ +(.+)/;next if exists $p{$1};unshift @o,$_;$p{$1}++};for(@o){print}' | tail "${N}"
 }
