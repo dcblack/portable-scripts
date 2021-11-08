@@ -1,0 +1,239 @@
+#!/usr/bin/env zsh
+#
+#$Info: wd - working directory shortcut.$
+#
+# Function index:
+#   Wd_help
+#   Wd_parse
+#   swd_func
+#   lwd_func
+#   rwd_func
+#   wds_func
+#   aliases
+
+function Realpath () {
+  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+}
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -d "${SCRIPTDIR}" ]]; then
+  printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
+  crash
+fi
+# shellcheck source=$HOME/scripts/Essential-IO disable=SC2250,SC1091
+source "${SCRIPTDIR}/Essential-IO"
+
+export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
+wd_init=false
+if [[ "$1" == "-init" ]]; then
+  wd_init=true
+  shift
+  if [[ ${wd_verb} == true ]]; then
+    Info "Initializing wd ${wd_vers}"
+  fi
+fi
+if [[ ${wd_init} == true ]]; then
+  # aliases
+  alias wd=lwd
+  alias lwds=wds
+  alias swds=wds
+fi
+
+#-------------------------------------------------------------------------------
+function Wd_help() # internal
+{
+  cat <<EOT
+Name
+----
+
+swd - save working directory
+lwd - load working directory (aka wd)
+rwd - remove working directory
+wds - list saved working directories aka (lwds, swds)
+
+Synopsis
+--------
+
+swd [-init] [SET] [DIR]
+lwd [OPTIONS] [SET]
+wds
+swds
+lwds
+
+| Option | Description
+| :----  | :----------
+| -help  | This text
+| -force | Use to skip verification during removal
+| -init  | Initialize/reload these scripts
+| -list  | List current set
+| -vers  | Display version
+
+EOT
+}
+
+#-------------------------------------------------------------------------------
+function Wd_parse() # internal
+{
+  wd_vers=1.0.3
+  wd_favs="${HOME}/favs"
+  wd_force=false
+  wd_verb=false
+  wd_debug=false
+  wd_notreally=false
+  if [[ -n "${wd_set}" ]]; then
+    wd_pset="${wd_set}"
+  fi
+  if [[ -n "${wd_dir}" ]]; then
+    wd_pdir="${wd_dir}"
+  fi
+  wd_set=1
+  wd_dir=.
+  # Parse command-line
+  local arg
+  while [[ "$#" != 0 ]]; do
+    arg="$1"
+    shift
+    case "${arg}" in
+      -init)
+        # shellcheck source=$HOME/bin/wd disable=SC2250,SC1091
+        source "${HOME}/bin/wd" -init
+        ;;
+      -h|-help|--help)   lwd_help ;;
+      -l|-list|--list)
+        if [[ -n "${wd_pset}" ]]; then
+          Info "wd_set=${wd_pset} wd_dir=${wd_pdir}"
+          wd_set="${wd_pset}"
+          wd_dir="${wd_pdir}"
+        else
+          Info "wd_set=${wd_set} wd_dir=${wd_dir}"
+        fi
+        ;;
+      -d|-dir|--dir|-wd|-C)
+          wd_dir="${1}"
+          shift
+        ;;
+      -p|-prev|--prev)
+          wd_set="${wd_pset}"
+          wd_dir="${wd_pdir}"
+        ;;
+      -vers|-version|--version) Info "wd version ${wd_vers}" ;;
+      -v|-verbose|--verbose) wd_verb=true ;;
+      -debug|--debug|-D) wd_debug=true ;;
+      -N|-notreally|--notreally) wd_notreally=true ;;
+      -f|-force|--force) wd_force=true ;;
+          -[1-9][0-9]) wd_set=$(( -"${arg}" )) ;;
+       [ci][1-9][0-9]) wd_set="${arg}" ;;
+           [1-9][0-9]) wd_set="${arg}" ;;
+               -[0-9]) wd_set=$(( -"${arg}" )) ;;
+            [ci][0-9]) wd_set="${arg}" ;;
+                [0-9]) wd_set="${arg}" ;;
+      -*)
+        Error "Unknown option: '${arg}'" || return 1
+        ;;
+      *)
+        ARGS="${ARGS} ${arg}"
+        ;;
+    esac
+  done
+  if [[ ${wd_debug} == true ]]; then
+    Debug -f "wd_favs='${wd_favs}'"
+    Debug -f "wd_set='${wd_set}'"
+    Debug -f "wd_dir='${wd_dir}'"
+    Debug -f "wd_pset='${wd_pset}'"
+    Debug -f "wd_pdir='${wd_pdir}'"
+    Debug -f "wd_init='${wd_init}'"
+    Debug -f "wd_verb='${wd_verb}'"
+    Debug -f "ARGS='${ARGS}'"
+  fi
+  export wd_favs wd_set wd_dir wd_pset wd_pdir wd_init wd_force wd_notreally wd_verb wd_debug ARGS
+  return 0
+}
+
+#-------------------------------------------------------------------------------
+function swd() # swd_func
+{
+  Wd_parse "$@" || return 1
+  wd_dir="$(Realpath "${wd_dir}")"
+  Info "Saved wd-${wd_set} => ${wd_dir}"
+  printf "swd %2d '%s' ;# %s\n" "${wd_set}" "${wd_dir}" "$(date)" >> "${HOME}/.wdhistory"
+  rm -f "${wd_favs}/wd-${wd_set}"
+  ln -s "${wd_dir}" "${wd_favs}/wd-${wd_set}"
+}
+
+#-------------------------------------------------------------------------------
+function lwd() # lwd_func
+{
+  Comment "Load saved working directory"
+  if [[ $# == 0 ]]; then
+    wds
+    return 0
+  else
+    Wd_parse "$@" || return 1
+  fi
+
+  if [[ -d "${wd_favs}/wd-${wd_set}" ]]; then
+    # shellcheck disable=SC2086
+    j "$(Realpath "${wd_favs}/wd-${wd_set}")" ${ARGS} || echo "Whoops! Unable to cd into '${wd_favs}/wd-${wd_set}'"
+  else
+    Error "Missing saved set wd-${wd_set}" 1>&2
+  fi
+  if [[ ${wd_verb} == true ]]; then
+    pwd
+  fi
+
+}
+
+#-------------------------------------------------------------------------------
+function rwd() # rwd_func
+{
+  Comment "Remove working directory"
+  Wd_parse "$@" || return 1
+
+  if [[ -d "${wd_dir}" ]]; then
+    REPLY="y"
+    if [[ ${wd_force} == false ]]; then
+      while true; do
+        read -r -p "Confirm removal of wd-${wd_set} -> ${wd_dir} (y|n) "
+        case "${REPLY}" in
+          y|yes) REPLY="y" ; break ;;
+          n|no)  REPLY="n" ; break ;;
+          abort) return ;;
+          *)     REPLY=""  ;;
+        esac
+      done
+    fi
+    rm -v "${wd_favs}/wd-${wd_set}"
+  else
+    echo "No saved set to remove wd-${wd_set}"
+  fi
+}
+
+#-------------------------------------------------------------------------------
+function wds() # wds_func
+{
+  Comment "List saved working directories"
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    set -o shwordsplit
+  fi
+  local p n r h t
+  h="$(Realpath .)"
+  for p in $(find ~/favs -name 'wd-*' | sort -n -t - -k 2)
+  do
+    n="${p//*\//}"
+    r="$(Realpath "${p}")"
+    if [[ "${r}" =~ ^${h} ]]
+    then
+      t="${r/#${h}/}"
+      # shellcheck disable=SC2154
+      printf "${CCYN}%s ${CGRN}->${NONE} %s${NONE}\n" "${n}" "${CRED}${h}${NONE}${t}"
+    else
+      # shellcheck disable=SC2154
+      printf "${CCYN}%s ${CGRN}->${NONE} %s\n" "${n}" "${r}"
+    fi
+  done
+  export cwd lwd
+  cwd="$(Realpath .)"
+  printf "lwd '%s'\n" "${lwd}"
+  printf "cwd '%s'\n" "${cwd}"
+}
+
+#TAF vim:nospell
