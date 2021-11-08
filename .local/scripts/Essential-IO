@@ -9,11 +9,13 @@ function Essential-IO()
     cat <<TEXT
 # Essential-IO
 
-A collection of useful functions for bash/zsh.
+A collection of useful functions for output in bash/zsh.
 
 | FUNCTION SYNTAX               | DESCRIPTION 
 | :---------------------------- | :---------- 
 | Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
+| Columns                       | Display the number columns in the current terminal
+| Rows                          | Display the number rows in the current terminal
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
 | Debug "_MESSAGE_"             | Echo a debug message
 | Die "_MESSAGE_"               | Echo a fatal message and return with fail
@@ -64,6 +66,16 @@ function Realpath()
   #@ Output the realpath name treating all arguments as a single filename specification
   #| Realpath FILENAME_SPECIFICATION
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function Columns()
+{
+  stty -a | perl -lne 'm/columns (\d+)/ and print $1'
+}
+
+function Rows()
+{
+  stty -a | perl -lne 'm/rows (\d+)/ and print $1'
 }
 
 function Color-Setup()
