@@ -23,7 +23,11 @@ function Firstreal() {
   perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }
 
-SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ "$0" == /bin/bash ]]; then
+  SCRIPTDIR="${HOME}/.local/scripts"
+else
+  SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+fi
 if [[ ! -d "${SCRIPTDIR}" ]]; then
   printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
   crash
@@ -103,8 +107,8 @@ function Wd_parse() # internal
     shift
     case "${arg}" in
       -init)
-        # shellcheck source=$HOME/bin/wd disable=SC2250,SC1091
-        source "${HOME}/bin/wd" -init
+        # shellcheck source=$HOME/.local/bin/wd disable=SC2250,SC1091
+        source "${HOME}/.local/bin/wd" -init
         ;;
       -h|-help|--help)   lwd_help ;;
       -l|-list|--list)
@@ -225,7 +229,7 @@ function wds() # wds_func
   fi
   local p n r h t
   h="$(Realpath .)"
-  for p in $(find ~/favs -name 'wd-*' | sort -n -t - -k 2)
+  for p in $(find "${wd_favs}" -name 'wd-*' | sort -n -t - -k 2)
   do
     n="${p//*\//}"
     r="$(Realpath "${p}")"
