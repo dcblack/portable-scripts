@@ -36,6 +36,6 @@ function use-cmake() {
   source "${LEADER}/.local/bin/use-cmake"
 }
 
-wd -init
+source "${LOCAL}/bin/wd" -init
 
 # vim:nospell
