@@ -84,6 +84,7 @@ alias .env='source   "$(dotfile bashenv)"'
 alias .funcs='source "$(dotfile bash_functions)"'
 alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
 alias funcs='declare -F|perl -pe "s/declare -f//;"|fmt'
+alias func='declare -f'
 alias tcpip='ifconfig | grep -i mask'
 
 alias grep='grep --color=auto'
