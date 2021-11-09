@@ -2,6 +2,8 @@
 #
 # FILE: .bash_profile
 
+# This script sources bashrc and ensure the home directory is setup properly.
+
 # Get the aliases and functions
 if [ -f "${HOME}/.bashrc" ]; then
   source "${HOME}/.bashrc"

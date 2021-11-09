@@ -5,7 +5,8 @@
 #-------------------------------------------------------------------------------
 cat <<'EOD' >/dev/null
 
-There's more than aliases here and we invoke some other files under $HOME/.local/dotfiles:
+There's more than aliases here and we invoke some other files under found under
+$HOME/.local/dotfiles in the following order:
 
 1. bash_debug -- if executable
 2. bash_functions -- sets functions for use in scripting
@@ -15,7 +16,14 @@ There's more than aliases here and we invoke some other files under $HOME/.local
 
 EOD
 #-------------------------------------------------------------------------------
-
+#  #####  #####  ##### #     #    # ####   #####                                 
+#  #    # #    # #     #     #    # #   #  #                                     
+#  #    # #    # #     #     #    # #    # #                                     
+#  #####  #####  ##### #     #    # #    # #####                                 
+#  #      #  #   #     #     #    # #    # #                                     
+#  #      #   #  #     #     #    # #   #  #                                     
+#  #      #    # ##### #####  ####  ####   #####                                 
+#-------------------------------------------------------------------------------
 if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
   export ALIAS_SCRIPT
   ALIAS_SCRIPT="${script}"
@@ -37,6 +45,14 @@ if [[ -r ~/.dircolors ]]; then
   eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
 fi
 
+#-------------------------------------------------------------------------------
+#     #    #     ###    #     ####  #####  ####                                  
+#    # #   #      #    # #   #    # #     #    #                                 
+#   #   #  #      #   #   #  #      #     #                                      
+#  #     # #      #  #     #  ####  #####  ####                                  
+#  ####### #      #  #######      # #          #                                 
+#  #     # #      #  #     # #    # #     #    #                                 
+#  #     # ##### ### #     #  ####  #####  ####                                  
 #-------------------------------------------------------------------------------
 alias ls='ls -BCF --color=always'
 alias la='ls -A'
@@ -78,6 +94,14 @@ alias egrep='egrep --color=auto'
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
+#-------------------------------------------------------------------------------
+#  #####   ####   ####  #######    #    #     # #####  #     #####               
+#  #    # #    # #    #    #      # #   ##   ## #    # #     #                   
+#  #    # #    # #         #     #   #  # # # # #    # #     #                   
+#  #####  #    #  ####     #    #     # #  #  # #####  #     #####               
+#  #      #    #      #    #    ####### #     # #    # #     #                   
+#  #      #    # #    #    #    #     # #     # #    # #     #                   
+#  #       ####   ####     #    #     # #     # #####  ##### #####               
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2043
 for SCRIPT_NAME in bash_paths; do
