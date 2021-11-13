@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+export DEVELOPER EXPIRATION
+
+function Instructor()
+{
+  export DEVELOPER EXPIRATION
+  DEVELOPER=""
+  EXPIRATION=0
+  local count
+  count=3
+  while [[ -z "${DEVELOPER}" && ${count} -gt 0 ]]; do
+    printf "\nE-mail address : "
+    read -r
+    if [[ "${REPLY}" =~ ^[a-zA-Z._]+[@]doulos.com$ ]]; then
+      DEVELOPER="${REPLY}"
+      EXPIRATION="$(date -d '1:00 next Saturday' +%s)"
+      break
+    else
+      Error "This is for Doulos instructors only. If you are an instructor, please use the Doulos e-mail address."
+    fi
+    (( --count ))
+  done
+}
+
+function mk()
+{
+  export DEVELOPER EXPIRATION
+  local NOW
+  NOW="$(date +%s)"
+  if [[ "${NOW}" -gt ${EXPIRATION} ]]; then
+    DEVELOPER=""
+    Warn "Expired instructor information"
+  fi
+  if [[ "${DEVELOPER}" =~ ^[a-zA-Z._]+@doulos.com$ ]]; then
+    local GIT_ROOT
+    GIT_ROOT="$(git rev-parse --show-toplevel)"
+    if [[ -n "${GIT_ROOT}" ]]; then
+      make -f "${GIT_ROOT}/GNUmakefile"
+    else
+      Error "Must be run from within the git repository."
+    fi
+  else
+    Error "This is for Doulos instructors only. If you are an instructor, please run instructor setup first."
+  fi
+}
+
