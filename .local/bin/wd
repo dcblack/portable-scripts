@@ -36,6 +36,8 @@ fi
 source "${SCRIPTDIR}/Essential-IO"
 
 export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
+real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
+wd_favs="$(Realpath "${real_favs}")"
 wd_init=false
 if [[ "$1" == "-init" ]]; then
   wd_init=true
@@ -86,8 +88,12 @@ EOT
 #-------------------------------------------------------------------------------
 function Wd_parse() # internal
 {
+  if [[ "${SHELL}" == /bin/zsh ]]; then set -o shwordsplit ; fi # compatible
+  export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
   wd_vers=1.0.3
-  wd_favs="$(Realpath "$(Firstreal "${HOME}/Favorites" "${HOME}/favs")")"
+  local real_favs
+  real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
+  wd_favs="$(Realpath "${real_favs}")"
   wd_force=false
   wd_verb=false
   wd_debug=false
@@ -157,7 +163,6 @@ function Wd_parse() # internal
     Debug -f "wd_verb='${wd_verb}'"
     Debug -f "ARGS='${ARGS}'"
   fi
-  export wd_favs wd_set wd_dir wd_pset wd_pdir wd_init wd_force wd_notreally wd_verb wd_debug ARGS
   return 0
 }
 
@@ -166,8 +171,10 @@ function swd() # swd_func
 {
   Wd_parse "$@" || return 1
   wd_dir="$(Realpath "${wd_dir}")"
+  local today
+  today="$(date)"
   Info "Saved wd-${wd_set} => ${wd_dir}"
-  printf "swd %2d '%s' ;# %s\n" "${wd_set}" "${wd_dir}" "$(date)" >> "${HOME}/.wdhistory"
+  printf "swd %2d '%s' ; # %s\n" "${wd_set}" "${wd_dir}" "${today}" >> "${HOME}/.wdhistory"
   rm -f "${wd_favs}/wd-${wd_set}"
   ln -s "${wd_dir}" "${wd_favs}/wd-${wd_set}"
 }
@@ -184,8 +191,10 @@ function lwd() # lwd_func
   fi
 
   if [[ -d "${wd_favs}/wd-${wd_set}" ]]; then
-    # shellcheck disable=SC2086
-    j "$(Realpath "${wd_favs}/wd-${wd_set}")" ${ARGS} || echo "Whoops! Unable to cd into '${wd_favs}/wd-${wd_set}'"
+    local target
+    target="$(Realpath "${wd_favs}/wd-${wd_set}")"
+    # shellcheck disable=SC2086 # intended expansion
+    j "${target}" ${ARGS} || echo "Whoops! Unable to cd into '${wd_favs}/wd-${wd_set}'"
   else
     Error "Missing saved set wd-${wd_set}" 1>&2
   fi
@@ -227,6 +236,10 @@ function wds() # wds_func
   if [[ "${SHELL}" == /bin/zsh ]]; then
     set -o shwordsplit
   fi
+  export wd_favs
+  local real_favs
+  real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
+  wd_favs="$(Realpath "${real_favs}")"
   local p n r h t
   h="$(Realpath .)"
   for p in $(find "${wd_favs}" -name 'wd-*' | sort -n -t - -k 2)
@@ -237,7 +250,7 @@ function wds() # wds_func
     then
       t="${r/#${h}/}"
       # shellcheck disable=SC2154
-      printf "${CCYN}%s ${CGRN}->${NONE} %s${NONE}\n" "${n}" "${CMAG}${h}${NONE}${t}"
+      printf "${CCYN}%s ${CGRN}->${NONE} %s${NONE}\n" "${n}" "${CMAG}${BOLD}${h}${NONE}${t}"
     elif [[ -z "${r}" ]]; then
       # shellcheck disable=SC2154
       r="${CRED}${BOLD}?? ${NONE}${UNDR}${CRED}$(readlink "${p}")${NONE}"
