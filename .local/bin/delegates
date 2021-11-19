@@ -12,21 +12,36 @@ STDERR->autoflush(1);
 
 if( $ARGV[0] =~ m/^-{1,2}h(elp)?$/ ) {
   my $documentation = <<"EOT";
-Syntax
+Name
+----
+
+$0 - extract delegate information from CoCalc courses
+
+Synopsis
+--------
 
   $0 [-ssh|-who=_PATT_] _COURSEFILE(S)_...
   $0 _EMAIL_
 
 Description
+-----------
 
 Extracts hostname and email information from CoCalc course files (JSON format).
+If a debrief*.md file exists, the names will also be extracted if contains lines
+of the format:
 
--ssh option generates \$HOME/.ssh/config entries instead of a simple list
+FIRST LAST <EMAIL@COMPANY.DOMAIN>;
 
--ssh/config option greps your ~/.ssh/config file for delegates
+Options
+-------
 
--who option allow filtering by delegate e-mail address.
+OPTION      | DESCRIPTION
+------      | -----------
+-ssh        | generates \$HOME/.ssh/config entries instead of a simple list
+-ssh/config | greps your ~/.ssh/config file for delegates
+-who        | allows filtering by delegate e-mail address.
 
+--------------------------------------------------------------------------------
 EOT
   print $documentation;
   exit 1;
@@ -51,7 +66,7 @@ $sshconfig = $OPT{-ssh} if exists $OPT{-ssh} and $OPT{-ssh} ne '1';
 $sshconfig = $OPT{'-ssh/config'} if exists $OPT{'-ssh/config'} and $OPT{'-ssh/config'} ne '1';
 
 our %name;
-for my $debrief (glob("debrief_*.md")) {
+for my $debrief (glob("debrief[-_]*.md")) {
   printf "Parsing %s\n", $debrief if exists $OPT{-verbose};
   open DEBRIEF,'<',$debrief;
   while(not eof DEBRIEF) {
@@ -130,6 +145,7 @@ for my $course_file ( @ARGV ) {
   open COURSE,'<',$course_file;
   my $idx = 0;
   while(<COURSE>) {
+    next unless m/"account_id"/;
     my $course_json = decode_json($_);
     next unless defined $course_json->{"email_address"};
     ++$idx;
