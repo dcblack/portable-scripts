@@ -22,15 +22,13 @@ A collection of useful functions for output in bash/zsh.
 | _do _COMMAND_                 | Displays and executes a command
 | Echo [-n] "_MESSAGE_"         | Displays and logs message
 | Error "_MESSAGE_"             | Echo an error message
-| Errors                        | Display number of errors
+| Errors||true                  | Display number of errors
 | Essential-IO [--help]         | Display version or this help text
-| Fail                          | Sets error status (1)
 | HelpText [-md] "_FILE_"       | Displays help for specified file
 | Info "_MESSAGE_"              | Echo an informational message
 | Log [-n] "_MESSAGE_"          | Adds message to logfile
 | Logfile [--append] _FILE_     | Establishes a logfile name
-| Pass                          | Sets success status (0)
-| PassFail "_MESSAGE_"          | Displays message with pass/fail status
+| PassFail $? "_MESSAGE_"       | Displays message with pass/fail status
 | Realpath FILESPEC             | Echo the real pathname for a file specification
 | Reset-errors                  | Reset error and warning counts to zero
 | Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
@@ -174,6 +172,8 @@ function Logfile()
   #| Logfile [--append|-a] FILENAME
   #| Logfile --off
   #| Logfile ""
+  local TIMESTAMP
+  TIMESTAMP="$(date)"
   if [[ $# == 0 ]]; then
     if [[ -z "${LOGFILE}" ]]; then
       Info "Not currently logging"
@@ -208,7 +208,7 @@ function Logfile()
     LOGFILE="${LOGFILE}${1//.log/}.log"
   fi
   if [[ -n "${PREV_LOGFILE}" && "${PREV_LOGFILE}" != "${LOGFILE}" ]]; then
-    builtin printf "\n# Closed %s\n" "$(date)" >> "${PREV_LOGFILE}"
+    builtin printf "\n# Closed %s\n" "${TIMESTAMP}" >> "${PREV_LOGFILE}"
     builtin printf "Closed %s\n" "${PREV_LOGFILE}"
   elif [[ -z "${LOGFILE}" ]]; then
     builtin echo "Error: Must specify a valid logfile name" 1>&2
@@ -216,7 +216,7 @@ function Logfile()
   fi
   if [[ -n "${LOGFILE}" ]]; then
     test "${APPEND}" -eq 0 && rm -f "${LOGFILE}"
-    builtin printf "# Logfile for %s created on %s\n\n" "$1" "$(date)" >> "${LOGFILE}"
+    builtin printf "# Logfile for %s created on %s\n\n" "$1" "${TIMESTAMP}" >> "${LOGFILE}"
     builtin printf "Logging to %s\n" "${LOGFILE}"
   fi
 }
@@ -289,16 +289,6 @@ function _do()
   "$@"
 }
 
-function Fail()
-{
-  return 1
-}
-
-function Pass()
-{
-  return 0
-}
-
 function Report_info()
 {
   #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
@@ -332,9 +322,8 @@ alias Info=Report_info
 
 function PassFail()
 { # Reports success or failure
-  # shellcheck disable=SC2181
-  local STATUS
-  STATUS="$?"
+  local STATUS=$?
+  shift
   if [[ $# == 0 ]]; then
     if [[ ${STATUS} == 0 ]]; then Info "${BOLD}${CGRN}success${NONE}"; else Info "${BOLD}${CRED}failure${NONE}"; fi
   else
@@ -485,18 +474,18 @@ function Summary()
   Assert $# -gt 0
   Echo -n "${CMAG}Execution summary for ${1}:"
   shift
-  if [[ "$(Warnings)" == 0 ]]; then
+  if [[ "$(Warnings||true)" == 0 ]]; then
     Echo -n " ${CGRN}No warnings"
   else
-    Echo -n " ${CRED}$(Warnings) warnings"
+    Echo -n " ${CRED}$(Warnings||true) warnings"
   fi
-  if [[ "$(Errors)" == 0 ]]; then
+  if [[ "$(Errors||true)" == 0 ]]; then
     Echo -n "  ${CGRN}No errors"
   else
-    Echo -n "  ${CRED}$(Errors) errors"
+    Echo -n "  ${CRED}$(Errors||true) errors"
   fi
   local RESULT
-  if [[ "$(Errors)" == 0 ]]; then Echo -n " - ${CGRN}passing"; RESULT=0;
+  if [[ "$(Errors||true)" == 0 ]]; then Echo -n " - ${CGRN}passing"; RESULT=0;
   else                          Echo -n " - ${CRED}failing"; RESULT=1;
   fi
   Echo -n "${NONE}"
