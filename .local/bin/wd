@@ -253,7 +253,7 @@ function wds() # wds_func
       printf "${CCYN}%s ${CGRN}->${NONE} %s${NONE}\n" "${n}" "${CMAG}${BOLD}${h}${NONE}${t}"
     elif [[ -z "${r}" ]]; then
       # shellcheck disable=SC2154
-      r="${CRED}${BOLD}?? ${NONE}${UNDR}${CRED}$(readlink "${p}")${NONE}"
+      r="${CRED}${BOLD}?? ${NONE}${UNDR}${CRED}$(readlink "${p}") ??${NONE}"
       printf "${CCYN}%s ${CGRN}->${NONE} %s\n" "${n}" "${r}"
     else
       # shellcheck disable=SC2154
