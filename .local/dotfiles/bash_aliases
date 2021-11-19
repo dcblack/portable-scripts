@@ -60,7 +60,7 @@ alias ll='ls -l'
 alias dir='dir --color=auto'
 alias m='less'
 alias agl='ag -l --nocolor'
-alias cls='clear'
+alias cls='clear ; '
 # shellcheck disable=SC2154
 alias vivado-setup='source "${APPS}"/xilinx/2020.1/Vivado/2020.1/settings64.sh'
 export VI='vim'
