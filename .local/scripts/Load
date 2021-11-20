@@ -33,10 +33,10 @@ function Load() {
   NOAUTORUN=1
   export NOAUTORUN
   if [[ "${VERBOSE}" == 1 ]]; then
-    Info "source ${SCRIPT}"
+    Report_info "source ${SCRIPT}"
   fi
   if [[ ${NOTREALLY} == 1 ]]; then
-    Info -tag % "source ${SCRIPT}" ;
+    Report_info -tag % "source ${SCRIPT}" ;
     return 0
   fi
   # shellcheck disable=SC1090
@@ -94,7 +94,7 @@ function Reload()
       SCRIPT="${DIR}/${NAME}"
       if [[ -x "${SCRIPT}" ]]; then
         if [[ "${VERBOSE}" == 1 ]]; then
-          Info "Loading ${SCRIPT}"
+          Report_info "Loading ${SCRIPT}"
         fi
         # shellcheck disable=SC1090
         source "${SCRIPT}"

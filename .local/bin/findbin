@@ -2,7 +2,7 @@
 eval 'exec perl -S $0 ${1+"$@"}'
   if 0; #$running_under_some_shell;
 
-# $Info: findbin - Returns a list of executable or manpage paths. $
+# $About: findbin - Returns a list of executable or manpage paths. $
 # $Syntax: findbin [-a] [-man] [-l] [-d#] COMMAND(S) $
 # $Copyright: 2001-2021 All rights reserved. $
 # $Email: <dcblack@hldwizard.com>. $

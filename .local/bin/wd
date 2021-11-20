@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 #
-#$Info: wd - working directory shortcut.$
+#$About: wd - working directory shortcut.$
 #
 # Function index:
 #   Wd_help
@@ -44,7 +44,7 @@ if [[ "$1" == "-init" ]]; then
   wd_init=true
   shift
   if [[ ${wd_verb} == true ]]; then
-    Info "Initializing wd ${wd_vers}"
+    Report_info "Initializing wd ${wd_vers}"
   fi
 fi
 if [[ ${wd_init} == true ]]; then
@@ -120,11 +120,11 @@ function Wd_parse() # internal
       -h|-help|--help)   lwd_help ;;
       -l|-list|--list)
         if [[ -n "${wd_pset}" ]]; then
-          Info "wd_set=${wd_pset} wd_dir=${wd_pdir}"
+          Report_info "wd_set=${wd_pset} wd_dir=${wd_pdir}"
           wd_set="${wd_pset}"
           wd_dir="${wd_pdir}"
         else
-          Info "wd_set=${wd_set} wd_dir=${wd_dir}"
+          Report_info "wd_set=${wd_set} wd_dir=${wd_dir}"
         fi
         ;;
       -d|-dir|--dir|-wd|-C)
@@ -135,7 +135,7 @@ function Wd_parse() # internal
           wd_set="${wd_pset}"
           wd_dir="${wd_pdir}"
         ;;
-      -vers|-version|--version) Info "wd version ${wd_vers}" ;;
+      -vers|-version|--version) Report_info "wd version ${wd_vers}" ;;
       -v|-verbose|--verbose) wd_verb=true ;;
       -debug|--debug|-D) wd_debug=true ;;
       -N|-notreally|--notreally) wd_notreally=true ;;
@@ -174,7 +174,7 @@ function swd() # swd_func
   wd_dir="$(Realpath "${wd_dir}")"
   local today
   today="$(date)"
-  Info "Saved wd-${wd_set} => ${wd_dir}"
+  Report_info "Saved wd-${wd_set} => ${wd_dir}"
   printf "swd %2d '%s' ; # %s\n" "${wd_set}" "${wd_dir}" "${today}" >> "${HOME}/.wdhistory"
   rm -f "${wd_favs}/wd-${wd_set}"
   ln -s "${wd_dir}" "${wd_favs}/wd-${wd_set}"

@@ -105,7 +105,7 @@ if [[ "${DEBUG}" == 1 ]]; then
 fi
 
 #-------------------------------------------------------------------------------
-Info "Setup source directory"
+Report_info "Setup source directory"
 if [[ -n ${SRC} && -d "${SRC}" ]]; then
   echo "Using SRC=${SRC}"
 fi
@@ -177,25 +177,25 @@ else
   cd "cmake-${FULL_VERS}" || Die "Unable to enter source directory"
 fi
 
-Info "Building cmake"
+Report_info "Building cmake"
 mkdir cmake-build || Die "Unable to create build directory"
 cd cmake-build || Die "Unable to enter build directory"
 ../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Die "Failed to bootstrap"
 echo "% make -j${NPROC}"
 make -j"${NPROC}" || Die "Failed to make"
-Info "Installing  cmake"
+Report_info "Installing  cmake"
 echo "% make install"
 make install
 
 cd "${SRC}" || Die "Unable to enter source directory"
 if [[ "${CLEAN}" == 1 ]]; then
-  Info "Clean up"
+  Report_info "Clean up"
   rm -fr cmake*
 fi
 
 cd || Die "Unable to return to home"
 cmake --version
 
-Info "Finished installing cmake"
+Report_info "Finished installing cmake"
 
 # vim:nospell

@@ -2,7 +2,7 @@
 eval 'exec perl -S $0 ${1+"$@"}'
   if 0;#running_under_some_shell;
 
-# @(#)$Info: header - Variation of banner tool for horizontal banners. $ {{{
+# @(#)$About: header - Variation of banner tool for horizontal banners. $ {{{
 #
 # @(#)$Email: <dcblack@hldwizard.com>. $
 require 5.0;

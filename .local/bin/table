@@ -2,7 +2,7 @@
 eval 'exec /usr/bin/perl -S $0 ${1+"$@"}' # vim600:sw=2:tw=0:fdm=marker
   if 0;#$running_under_some_shell;
 
-# @(#)$Info: table - Creates tabular output. $
+# @(#)$About: table - Creates tabular output. $
 #
 # @(#)$Copyright: 2001,2007 All rights reserved. $
 # @(#)$Email: <dcblack@mac.com>. $

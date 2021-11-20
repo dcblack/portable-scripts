@@ -106,7 +106,7 @@ if [[ "${DEBUG}" == 1 ]]; then
 fi
 
 #-------------------------------------------------------------------------------
-Info "Setup source directory"
+Report_info "Setup source directory"
 if [[ -n ${SRC} && -d "${SRC}" ]]; then
   echo "Using SRC=${SRC}"
 fi
@@ -158,7 +158,7 @@ tar zxvf "${ASTYLE_TARBALL}" || Die "Failed to extract ${ASTYLE_TARBALL}"
 echo "% cd ${TOOL_NAME}"
 cd "${TOOL_NAME}" || Die "Unable to enter source directory"
 
-Info "Building ${TOOL_NAME}"
+Report_info "Building ${TOOL_NAME}"
 BUILD_DIR="${TOOL_NAME}-build"
 mkdir "${BUILD_DIR}" || Die "Unable to create ${BUILD_DIR} directory"
 cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR} directory"
@@ -166,13 +166,13 @@ cmake ..
 make
 
 if [[ -z "${NOINSTALL+x}" ]]; then
-  Info "Installing ${TOOL_NAME}"
+  Report_info "Installing ${TOOL_NAME}"
   echo "% make install"
   mv "${TOOL_NAME}" "${CMAKE_INSTALL_PREFIX}/bin/"
 
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
-    Info "Clean up"
+    Report_info "Clean up"
     cd "${SRC}" || Die "Unable to enter source directory"
     rm -fr "${TOOL_NAME}"*
   fi
@@ -181,9 +181,9 @@ if [[ -z "${NOINSTALL+x}" ]]; then
   cd || Die "Unable to return to home"
   "${TOOL_NAME}" --version
 
-  Info "Finished installing ${TOOL_NAME}"
+  Report_info "Finished installing ${TOOL_NAME}"
 else
-  Info -mag "Stopped shy installing ${TOOL_NAME}"
+  Report_info -mag "Stopped shy installing ${TOOL_NAME}"
 fi
 
 

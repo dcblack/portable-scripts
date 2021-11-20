@@ -27,9 +27,9 @@ ConfirmBuildOpts || exit
 Create_and_Cd "${SRC}"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
-Info "Configuring ${TOOL_NAME}"
+Report_info "Configuring ${TOOL_NAME}"
 _do ./build.sh --prefix="${APPS}" || Die "Unable to build"
-Info "Installing ${TOOL_NAME}"
+Report_info "Installing ${TOOL_NAME}"
 _do make install | Log
 
 Summary "${TOOL_NAME}" "Installed. ${TOOL_INFO}"

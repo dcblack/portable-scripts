@@ -22,7 +22,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | Pass                       | Sets success status (0)
 | Fail                       | Sets error status (1)
 | PassFail "_MESSAGE_"       | Displays message with pass/fail status
-| Info "_MESSAGE_"           | Echo an informational message
+| Report_info "_MESSAGE_"           | Echo an informational message
 | Comment "_MESSAGE_"        | Does nothing but provide NOP comment
 | Debug "_MESSAGE_"          | Echo a debug message
 | Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
@@ -544,7 +544,7 @@ function GetBuildOpts() {
   mkdir -p "${APPS}" || Die "Failed to find/create ${APPS} directory"
 
   #-------------------------------------------------------------------------------
-  Info "Setup source directory"
+  Report_info "Setup source directory"
   if [[ -z "${SRC}" || ! -d "${SRC}" ]]; then
     if [[ "${APPS}" == '/apps' ]]; then
       SRC="${APPS}/src"

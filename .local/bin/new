@@ -4,7 +4,7 @@ eval 'exec perl -S $0 ${1+"$@"}'
 
 # vim600:tw=72:syntax=perl:fmr=<<<,>>>
 #
-# @(#)$Info: new - create a new set of skeleton files from templates $
+# @(#)$About: new - create a new set of skeleton files from templates $
 # @(#)$Copyright: (C) 2003-2007 ESLX Inc. $
 # @(#)$Copyright: (C) 2009-2010 XtremeEDA Corporation. $
 # @(#)$Copyright: (C) 2012-2018 David C Black. $

@@ -78,7 +78,7 @@ EOT
           else
             /bin/ls "${FAVS}"
           fi
-          Info "Use -lns for actual links"
+          Report_info "Use -lns for actual links"
         else
           echo "No favorites directory specified" 1>&2
         fi
@@ -130,7 +130,7 @@ EOT
     done
   fi
   test "${J_DEBUG}" = 1 && Debug -f "Debug on"
-  test "${J_VERBOSE}" = 1 && Info "Verbose on"
+  test "${J_VERBOSE}" = 1 && Report_info "Verbose on"
   # End parsing options
   #-----------------------------------------------------------------------------
   local working_script='setup.profile'
@@ -234,7 +234,7 @@ EOT
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
-      test "${J_VERBOSE}" = 1 && Info "Removing ${nws}"
+      test "${J_VERBOSE}" = 1 && Report_info "Removing ${nws}"
       export ACTION
       ACTION='rm'
       # shellcheck disable=SC1090
@@ -243,7 +243,7 @@ EOT
     fi
     # Source new working script
     if [[ ${NEXTOK} == 1 ]]; then
-      test "${J_VERBOSE}" = 1 && Info "Adding ${nws}"
+      test "${J_VERBOSE}" = 1 && Report_info "Adding ${nws}"
       export ACTION
       ACTION='add'
       # shellcheck disable=SC1090
@@ -252,7 +252,7 @@ EOT
       cws="${nws}"
     elif [[ ${REPEAT} == 1 ]]; then
       if grep -q ACTION "${nws}"; then
-        test "${J_VERBOSE}" = 1 && Info "Repeating ${nws}"
+        test "${J_VERBOSE}" = 1 && Report_info "Repeating ${nws}"
         export ACTION
         ACTION='repeat'
         # shellcheck disable=SC1090

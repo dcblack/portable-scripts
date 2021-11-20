@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Info: Calculate and display the next filename(s) in a series. $
+#$About: Calculate and display the next filename(s) in a series. $
 #$Syntax: next FILELNAME(S)
 
 use 5.012;

@@ -27,7 +27,7 @@ _do cd "${LAB_DIR}" || Die "Unable to find working path from '${ORIG_DIR}'"
 
 #-------------------------------------------------------------------------------
 function Clean_exercise() {
-  Info "Cleaning $*"
+  Report_info "Cleaning $*"
   rm -fr "$@"
   git checkout "$@";
 }
@@ -41,7 +41,7 @@ function Do_exercise() {
 }
 
 #-------------------------------------------------------------------------------
-Info "$(date "+Regression test %c %Z") for ${LAB_NAME}"
+Report_info "$(date "+Regression test %c %Z") for ${LAB_NAME}"
 
 if [[ $# == 0 ]]; then
   for f in ./ex[0-9]* ; do
@@ -84,12 +84,12 @@ Echo ""
 Ruler -blue Summary
 FAILURES="$(grep -c FAIL "${LOGFILE:?}")"
 if [[ ${FAILURES} == 0 ]]; then
-  Info -grn "# Passed all tests"
+  Report_info -grn "# Passed all tests"
 else
   grep FAILED "${LOGFILE:?}"
   Error "# Failed ${FAILURES} tests"
 fi
-Info "$(date "+# Completed %c %Z") from ${LAB_NAME}"
+Report_info "$(date "+# Completed %c %Z") from ${LAB_NAME}"
 Ruler -blu
-Info "REMINDER: Exercises are not clean."
-Info "Results in $(realpath "${LOGFILE:?}")"
+Report_info "REMINDER: Exercises are not clean."
+Report_info "Results in $(realpath "${LOGFILE:?}")"

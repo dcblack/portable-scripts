@@ -16,9 +16,9 @@ function Die() {
   exit 1
 }
 
-function Info() {
+function Report_info() {
   Ruler '-'
-  echo "${CGRN}Info: ${CBLU}$*${NONE}"
+  echo "${CGRN}Report_info: ${CBLU}$*${NONE}"
 }
 
 #-------------------------------------------------------------------------------

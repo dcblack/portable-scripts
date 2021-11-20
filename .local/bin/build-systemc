@@ -45,7 +45,7 @@ function Realpath() {
 SCRIPT="$(Realpath "$0")"
 SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
-  # shellcheck source=utils.bash
+  # shellcheck disable=SC1090
   source "${SCRIPT}" "$0"
 else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
@@ -57,29 +57,30 @@ CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
 ConfirmBuildOpts || exit
 
 Create_and_Cd "${SRC}"
-Info -grn "Obtaining ${TOOL_NAME} source"
+Report_info -grn "Obtaining ${TOOL_NAME} source"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
-Info -grn "Compiling ${TOOL_NAME}"
-# shellcheck disable=SC2119
+Report_info -grn "Compiling ${TOOL_NAME}"
+# shellcheck disable=SC2119,SC2312
 Generate | Log
 _do cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR}"
 _do make
 
 if [[ -z "${NOINSTALL+x}" ]]; then
-  Info -grn "Installing ${TOOL_NAME} to final location"
+  Report_info -grn "Installing ${TOOL_NAME} to final location"
   _do make install
 
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
-    Info -red "Clean up"
+    Report_info -red "Clean up"
     cd "${SRC}" || Die "Unable to enter source directory"
+    # shellcheck disable=SC2312
     rm -fr "${TOOL_NAME}"* | Log
   fi
 
-  Info -grn "Finished installation of ${TOOL_NAME} into ${SYSTEMC_HOME}"
+  Report_info -grn "Finished installation of ${TOOL_NAME} into ${SYSTEMC_HOME}"
 else
-  Info -mag "Stopped shy installing ${TOOL_NAME}"
+  Report_info -mag "Stopped shy installing ${TOOL_NAME}"
 fi
 
 # vim:nospell

@@ -200,7 +200,7 @@ function Main() {
   fi
   CourseName="${Dates}-${Crs}-${Who}"
 
-  Info "Course name to use ${CourseName}"
+  Report_info "Course name to use ${CourseName}"
 }
 
 Main "$@"

@@ -159,7 +159,7 @@ function Git_setup() {
     fi
   done
 
-  Info "Git set up"
+  Report_info "Git set up"
 }
 
 if [[ "$*" != "-n" ]]; then
