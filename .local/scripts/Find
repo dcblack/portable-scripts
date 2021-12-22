@@ -2,7 +2,7 @@
 
 function Find() {
   local DIR_LIST
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   while [[ -d "$1" ]]; do

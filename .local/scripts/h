@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function h() { # Display most recent N history lines
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   local N

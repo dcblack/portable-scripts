@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function lx() { # Display last N files (default 30) sorted by modification time
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   N=-30

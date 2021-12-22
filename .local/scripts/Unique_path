@@ -9,7 +9,7 @@ function Unique_path()
     VERBOSE=1
     shift
   fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   # shellcheck disable=SC2016

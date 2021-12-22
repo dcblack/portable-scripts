@@ -19,7 +19,7 @@ function Load() {
     esac
     shift
   done
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   SCRIPT="$(Firstreal "$(FindScript "$1")")"

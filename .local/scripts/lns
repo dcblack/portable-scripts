@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function lns() { # Display symbolic links
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   if [[ $# == 0 ]]; then
