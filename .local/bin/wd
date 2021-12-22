@@ -17,7 +17,7 @@ function Realpath ()
 }
 
 function Firstreal() {
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
@@ -105,10 +105,15 @@ function Wd_parse() # internal
   if [[ -n "${wd_dir}" ]]; then
     wd_pdir="${wd_dir}"
   fi
-  wd_set=1
+  if [[ -z "${ITERM2_TAB+x}" ]]; then
+    wd_set=1
+  else
+    wd_set="${ITERM2_TAB}"
+  fi
   wd_dir=.
   # Parse command-line
   local arg
+  ARGS=""
   while [[ "$#" != 0 ]]; do
     arg="$1"
     shift
@@ -147,22 +152,26 @@ function Wd_parse() # internal
             [ci][0-9]) wd_set="${arg}" ;;
                 [0-9]) wd_set="${arg}" ;;
       -*)
-        Error "Unknown option: '${arg}'" || return 1
+        Report_error "Unknown option: '${arg}'" || return 1
         ;;
       *)
-        ARGS="${ARGS} ${arg}"
+        if [[ -z "${ARGS}" ]]; then
+          ARGS="${arg}"
+        else
+          ARGS="${ARGS} ${arg}"
+        fi
         ;;
     esac
   done
   if [[ ${wd_debug} == true ]]; then
-    Debug -f "wd_favs='${wd_favs}'"
-    Debug -f "wd_set='${wd_set}'"
-    Debug -f "wd_dir='${wd_dir}'"
-    Debug -f "wd_pset='${wd_pset}'"
-    Debug -f "wd_pdir='${wd_pdir}'"
-    Debug -f "wd_init='${wd_init}'"
-    Debug -f "wd_verb='${wd_verb}'"
-    Debug -f "ARGS='${ARGS}'"
+    Report_debug -f "wd_favs='${wd_favs}'"
+    Report_debug -f "wd_set='${wd_set}'"
+    Report_debug -f "wd_dir='${wd_dir}'"
+    Report_debug -f "wd_pset='${wd_pset}'"
+    Report_debug -f "wd_pdir='${wd_pdir}'"
+    Report_debug -f "wd_init='${wd_init}'"
+    Report_debug -f "wd_verb='${wd_verb}'"
+    Report_debug -f "ARGS='${ARGS}'"
   fi
   return 0
 }
@@ -184,20 +193,15 @@ function swd() # swd_func
 function lwd() # lwd_func
 {
   Comment "Load saved working directory"
-  if [[ $# == 0 ]]; then
-    wds
-    return 0
-  else
-    Wd_parse "$@" || return 1
-  fi
+  Wd_parse "$@" || return 1
 
   if [[ -d "${wd_favs}/wd-${wd_set}" ]]; then
     local target
     target="$(Realpath "${wd_favs}/wd-${wd_set}")"
     # shellcheck disable=SC2086 # intended expansion
-    j "${target}" ${ARGS} || echo "Whoops! Unable to cd into '${wd_favs}/wd-${wd_set}'"
+    j "${target}" ${ARGS} || Report_error "Whoops! Unable to cd into '${wd_favs}/wd-${wd_set}'"
   else
-    Error "Missing saved set wd-${wd_set}" 1>&2
+    Report_error "Missing saved set wd-${wd_set}" 1>&2
   fi
   if [[ ${wd_verb} == true ]]; then
     pwd
@@ -211,11 +215,17 @@ function rwd() # rwd_func
   Comment "Remove working directory"
   Wd_parse "$@" || return 1
 
-  if [[ -d "${wd_dir}" ]]; then
-    REPLY="y"
+  local REPLY wd_rdir
+  wd_rdir="$(Realpath "${wd_favs}/wd-${wd_set}")"
+  if [[ -h "${wd_favs}/wd-${wd_set}" ]]; then
     if [[ ${wd_force} == false ]]; then
       while true; do
-        read -r -p "Confirm removal of wd-${wd_set} -> ${wd_dir} (y|n) "
+        REPLY="?"
+        if [[ "${SHELL}" == /bin/zsh ]]; then
+          read -r "REPLY?Confirm removal of wd-${wd_set} -> ${wd_rdir} (y|n) "
+        else
+          read -r -p "Confirm removal of wd-${wd_set} -> ${wd_rdir} (y|n) "
+        fi
         case "${REPLY}" in
           y|yes) REPLY="y" ; break ;;
           n|no)  REPLY="n" ; break ;;
@@ -224,9 +234,14 @@ function rwd() # rwd_func
         esac
       done
     fi
-    rm -v "${wd_favs}/wd-${wd_set}"
+    if [[ "${REPLY}" == "y" ]]; then
+      Report_info -n "Removing "
+      rm -v "${wd_favs}/wd-${wd_set}"
+    else
+      Report_info "Ignored removal of ${wd_favs}/wd-${wd_set}"
+    fi
   else
-    echo "No saved set to remove wd-${wd_set}"
+    Report_info "No saved set to remove wd-${wd_set}"
   fi
 }
 
