@@ -569,11 +569,11 @@ sub INFO { #<<<2
           my $LESS_FH;
           close $MORE_FH;
           open $LESS_FH,q{|-},"less";
-          printf $LESS_FH "%s",join('',@TEXT),"\n";
+          printf $LESS_FH "%s\n",join('',@TEXT);
           close $LESS_FH;
           open $MORE_FH,q{|-},"$PAGER";
         } else {
-          printf $MORE_FH "%s",join('',@TEXT),"\n";
+          printf $MORE_FH "%s\n",join('',@TEXT);
         }#endif
         $success = 1;
       } else {
@@ -1783,7 +1783,7 @@ NAMES: for my $name (@name) {
       $perm |= oct(220); # Make sure it's writeable by the user
       chmod $perm,$target;
     #----------------------------------------------------------------------------
-    } else { # Plain file #<<<3
+    } elsif (-T $template) { # Plain file #<<<3
     #----------------------------------------------------------------------------
       ($repl_total,$phld_total) = (0,0);
       if (!exists $OPT{-notreally} and !exists $OPT{-out}) {
@@ -1831,6 +1831,10 @@ NAMES: for my $name (@name) {
         }#endif
         &System("$OPT{-edit} $target");
       }#endif
+    #----------------------------------------------------------------------------
+    } else { # Binary -- just copy
+    #----------------------------------------------------------------------------
+      &System( "rsync -a $template $target" );
     }#endif
   }#endfor
   close $TARGET_FH if exists $OPT{-out} and $OPT{-out} ne '-';
