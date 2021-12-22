@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export lwd nwd cws nws
+export lwd nwd lws cws nws
 function j() {
   # Synopsis
   #   j - more powerful alternative to cd (aka jump)
@@ -26,7 +26,7 @@ function j() {
   if [[ $# != 0 ]]; then
     # Parse command-line options
     while [[ "$1" =~ ^-. ]]; do
-      if [[ ${J_DEBUG} == 1 ]]; then Debug -f "$1"; fi
+      if [[ ${J_DEBUG} == 1 ]]; then Report_debug -f "$1"; fi
       case "$1" in
       -h | -help | --help) cat 1>&2 <<EOT
 Synopsis
@@ -86,21 +86,21 @@ EOT
         ;;
       -mk )
         shift
-        if [[ $# != 2 ]]; then Error "Requires two arguments: j -mk FAV DIRPATH"; return 1; fi
-        if [[ "$1" =~ .*/.* ]]; then Error "First argument must be a simple name"; return 1; fi
-        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
-        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
-        if [[ -e "${FAVS}/$1" ]]; then Error "$1 already exists"; return 1; fi
-        if [[ ! -d "$2" ]]; then Error "'$2/.' does not refer to a directory"; return 1; fi
+        if [[ $# != 2 ]]; then Report_error "Requires two arguments: j -mk FAV DIRPATH"; return 1; fi
+        if [[ "$1" =~ .*/.* ]]; then Report_error "First argument must be a simple name"; return 1; fi
+        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Report_error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
+        if [[ -e "${FAVS}/$1" ]]; then Report_error "$1 already exists"; return 1; fi
+        if [[ ! -d "$2" ]]; then Report_error "'$2/.' does not refer to a directory"; return 1; fi
         ln -s "$(Realpath "$2/.")" "${FAVS}/$1" && echo "Created favorite $1 -> $(Realpath "${FAVS}/$1")" ;
         return 0;
         ;;
       -rm )
         shift
-        if [[ $# != 1 ]]; then Error "Requires exactly one argument: j -rm FAV"; return 1; fi
-        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Error "First argument must begin with an alphanumeric"; return 1; fi
-        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
-        if [[ ! -e "${FAVS}/$1" ]]; then Error "$1 does not exist"; return 1; fi
+        if [[ $# != 1 ]]; then Report_error "Requires exactly one argument: j -rm FAV"; return 1; fi
+        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "First argument must begin with an alphanumeric"; return 1; fi
+        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Report_error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
+        if [[ ! -e "${FAVS}/$1" ]]; then Report_error "$1 does not exist"; return 1; fi
         local old
         old="$(Realpath "${FAVS}/$1")"
         rm "${FAVS}/$1" && echo "Removed favorite $1 -> ${old}" ;
@@ -129,13 +129,13 @@ EOT
       shift
     done
   fi
-  test "${J_DEBUG}" = 1 && Debug -f "Debug on"
+  test "${J_DEBUG}" = 1 && Report_debug -f "Debug on"
   test "${J_VERBOSE}" = 1 && Report_info "Verbose on"
   # End parsing options
   #-----------------------------------------------------------------------------
   local working_script='setup.profile'
 
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
 
@@ -147,7 +147,7 @@ EOT
     cd
   else
     while [[ $# != 0 ]]; do
-      test "${J_DEBUG}" = 1 && Debug -f "Arg '%s'" "$1"
+      test "${J_DEBUG}" = 1 && Report_debug -f "Arg '%s'" "$1"
       if [[ "$1" == '-' ]]; then
         # shellcheck disable=SC2164
         cd -
@@ -156,8 +156,8 @@ EOT
         PART="$1"
         GLOB="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
         if [[ ${J_DEBUG} == 1 ]]; then
-          Debug -f "DEBUG: PART='%s'" "${PART}"
-          Debug -f "DEBUG: GLOB='%s'" "${GLOB}"
+          Report_debug -f "DEBUG: PART='%s'" "${PART}"
+          Report_debug -f "DEBUG: GLOB='%s'" "${GLOB}"
         fi
         if [[ -e "${PART}" && -f "${PART}" ]]; then
           PART=$(dirname "${PART}")
@@ -169,16 +169,16 @@ EOT
         if   cd "${PART}" 1>/dev/null 2>&1 ; then DEST="$(Realpath .)" ;
         elif cd "${GLOB}" 1>/dev/null 2>&1 ; then DEST="$(Realpath .)" ; fi
         if [[ -n "${DEST}" ]]; then
-          cd "${DEST}" 1>/dev/null 2>&1 || Error "Bug in script j"
+          cd "${DEST}" 1>/dev/null 2>&1 || Report_error "Bug in script j"
         else
-          Warn "Unable to locate ${PART}"
+          Report_warning "Unable to locate ${PART}"
           break
         fi
       fi
       shift
     done
   fi
-  test "${J_DEBUG}" = 1 && Debug -f "Saving working directory"
+  test "${J_DEBUG}" = 1 && Report_debug -f "Saving working directory"
   # Save current location as the working directory
   local next_wd
   next_wd="$(Realpath .)"
@@ -194,7 +194,7 @@ EOT
     export cwd
     cwd="${next_wd}"
   fi
-  test "${J_DEBUG}" = 1 && Debug -f "Landed %s" "$(pwd)"
+  test "${J_DEBUG}" = 1 && Report_debug -f "Landed %s" "$(pwd)"
 
   # Save last working script if it was previously set
   if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
@@ -202,7 +202,7 @@ EOT
   # Deal with new working script if it exists
   export nws
   nws="$(Firstreal "$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)")"
-  test "${J_DEBUG}" = 1 && Debug -f "Checking for working script nws=%s" "'${nws}'"
+  test "${J_DEBUG}" = 1 && Report_debug -f "Checking for working script nws=%s" "'${nws}'"
   if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
     local LASTOK NEXTOK REPEAT
@@ -212,7 +212,7 @@ EOT
     # 2. Must be executable and not a directory
     # 3. Last script must support ACTION variable
     if [[ -n "${lws}" && "${lws}" == "${nws}" ]]; then
-      test "${J_DEBUG}" = 1 && Debug -f "lws set and equal to nws ${nws}"
+      test "${J_DEBUG}" = 1 && Report_debug -f "lws set and equal to nws ${nws}"
       LASTOK=0
       NEXTOK=0
       REPEAT=1
@@ -230,7 +230,7 @@ EOT
     if [[ ! -x "${nws}" || -d "${nws}" ]]; then
       NEXTOK=0
       REPEAT=0
-      test "${J_DEBUG}" = 1 && Debug -f "nws not executable or is a directory ${nws}"
+      test "${J_DEBUG}" = 1 && Report_debug -f "nws not executable or is a directory ${nws}"
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
