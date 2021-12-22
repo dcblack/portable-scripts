@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+function Path_index()
+{
+  perl -le '$v=shift;@_=reverse(split(q{/},shift@ARGV));for $i(0..$#_){next if $v ne $_[$i];print $i}' "$1" "$(Realpath "$2")"
+}

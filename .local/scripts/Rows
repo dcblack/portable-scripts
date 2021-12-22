@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+function Rows()
+{
+  # shellcheck disable=SC2312
+  stty -a | perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
+}
