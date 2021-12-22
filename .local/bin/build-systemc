@@ -7,6 +7,9 @@ TOOL_SRC="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS=2.3.3
 
+export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS
+export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX
+
 #-------------------------------------------------------------------------------
 # The following is formatted for use with -help
 #|
@@ -37,6 +40,9 @@ TOOL_VERS=2.3.3
 #|  --src=DIR | -s DIR
 #|  --std=N | -std=N
 #|
+
+export SHELL
+SHELL=bash
 
 function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
