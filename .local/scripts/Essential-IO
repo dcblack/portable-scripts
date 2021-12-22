@@ -15,28 +15,28 @@ A collection of useful functions for output in bash/zsh.
 | :---------------------------- | :---------- 
 | Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
 | Columns                       | Display the number columns in the current terminal
-| Rows                          | Display the number rows in the current terminal
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
-| Report_debug "_MESSAGE_"      | Echo a debug message
-| Report_fatal "_MESSAGE_"      | Echo a fatal message and return with fail
-| _do _COMMAND_                 | Displays and executes a command
 | Echo [-n] "_MESSAGE_"         | Displays and logs message
-| Report_error "_MESSAGE_"      | Echo an error message
 | Errors||true                  | Display number of errors
 | Essential-IO [--help]         | Display version or this help text
 | HelpText [-md] "_FILE_"       | Displays help for specified file
-| Report_info "_MESSAGE_"              | Echo an informational message
 | Log [-n] "_MESSAGE_"          | Adds message to logfile
 | Logfile [--append] _FILE_     | Establishes a logfile name
 | PassFail $? "_MESSAGE_"       | Displays message with pass/fail status
 | Realpath FILESPEC             | Echo the real pathname for a file specification
+| Report_debug "_MESSAGE_"      | Echo a debug message
+| Report_error "_MESSAGE_"      | Echo an error message
+| Report_fatal "_MESSAGE_"      | Echo a fatal message and return with fail
+| Report_info "_MESSAGE_"              | Echo an informational message
+| Report_warning "_MESSAGE_"    | Echo a warning message
 | Reset-errors                  | Reset error and warning counts to zero
+| Rows                          | Display the number rows in the current terminal
 | Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
 | ShowVars VARLIST              | Echo values of variables
-| Summary PROG ["_MESSAGE_"]    | Echo a summary of errors and warnings
+| Summary PROG ["_MESSAGE_"]    | Echo a report summary of errors and warnings
 | Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
-| Report_warning "_MESSAGE_"    | Echo a warning message
 | Warnings                      | Display number of errors
+| _do _COMMAND_                 | Displays and executes a command
 
 TEXT
   elif [[ $# == 0 ]]; then
@@ -68,12 +68,14 @@ function Realpath()
 
 function Columns()
 {
-  stty -a | perl -lne 'm/columns (\d+)/ and print $1'
+  # shellcheck disable=SC2312
+  stty -a | perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
 }
 
 function Rows()
 {
-  stty -a | perl -lne 'm/rows (\d+)/ and print $1'
+  # shellcheck disable=SC2312
+  stty -a | perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
 }
 
 function Color-Setup()
@@ -227,7 +229,7 @@ function Log()
   #| Log [-n] "MESSAGE"
   #| COMMAND | Log
   if [[ -z "${LOGFILE}" ]]; then return; fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   local OPT
@@ -261,7 +263,7 @@ function Echo()
 function Printf()
 {
   #@ Printf with logging
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   local TEXT
@@ -283,7 +285,7 @@ function _do()
   else
     Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
   fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   "$@"
@@ -292,15 +294,17 @@ function _do()
 function Report_info()
 {
   #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
-  #| Report_info [-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
+  #| Report_info [-n][-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
   if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
   fi
-  local PRE TAG
+  local PRE TAG EOL
   PRE="${NONE}"
-  TAG="Report_info: "
-  while [[ "$1" =~ ^-[[:alpha:]]{3}$ ]]; do
+  TAG="Info: "
+  EOL=""
+  while [[ "$1" =~ ^-[[:alpha:]]{1,3}$ ]]; do
     case "$1" in
+      -n)   EOL="-n"      ; shift ;;
       -pre) PRE="${2}"    ; shift  ; shift ;;
       -cyn) PRE="${CCYN}" ; shift ;;
       -red) PRE="${CRED}" ; shift ;;
@@ -316,7 +320,11 @@ function Report_info()
       *) PRE="${NONE}" ;;
     esac
   done
-  Echo "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
+  if [[ -z "${EOL}" ]]; then
+    Echo "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
+  else
+    Echo -n "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
+  fi
 }
 
 function PassFail()
@@ -335,7 +343,7 @@ function Report_debug()
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Debug MESSAGE
   if [[ "$1" == "-f" || -n "${DEBUG}" && "${DEBUG}" -gt 0 ]]; then
-    if [[ "${SHELL}" == /bin/zsh ]]; then
+    if [[ "${SHELL}" =~ zsh ]]; then
       set -o shwordsplit
     fi
     if [[ "$1" == "-f" ]]; then shift; fi
@@ -490,7 +498,7 @@ function Summary()
 
 function HelpText()
 {
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   local HELPSCRIPT
@@ -508,7 +516,7 @@ function HelpText()
 
 function ShowVars()
 {
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   local DLR VAR VAL
