@@ -74,7 +74,7 @@ while [[ $# != 0 ]]; do
       CMAKE_INSTALL_PREFIX="$2"
       shift
     else
-      Die "Need directory argument for --install"
+      Report_fatal "Need directory argument for --install"
     fi
     shift;
     ;;
@@ -85,12 +85,12 @@ while [[ $# != 0 ]]; do
       SRC="$2"
       shift
     else
-      Die "Need directory argument for --src"
+      Report_fatal "Need directory argument for --src"
     fi
     shift;
     ;;
   *)
-    Die "ERROR: Unkhown option $1";
+    Report_fatal "ERROR: Unkhown option $1";
     ;;
   esac
 done
@@ -116,7 +116,7 @@ elif [[ "${HOME}" == "$(pwd)" ]]; then
 else
   SRC="$(pwd)/src"
 fi
-mkdir -p "${SRC}" || Die "Failed to find/create ${SRC} directory"
+mkdir -p "${SRC}" || Report_fatal "Failed to find/create ${SRC} directory"
 
 #-------------------------------------------------------------------------------
 # Determine installation directory
@@ -125,7 +125,7 @@ if [[ ! -v CMAKE_INSTALL_PREFIX ]]; then
 fi
 export CMAKE_INSTALL_PREFIX
 
-cd "${SRC}" || Die "Unable to enter ${SRC}"
+cd "${SRC}" || Report_fatal "Unable to enter ${SRC}"
 test "${CLEAN}" == 1 && rm -fr cmake*
 
 
@@ -143,8 +143,8 @@ if [[ "${TYPE}" == "-git" ]]; then
 ###############################################################################
  
   echo "Cloning cmake"
-  git clone https://gitlab.kitware.com/cmake/cmake.git  || Die "Failed to clone"
-  cd cmake || Die "Unable to enter repo"
+  git clone https://gitlab.kitware.com/cmake/cmake.git  || Report_fatal "Failed to clone"
+  cd cmake || Report_fatal "Unable to enter repo"
 
 else
 ###############################################################################
@@ -165,35 +165,35 @@ else
   # Assumed to be under latest; otherwise, use v$MAJOR.$MINOR
   if [[ "${TYPE}" == "-wget" ]]; then
     echo "% wget ${URL}"
-    wget "${URL}" || Die "Failed to download cmake ${URL}"
+    wget "${URL}" || Report_fatal "Failed to download cmake ${URL}"
   else
     echo "% curl -output ${CMAKE_TARBALL} ${URL}"
-    curl -output "${CMAKE_TARBALL}" "${URL}" || Die "Failed to download from ${URL}"
+    curl -output "${CMAKE_TARBALL}" "${URL}" || Report_fatal "Failed to download from ${URL}"
   fi
   echo "Expanding cmake tarball"
   echo "% tar zxvf cmake-${FULL_VERS}.tar.gz"
-  tar zxvf "cmake-${FULL_VERS}.tar.gz" || Die "Failed to extract cmake-${FULL_VERS}.tar.gz"
+  tar zxvf "cmake-${FULL_VERS}.tar.gz" || Report_fatal "Failed to extract cmake-${FULL_VERS}.tar.gz"
   echo "% cd cmake-${FULL_VERS}"
-  cd "cmake-${FULL_VERS}" || Die "Unable to enter source directory"
+  cd "cmake-${FULL_VERS}" || Report_fatal "Unable to enter source directory"
 fi
 
 Report_info "Building cmake"
-mkdir cmake-build || Die "Unable to create build directory"
-cd cmake-build || Die "Unable to enter build directory"
-../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Die "Failed to bootstrap"
+mkdir cmake-build || Report_fatal "Unable to create build directory"
+cd cmake-build || Report_fatal "Unable to enter build directory"
+../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Report_fatal "Failed to bootstrap"
 echo "% make -j${NPROC}"
-make -j"${NPROC}" || Die "Failed to make"
+make -j"${NPROC}" || Report_fatal "Failed to make"
 Report_info "Installing  cmake"
 echo "% make install"
 make install
 
-cd "${SRC}" || Die "Unable to enter source directory"
+cd "${SRC}" || Report_fatal "Unable to enter source directory"
 if [[ "${CLEAN}" == 1 ]]; then
   Report_info "Clean up"
   rm -fr cmake*
 fi
 
-cd || Die "Unable to return to home"
+cd || Report_fatal "Unable to return to home"
 cmake --version
 
 Report_info "Finished installing cmake"
