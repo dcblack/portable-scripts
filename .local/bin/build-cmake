@@ -27,7 +27,7 @@
 
 SCRIPT="$(dirname "$0")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
-  # shellcheck source=utils.bash
+  # shellcheck disable=SC1090
   source "${SCRIPT}" "$0"
 else
   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
@@ -109,9 +109,10 @@ Report_info "Setup source directory"
 if [[ -n ${SRC} && -d "${SRC}" ]]; then
   echo "Using SRC=${SRC}"
 fi
+CWD="$(pwd)"
 if [[ -v APPS ]]; then
   SRC="${APPS}/src"
-elif [[ "${HOME}" == "$(pwd)" ]]; then
+elif [[ "${HOME}" == "${CWD}" ]]; then
   SRC="${HOME}/.local/src"
 else
   SRC="$(pwd)/src"
@@ -178,7 +179,7 @@ else
 fi
 
 Report_info "Building cmake"
-mkdir cmake-build || Report_fatal "Unable to create build directory"
+mkdir -p cmake-build || Report_fatal "Unable to create build directory"
 cd cmake-build || Report_fatal "Unable to enter build directory"
 ../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Report_fatal "Failed to bootstrap"
 echo "% make -j${NPROC}"
