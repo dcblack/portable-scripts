@@ -40,8 +40,8 @@ DEBUG=0
 NPROC=4 # Cores to use when building
 # Following for the non-git approach where you need to specify the version
 MAJVERS=3
-MINVERS=20
-DOTVERS=1
+MINVERS=22
+DOTVERS=0
 if [[ "${TYPE}" == "" ]]; then
   TYPE=-wget # use -git or -wget or -curl
 fi
@@ -161,7 +161,7 @@ else
 ###############################################################################
   FULL_VERS=${MAJVERS}.${MINVERS}.${DOTVERS}
   CMAKE_TARBALL="cmake-${FULL_VERS}.tar.gz"
-  URL="https://cmake.org/files/LatestRelease/${CMAKE_TARBALL}"
+  URL="https://cmake.org/files/v${MAJVERS}.${MINVERS}/${CMAKE_TARBALL}"
   echo "Fetching cmake"
   # Assumed to be under latest; otherwise, use v$MAJOR.$MINOR
   if [[ "${TYPE}" == "-wget" ]]; then
@@ -181,7 +181,8 @@ fi
 Report_info "Building cmake"
 mkdir -p cmake-build || Report_fatal "Unable to create build directory"
 cd cmake-build || Report_fatal "Unable to enter build directory"
-../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Report_fatal "Failed to bootstrap"
+#../bootstrap --qt-gui --sphinx-man --prefix="${CMAKE_INSTALL_PREFIX}" || Report_fatal "Failed to bootstrap"
+../bootstrap --prefix="${CMAKE_INSTALL_PREFIX}" || Report_fatal "Failed to bootstrap"
 echo "% make -j${NPROC}"
 make -j"${NPROC}" || Report_fatal "Failed to make"
 Report_info "Installing  cmake"
