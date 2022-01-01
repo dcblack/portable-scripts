@@ -38,6 +38,13 @@ for SCRIPT_NAME in bash_debug bash_functions bash_env; do
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
+  SCRIPT_PATH="${HOME}/.${SCRIPT_NAME}-local"
+  if [[ -x "${SCRIPT_PATH}" ]]; then
+    # shellcheck disable=SC2154
+    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    # shellcheck disable=SC1090
+    source "${SCRIPT_PATH}"
+  fi
 done
 
 # enable color support of ls and also add handy aliases
