@@ -140,7 +140,7 @@ function Git_setup() {
   # Useful aliases
   git config --global alias.changes  'status -s -uno'
   git config --global alias.changed  'ls-files -m'
-  git config --glogal alias.missed   'ls-files -o --exclude-standard'
+  git config --global alias.missed   'ls-files -o --exclude-standard'
   git config --global alias.tags     'tag -l'
   git config --global alias.unstage  'reset HEAD'
   git config --global alias.untrack  'rm --cached'
