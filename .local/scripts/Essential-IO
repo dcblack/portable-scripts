@@ -33,7 +33,7 @@ A collection of useful functions for output in bash/zsh.
 | Rows                          | Display the number rows in the current terminal
 | Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
 | ShowVars VARLIST              | Echo values of variables
-| Summary PROG ["_MESSAGE_"]    | Echo a report summary of errors and warnings
+| Summary TARGET ["_MESSAGE_"]  | Echo a report summary of errors and warnings
 | Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
 | Warnings                      | Display number of errors
 | _do _COMMAND_                 | Displays and executes a command
@@ -473,8 +473,13 @@ function Warnings()
 
 function Summary()
 {
-  Assert $# -gt 0
-  Echo -n "${CMAG}Execution summary for ${1}:"
+  if [[ $# == 0 ]]; then
+    Report_error "Summary must be called with at least one argument"
+    return 1
+  fi
+  local TARGET
+  TARGET="${1}"
+  Echo -n "${CMAG}Execution summary for ${TARGET}:"
   shift
   if [[ "$(Warnings||true)" == 0 ]]; then
     Echo -n " ${CGRN}No warnings"
