@@ -31,6 +31,7 @@ source "${LOCAL}/scripts/lx"
 source "${LOCAL}/scripts/lns"
 source "${LOCAL}/scripts/h"
 source "${LOCAL}/scripts/show-colors"
+source "${LOCAL}/scripts/Tcpip"
 
 function use-cmake() {
   source "${LEADER}/.local/bin/use-cmake"
