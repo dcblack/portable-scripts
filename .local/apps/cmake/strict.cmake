@@ -3,5 +3,5 @@ if (MSVC)
     add_compile_options( /W4 )
 else()
     # lots of warnings
-    add_compile_options( -g -Wall -Wextra -pedantic )
+    add_compile_options( -Wall -Wextra -pedantic )
 endif()
