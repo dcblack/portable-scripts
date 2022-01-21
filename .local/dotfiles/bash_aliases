@@ -87,7 +87,7 @@ alias vienv='"${VI}"   -f "$(dotfile bashenv)";        source "$(dotfile bashenv
 alias vifuncs='"${VI}" -f "$(dotfile bash_functions)"; source "${HOME}"/.bash_functions'
 alias .alias='source "$(dotfile bash_aliases)"'
 alias .bash='source  "$(dotfile bashrc)"'
-alias .env='source   "$(dotfile bashenv)"'
+alias .env='source   "$(dotfile bash_env)"'
 alias .funcs='source "$(dotfile bash_functions)"'
 alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
 alias funcs='declare -F|perl -pe "s/declare -f//;"|fmt'
