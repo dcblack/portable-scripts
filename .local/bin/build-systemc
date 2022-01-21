@@ -69,7 +69,7 @@ GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 Report_info -grn "Compiling ${TOOL_NAME}"
 # shellcheck disable=SC2119,SC2312
 Generate | Log
-_do cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR}"
+_do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
 _do make
 
 if [[ -z "${NOINSTALL+x}" ]]; then
@@ -79,7 +79,7 @@ if [[ -z "${NOINSTALL+x}" ]]; then
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
     Report_info -red "Clean up"
-    cd "${SRC}" || Die "Unable to enter source directory"
+    cd "${SRC}" || Report_fatal "Unable to enter source directory"
     # shellcheck disable=SC2312
     rm -fr "${TOOL_NAME}"* | Log
   fi
