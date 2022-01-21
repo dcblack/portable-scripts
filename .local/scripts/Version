@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+
+function Version()
+{
+  if [[ $# == 0 ]]; then
+    echo "Essential-IO version ${Essential_IO_VERSION}"
+  else
+    Warn "Not yet implemented for general scripts"
+    local script vers
+    while [[ $# != 0 ]]; do
+      shift   
+    done
+  fi
+}
+
