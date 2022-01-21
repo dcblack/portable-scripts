@@ -16,9 +16,9 @@ function portable-env() {
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
   PERL5LIB="$(Realpath "${PSCR}/lib")"
-  TEMPLATEPATH="$(Realpath "${HOME}/templates")"
-  for f in "${APPS}/sc-templates" "${HOME}/templates"; do
-    Append_path TEMPLATE_PATH "${f}"
+  TEMPLATEPATH="$(Realpath "${HOME}/TEMPLATES")"
+  for f in "${APPS}/sc-templates" "${HOME}/TEMPLATES"; do
+    Append_path TEMPLATEPATH "${f}"
   done
 
   Unique_path PATH
