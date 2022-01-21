@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+function Read()
+{
+  export REPLY SHELL
+  local PROMPT
+  PROMPT="$*"
+  if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
+    PROMPT="${PROMPT}?"
+  fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    read -r "REPLY?${PROMPT} "
+  else
+    read -r -p "${PROMPT} "
+  fi
+}
