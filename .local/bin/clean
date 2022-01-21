@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SYNTAX="SYNTAX: clean --[exe|logs|build|most|all] [DIRLIST]"
+SYNTAX="SYNTAX: clean [-n][-q|-v] --[exe|logs|build|most|all] [DIRLIST]"
 
 function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
@@ -59,7 +59,7 @@ YMD="$(date +%Y%m%d)"
 OLD_LOGS="$(echo /tmp/clean_log.*)"
 NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
 for DIR in "${DIRS[@]}"; do
-  test -s "${V}" && echo "Removing objects and dependencies"
+  test -s "${V}" && echo "Remove objects and dependencies under ${DIR}"
   find "${DIR}" -name '*.[doP]' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   find "${DIR}" -path "*/compile-${YMD}*.sh" -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   if   [[ "${OPTS}" =~ .*L.* ]]; then
