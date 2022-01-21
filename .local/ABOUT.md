@@ -5,7 +5,9 @@ Quick install
 -------------
 
 ```bash
-. portable-scripts/setup
+cd SOMEWHERE_SUITABLE
+git clone https://github.com/dcblack/portable-scripts.git
+source portable-scripts/setup
 ```
 
 Description
