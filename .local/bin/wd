@@ -221,11 +221,7 @@ function rwd() # rwd_func
     if [[ ${wd_force} == false ]]; then
       while true; do
         REPLY="?"
-        if [[ "${SHELL}" == /bin/zsh ]]; then
-          read -r "REPLY?Confirm removal of wd-${wd_set} -> ${wd_rdir} (y|n) "
-        else
-          read -r -p "Confirm removal of wd-${wd_set} -> ${wd_rdir} (y|n) "
-        fi
+        Read "Confirm removal of wd-${wd_set} -> ${wd_rdir} (y|n):"
         case "${REPLY}" in
           y|yes) REPLY="y" ; break ;;
           n|no)  REPLY="n" ; break ;;
@@ -235,8 +231,11 @@ function rwd() # rwd_func
       done
     fi
     if [[ "${REPLY}" == "y" ]]; then
-      Report_info -n "Removing "
-      rm -v "${wd_favs}/wd-${wd_set}"
+      if rm "${wd_favs}/wd-${wd_set}"; then
+        Report_info  "Removed ${wd_favs}/wd-${wd_set}"
+      else
+        Report_error "Unable to remove ${wd_favs}/wd-${wd_set}"
+      fi
     else
       Report_info "Ignored removal of ${wd_favs}/wd-${wd_set}"
     fi
