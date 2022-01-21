@@ -26,9 +26,9 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | Comment "_MESSAGE_"        | Does nothing but provide NOP comment
 | Debug "_MESSAGE_"          | Echo a debug message
 | Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
-| Die "_MESSAGE_"            | Echo a fatal message and exit with fail
-| Error "_MESSAGE_"          | Echo an error message
-| Warn "_MESSAGE_"           | Echo a warning message
+| Report_fatal "_MESSAGE_"   | Echo a fatal message and exit with fail
+| Report_error "_MESSAGE_"   | Echo an error message
+| Report_warning "_MESSAGE_" | Echo a warning message
 | Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
 | GetBuildOpts "$0" "$@"     | Parses standard _build_ command-line inputs
 | ShowBuildOpts              | Display options variables
@@ -73,6 +73,7 @@ export CXX
 export DEBUG
 export ERRORS
 export GENERATOR
+export GITROOT_DIR
 export LOGDIR
 export LOGFILE
 export NOTREALLY
@@ -139,7 +140,7 @@ function Needs() {
         P=""
       fi
     done
-    if [[ -z "${P}" ]]; then Error "Missing ${X}"; fi
+    if [[ -z "${P}" ]]; then Report_error "Missing ${X}"; fi
   done
   if [[ "${I}" == "${J}" ]]; then
     return 0
@@ -166,6 +167,7 @@ function ShowBuildOpts() {
     CC \
     CXX \
     DEBUG \
+    GITROOT_DIR \
     LOGDIR \
     LOGFILE \
     NOTREALLY \
@@ -266,6 +268,7 @@ function GetBuildOpts() {
 #| - $CXX
 #| - $DEBUG
 #| - $ERRORS integer
+#| - $GITROOT_DIR
 #| - $LOGDIR
 #| - $LOGFILE
 #| - $NOTREALLY
@@ -302,16 +305,19 @@ function GetBuildOpts() {
   #-------------------------------------------------------------------------------
   CMAKE_CXX_STANDARD=17 # <---------- VERSION OF C++ YOUR COMPILER SUPPORTS
   if [[ "${CXX}" == "" ]]; then
-    if [[ "$(command -v clang++)" != "" ]]; then
+    if [[ "$(command -v clang++||true)" != "" ]]; then
       CXX=clang++
       CC=clang
-    elif [[ "$(command -v g++)" != "" ]]; then
+    elif [[ "$(command -v g++||true)" != "" ]]; then
       CXX=g++
       CC=gcc
     else
-      Die "Unable to determine C++ compiler"
+      Report_fatal "Unable to determine C++ compiler"
     fi
   fi
+  GITROOT_DIR="Unknown"
+  git rev-parse --show-toplevel 2>&/dev/null 1>&/dev/null && \
+  GITROOT_DIR="$(git rev-parse --show-toplevel)"
 
   #-------------------------------------------------------------------------------
   # Scan command-line for options
@@ -341,7 +347,7 @@ function GetBuildOpts() {
         BUILD_DIR="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -397,7 +403,7 @@ function GetBuildOpts() {
         GENERATOR="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -408,7 +414,7 @@ function GetBuildOpts() {
         TOOL_INFO="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -419,7 +425,7 @@ function GetBuildOpts() {
         APPS="$2"
         shift
       else
-        Die "Need directory argument for $1"
+        Report_fatal "Need directory argument for $1"
       fi
       shift
       ;;
@@ -435,9 +441,20 @@ function GetBuildOpts() {
         CMAKE_INSTALL_PREFIX="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift
+      ;;
+    --root-dir=*|-rd)
+      if [[ "$1" != '-rd' ]]; then
+        GITROOT_DIR="${1//*=}"
+      elif [[ $# -gt 1 && -d "$2" ]]; then
+        GITROOT_DIR="$2"
+        shift
+      else
+        Report_fatal "Need argument for $1"
+      fi
+      shift;
       ;;
     -s|--src=*)
       if [[ "$1" != '-s' ]]; then
@@ -446,7 +463,7 @@ function GetBuildOpts() {
         SRC="$2"
         shift
       else
-        Die "Need directory argument for $1"
+        Report_fatal "Need directory argument for $1"
       fi
       shift
       ;;
@@ -461,7 +478,7 @@ function GetBuildOpts() {
         SYSTEMC_HOME="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -472,7 +489,7 @@ function GetBuildOpts() {
         SUFFIX="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -483,7 +500,7 @@ function GetBuildOpts() {
         TOOL_NAME="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -502,7 +519,7 @@ function GetBuildOpts() {
         TOOL_VERS="$2"
         shift
       else
-        Die "Need argument for $1"
+        Report_fatal "Need argument for $1"
       fi
       shift;
       ;;
@@ -536,12 +553,12 @@ function GetBuildOpts() {
   if [[ "${GENERATOR}" =~ (cmake|autotools) ]]; then
     Comment all is ok
   else
-    Error "GENERATOR must be one of 'cmake' or 'autotools'"
+    Report_error "GENERATOR must be one of 'cmake' or 'autotools'"
   fi
 
   #-------------------------------------------------------------------------------
   # Setup apps directory
-  mkdir -p "${APPS}" || Die "Failed to find/create ${APPS} directory"
+  mkdir -p "${APPS}" || Report_fatal "Failed to find/create ${APPS} directory"
 
   #-------------------------------------------------------------------------------
   Report_info "Setup source directory"
@@ -550,15 +567,15 @@ function GetBuildOpts() {
       SRC="${APPS}/src"
     elif [[ "${APPS}" != '' ]]; then
       SRC="$(dirname "${APPS}")/src"
-    elif [[ "${HOME}" == "$(pwd)" ]]; then
+    elif [[ "${HOME}" == "$(pwd||true)" ]]; then
       SRC="${HOME}/.local/src"
     else
       SRC="$(pwd)/src"
     fi
   fi
-  mkdir -p "${SRC}" || Die "Failed to find/create ${SRC} directory"
+  mkdir -p "${SRC}" || Report_fatal "Failed to find/create ${SRC} directory"
 
-  cd "${SRC}" || Die "Unable to change into source directory"
+  cd "${SRC}" || Report_fatal "Unable to change into source directory"
 
   if [[ -n "${DEBUG}" && "${DEBUG}" != 0 ]]; then
     ShowBuildOpts
@@ -590,8 +607,8 @@ function SetupLogdir() {
 # Make directory and enter
 function Create_and_Cd() {
   Assert $# = 1
-  _do mkdir -p "${1}" || Die "Unable to create ${1}"
-  _do cd "${1}" || Die "Unable to enter ${1} directory"
+  _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}"
+  _do cd "${1}" || Report_fatal "Unable to enter ${1} directory"
 }
 
 # Download and enter directory
@@ -608,9 +625,9 @@ function GetSource_and_Cd() {
       _do rsync -a "${1}/" "${1}-save/"
       _do rm -fr "${1}" 
     fi
-    _do git clone "${2}" "${1}" || Die "Unable to clone into ${1}"
+    _do git clone "${2}" "${1}" || Report_fatal "Unable to clone into ${1}"
   fi
-  cd "${1}" || Die "Unable to enter ${1}"
+  cd "${1}" || Report_fatal "Unable to enter ${1}"
   if [[ -n "${TOOL_VERS}" ]]; then
     _do git  checkout "${TOOL_VERS}"
   fi
@@ -629,8 +646,8 @@ function Generate() {
   case "${GENERATOR}" in
     cmake)
       _do rm -fr "${BUILD_DIR}"
-      _do mkdir -p "${BUILD_DIR}" || Die "Unable to create build directory"
-      _do cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR} directory"
+      _do mkdir -p "${BUILD_DIR}" || Report_fatal "Unable to create build directory"
+      _do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR} directory"
       _do cmake\
           -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
           -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
@@ -639,12 +656,12 @@ function Generate() {
     autotools)
       reconfigure
       _do mkdir -p "${BUILD_DIR}"
-      _do cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR}"
+      _do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
       _do env CXXFLAGS="-std=c++${CMAKE_CXX_STANDARD} -I/opt/local/include -I${SYSTEMC_HOME}/include"\
           ../configure --prefix="${SYSTEMC_HOME}"
       ;;
     *)
-      Error "Unknown generator '${GENERATOR}'"
+      Report_error "Unknown generator '${GENERATOR}'"
       ;;
   esac
 }
@@ -652,7 +669,7 @@ function Generate() {
 function Cleanup() {
   Assert $# = 1
   if [[ -n "${CLEANUP}" && "${CLEANUP}" == 1 ]]; then
-    cd "${SRC}" || Die "Unable to enter source directory"
+    cd "${SRC}" || Report_fatal "Unable to enter source directory"
     rm -fr "${1}"
   fi
 }
