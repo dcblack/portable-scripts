@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+export SHELL
+SHELL=/bin/bash
+
+# Setup
+#------------------------------------------------------------------------------
+SRC_DIR="."
+BLD_DIR="build"
+INSTALL_DIR="share"
+EXERCISE="$(pwd)"
+SCRIPTS="${HOME}/.local/scripts"
+APPS="${HOME}/.local/apps"
+GITROOT_DIR="$(git rev-parse --show-toplevel)"
+CMAKE_MODULE_PATH="${GITROOT_DIR}/cmake;${APPS}/cmake"
+CLEAN=0
+INSTALL=0
+TEST_OPTS=
+
+# shellcheck disable=SC1091
+source "${SCRIPTS}/Essential-IO"
+Logfile build.log
+
+#------------------------------------------------------------------------------
+# Scan for command-line options
+#------------------------------------------------------------------------------
+while [[ $# != 0 ]]; do
+  if   [[ "$1" =~ ^-{1,2}clean$ ]]; then
+    CLEAN=1;
+  elif [[ "$1" =~ ^-{1,2}install$ ]]; then
+    INSTALL=1
+  else
+    TEST_OPTS="${TEST_OPTS} $1"
+  fi
+  shift
+done
+
+#------------------------------------------------------------------------------
+clear
+ruler
+
+#------------------------------------------------------------------------------
+if [[ ${CLEAN} == 1 ]]; then
+  Report_info "Cleaning ${EXERCISE}"
+  _do rm -fr "${BLD_DIR}"
+fi
+
+#------------------------------------------------------------------------------
+Report_info "Configuring ${EXERCISE}"
+_do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_MODULE_PATH="${CMAKE_MODULE_PATH}" || exit
+
+#------------------------------------------------------------------------------
+Report_info "Compiling ${EXERCISE}"
+_do cmake --build build || exit
+
+#------------------------------------------------------------------------------
+Report_info "Running ${EXERCISE}"
+_do ctest --test-dir build ${TEST_OPTS} || exit
+
+#------------------------------------------------------------------------------
+if [[ ${INSTALL} == 1 ]]; then
+  Report_info "Installing ${EXERCISE}"
+  _do cmake --prefix "${INSTALL_DIR}"
+fi
