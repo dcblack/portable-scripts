@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+#
+# Steps to build and install GoogleTest
+TOOL_NAME="googletest"
+TOOL_INFO='Go to 'https://{:TBS:}' for more information.'
+TOOL_SRC="googletest"
+TOOL_URL="https://{:TBS:}"
+TOOL_VERS=2.3.3
+
+export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS
+export SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX
+
+#-------------------------------------------------------------------------------
+# The following is formatted for use with -help
+#|
+#|NAME
+#|----
+#|
+#|  $0 - build and install googletest under externs/ in your project from github source
+#|
+#|SYNOPSIS
+#|--------
+#|
+#|  $0 -help
+#|  $0 [OPTIONS...]
+#|
+#|DESCRIPTION
+#|-----------
+#|
+#|  Downloads, unpacks, builds and installs the latest or specified version of GoogleTest.
+#|
+#|OPTIONS
+#|-------
+#|  --cc=C_COMPILER | CC=C_COMPILER
+#|  --clang
+#|  --cxx=CPP_COMPILER | CXX=CPP_COMPILER
+#|  --debug # developer use
+#|  --gcc
+#|  --install=DIR | -i DIR
+#|  --src=DIR | -s DIR
+#|  --std=N | -std=N
+#|
+
+export SHELL
+SHELL=bash
+
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck disable=SC1090
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+SetupLogdir "$0"
+
+GetBuildOpts "$0" "$@"
+CMAKE_INSTALL_PREFIX="${GITROOT_DIR}/externs"
+ConfirmBuildOpts || exit
+
+Create_and_Cd "${SRC}"
+Report_info -grn "Obtaining ${TOOL_NAME} source"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
+
+Report_info -grn "Compiling ${TOOL_NAME}"
+# shellcheck disable=SC2119,SC2312
+Generate | Log
+_do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
+_do make
+
+if [[ -z "${NOINSTALL+x}" ]]; then
+  Report_info -grn "Installing ${TOOL_NAME} to final location"
+  _do make install
+
+  # Optional clean up
+  if [[ "${CLEAN}" == 1 ]]; then
+    Report_info -red "Clean up"
+    cd "${SRC}" || Report_fatal "Unable to enter source directory"
+    # shellcheck disable=SC2312
+    rm -fr "${TOOL_NAME}"* | Log
+  fi
+
+  Report_info -grn "Finished installation of ${TOOL_NAME} into ${CMAKE_INSTALL_PREFIX}"
+else
+  Report_info -mag "Stopped shy installing ${TOOL_NAME}"
+fi
+
+# vim:nospell
