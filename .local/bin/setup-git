@@ -13,6 +13,22 @@ else
 fi
 
 #-------------------------------------------------------------------------------
+function Read()
+{
+  export REPLY SHELL
+  local PROMPT
+  PROMPT="$*"
+  if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
+    PROMPT="${PROMPT}?"
+  fi
+  if [[ "${SHELL}" == /bin/zsh ]]; then
+    read -r "REPLY?${PROMPT} "
+  else
+    read -r -p "${PROMPT} "
+  fi
+}
+
+#-------------------------------------------------------------------------------
 function Valid_name() {
   if [[ "${REPLY}" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
     return 0;
@@ -23,9 +39,10 @@ function Valid_name() {
 
 #-------------------------------------------------------------------------------
 function Get_name() {
+  local YOURNAME
   YOURNAME=""
   while [[ "${YOURNAME}" == "" ]]; do
-    read -r -p 'Your full name: '
+    Read 'Your full name: '
     if Valid_name "${REPLY}"; then
       YOURNAME="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
@@ -48,7 +65,7 @@ function Valid_email() {
 function Get_email() {
   YOURMAIL=""
   while [[ "${YOURMAIL}" == "" ]]; do
-    read -r -p 'Your email address: '
+    Read 'Your email address: '
     if Valid_email "${REPLY}"; then
       YOURMAIL="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
@@ -72,7 +89,7 @@ function Choose() {
   ANS=""
   
   while [[ "${ANS}" == "" ]]; do
-    read -r -p "${question}\nChoose action: (${choices}): "
+    Read "${question}\nChoose action: (${choices}): "
     if [[ "${REPLY}" =~ ${choices} ]]; then
       ANS="${REPLY}"
     fi
@@ -116,19 +133,23 @@ function Git_setup() {
     shift
   done
 
-  if test "${FORCE}" -eq 1 -o -z "$(git config --global user.name)"; then
+  local GIT_USERNAME
+  GIT_USERNAME="$(git config --global user.name)"
+  if [[ ${FORCE} == 1 || -z "${GIT_USER_NAME}" ]]; then
     Get_name
     git config --global user.name "${YOURNAME}"
     printf "Setup user.name=%s\n" "${YOURNAME}"
   else
-    printf "Leaving user.name=%s\n" "$(git config --global user.name)"
+    printf "Leaving user.name=%s\n" "${GIT_USERNAME}"
   fi
-  if test "${FORCE}" -eq 1 -o -z "$(git config --global user.email)"; then
+  local GIT_EMAIL
+  GIT_EMAIL="$(git config --global user.email)"
+  if [[ ${FORCE} == 1 || -z "${GIT_EMAIL}" ]]; then
     Get_email
     git config --global user.email "${YOURMAIL}"
     printf "Setup user.email=%s\n" "${YOURMAIL}"
   else
-    printf "Leaving user.email=%s\n" "$(git config --global user.email)"
+    printf "Leaving user.email=%s\n" "${GIT_EMAIL}"
   fi
 
   git config --global push.followTags true
