@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Realpath() {
+function Realpath()
+{
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 SCRIPT="$(Realpath "$0")"
@@ -29,8 +30,9 @@ function Read()
 }
 
 #-------------------------------------------------------------------------------
-function Valid_name() {
-  if [[ "${REPLY}" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
+function Valid_name()
+{
+  if [[ "$1" =~ [A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
     return 0;
   else
     return 1;
@@ -38,22 +40,24 @@ function Valid_name() {
 }
 
 #-------------------------------------------------------------------------------
-function Get_name() {
-  local YOURNAME
+function Get_name()
+{
+  export YOURNAME
   YOURNAME=""
   while [[ "${YOURNAME}" == "" ]]; do
     Read 'Your full name: '
     if Valid_name "${REPLY}"; then
       YOURNAME="${REPLY}"
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
-      return
+      return 1
     else
-      Error "Improperly formatted name"
+      Report_warning "Improperly formatted name"
     fi
   done
 }
 
-function Valid_email() {
+function Valid_email()
+{
   if [[ "$1" =~ [-.a-zA-Z0-9]+@[-.a-zA-Z0-9]+[.][a-zA-Z]{3} ]]; then
     return 0;
   else
@@ -62,7 +66,9 @@ function Valid_email() {
 }
 
 #-------------------------------------------------------------------------------
-function Get_email() {
+function Get_email()
+{
+  export YOURMAIL
   YOURMAIL=""
   while [[ "${YOURMAIL}" == "" ]]; do
     Read 'Your email address: '
@@ -71,12 +77,13 @@ function Get_email() {
     elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
       return
     else
-      Error "ERROR: Improperly formatted e-mail address" 1>&2
+      Report_error "ERROR: Improperly formatted e-mail address" 1>&2
     fi
   done
 }
 
-function Choose() {
+function Choose()
+{
   # SYNTAX: Choose "QUESTION" CHOICE1 CHOICE2...
   if [[ $# -lt 3 ]]; then
     echo "Error: Must have a question and at least two choices." 1>&2
@@ -101,7 +108,8 @@ function Choose() {
 #-------------------------------------------------------------------------------
 # Main
 #-------------------------------------------------------------------------------
-function Git_setup() {
+function Git_setup()
+{
   # SYNTAX: Git_setup [OPTIONS]
   # OPTIONS:
   #   --name  NAME
@@ -116,7 +124,7 @@ function Git_setup() {
         YOURNAME="$2";
         shift;
       else
-        Error "Name is not valid. Use 'First Last'"
+        Report_error "Name is not valid. Use 'First Last'"
       fi
     fi
     if [[ "$1" =~ ^-{1,2}e(mail)?$ && $# -gt 1 ]]; then
@@ -124,7 +132,7 @@ function Git_setup() {
         YOURMAIL="$2";
         shift;
       else
-        Error "Email address is not valid. Use 'first@domain'"
+        Report_error "Email address is not valid. Use 'first@domain'"
       fi
     fi
     if [[ "$1" =~ ^-{1,2}f(orce)?$ && $# -gt 1 ]]; then
@@ -136,9 +144,13 @@ function Git_setup() {
   local GIT_USERNAME
   GIT_USERNAME="$(git config --global user.name)"
   if [[ ${FORCE} == 1 || -z "${GIT_USER_NAME}" ]]; then
-    Get_name
-    git config --global user.name "${YOURNAME}"
-    printf "Setup user.name=%s\n" "${YOURNAME}"
+    if Get_name; then
+      git config --global user.name "${YOURNAME}"
+      printf "Setup user.name=%s\n" "${YOURNAME}"
+    else
+      echo "Aborting..."
+      return 1
+    fi
   else
     printf "Leaving user.name=%s\n" "${GIT_USERNAME}"
   fi
