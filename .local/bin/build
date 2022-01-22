@@ -11,10 +11,17 @@ EXERCISE="$(pwd)"
 SCRIPTS="${HOME}/.local/scripts"
 APPS="${HOME}/.local/apps"
 GITROOT_DIR="$(git rev-parse --show-toplevel)"
-CMAKE_MODULE_PATH="${GITROOT_DIR}/cmake;${APPS}/cmake"
 CLEAN=0
 INSTALL=0
+OPTS_SEP=0
+BUILD_OPTS=
 TEST_OPTS=
+CMAKE_MODULE_PATH=
+for CDIR in "${GITROOT_DIR}" "${GITROOT_DIR}/externs/lib" "${APPS}" "${APPS}/lib"; do
+  if [[ -d "${CDIR}/cmake" ]]; then
+    CMAKE_MODULE_PATH="${CMAKE_MODULE_PATH};${CDIR}/cmake"
+  fi
+done
 
 # shellcheck disable=SC1091
 source "${SCRIPTS}/Essential-IO"
@@ -28,6 +35,10 @@ while [[ $# != 0 ]]; do
     CLEAN=1;
   elif [[ "$1" =~ ^-{1,2}install$ ]]; then
     INSTALL=1
+  elif [[ "$1" == "--" ]]; then
+    OPTS_SEP=1
+  elif [[ ${OPTS_SEP} == 0 ]]; then
+    BUILD_OPTS="${BUILD_OPTS} $1"
   else
     TEST_OPTS="${TEST_OPTS} $1"
   fi
@@ -46,14 +57,16 @@ fi
 
 #------------------------------------------------------------------------------
 Report_info "Configuring ${EXERCISE}"
-_do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_MODULE_PATH="${CMAKE_MODULE_PATH}" || exit
+_do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_MODULE_PATH="${CMAKE_MODULE_PATH/;/}" || exit
 
 #------------------------------------------------------------------------------
 Report_info "Compiling ${EXERCISE}"
-_do cmake --build build || exit
+# shellcheck disable=SC2086
+_do cmake --build build ${BUILD_OPTS} || exit
 
 #------------------------------------------------------------------------------
 Report_info "Running ${EXERCISE}"
+# shellcheck disable=SC2086
 _do ctest --test-dir build ${TEST_OPTS} || exit
 
 #------------------------------------------------------------------------------
