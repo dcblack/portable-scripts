@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+Mk () {
+  export GITROOT_DIR USER
+  if [[ "${USER}" == user ]];then
+  fi
+  GITROOT_DIR="$(git rev-parse --show-toplevel)"
+  env DEVELOPER="${USER}@doulos.com" make -f "${GITROOT_DIR}/GNUmakefile" "$@"
+}
