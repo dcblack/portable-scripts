@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+function Confirm()
+{
+  if [[ $# == 0 ]]; then
+    Report_error "Confirm need to have a prompt"
+    return 1
+  fi
+  export SHELL
+  local ANS PROMPT
+  while [[ -z "${ANS}" ]]; do
+    PROMPT="$*"
+    if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
+      PROMPT="${PROMPT}?"
+    fi
+    if [[ "${SHELL}" == /bin/zsh ]]; then
+      read -r "ANS?${PROMPT} "
+    else
+      read -r -p "${PROMPT} " ANS
+    fi
+    case "${ANS}" in
+       y|Y|yes)             return 0;;
+        n|N|no)             return 1;;
+       q|quit|exit|x|abort) return 2;;
+       *) Report_warning "Please answer with any of: y|n|yes|no|quit|abort";;
+    esac
+  done
+}
