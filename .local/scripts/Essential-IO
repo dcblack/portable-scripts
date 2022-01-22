@@ -18,6 +18,7 @@ A collection of useful functions for output in bash/zsh.
 | Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
 | Columns                       | Display the number columns in the current terminal
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
+| Confirm "_PROMPT_"            | Return 0 if yes else return 1
 | Echo [-n] "_MESSAGE_"         | Displays and logs message
 | Errors||true                  | Display number of errors
 | Essential-IO [--help]         | Display version or this help text
@@ -513,6 +514,34 @@ function Read()
   else
     read -r -p "${PROMPT} "
   fi
+}
+
+#-------------------------------------------------------------------------------
+function Confirm()
+{
+  if [[ $# == 0 ]]; then
+    Report_error "Confirm need to have a prompt"
+    return 1
+  fi
+  export SHELL
+  local ANS PROMPT
+  while [[ -z "${ANS}" ]]; do
+    PROMPT="$*"
+    if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
+      PROMPT="${PROMPT}?"
+    fi
+    if [[ "${SHELL}" == /bin/zsh ]]; then
+      read -r "ANS?${PROMPT} "
+    else
+      read -r -p "${PROMPT} " ANS
+    fi
+    case "${ANS}" in
+       y|Y|yes)             return 0;;
+        n|N|no)             return 1;;
+       q|quit|exit|x|abort) return 2;;
+       *) Report_warning "Please answer with any of: y|n|yes|no|quit|abort";;
+    esac
+  done
 }
 
 #-------------------------------------------------------------------------------
