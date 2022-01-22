@@ -1,9 +1,41 @@
 #!/usr/bin/env bash
 
-Mk () {
-  export GITROOT_DIR USER
-  if [[ "${USER}" == user ]];then
+Load Read
+Load Confirm
+
+#-------------------------------------------------------------------------------
+function Mk()
+{
+  export GITROOT_DIR GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+  if [[ "${USER}" == user || -z "${GIT_COMMITTER_NAME}" || -z "${GIT_COMMITTER_EMAIL}" ]];then
+    while [[ -z "${GIT_COMMITTER_NAME}" ]]; do
+      REPLY=""
+      if [[ -z "${REPLY}" ]]; then
+        Read "What's your full name?"
+        if Confirm "Is ${REPLY} correct (y|n)?"; then
+          GIT_COMMITTER_NAME="${REPLY}"
+        else
+          REPLY=""
+        fi
+      fi
+    done
+    while [[ -z "${GIT_COMMITTER_EMAIL}" ]]; do
+      REPLY=""
+      if [[ -z "${REPLY}" ]]; then
+        Read "What's your Doulos e-mail?"
+        if [[ "${REPLY}" =~ ^[A-Za-z]+[-A-Za-z0-9_.]+[A-Za-z0-9][@]doulos[.]com$ ]]; then
+          if Confirm "Is ${REPLY} correct (y|n)?"; then
+            GIT_COMMITTER_EMAIL="${REPLY}"
+          else
+            echo "Please specify a valid e-mail address"
+            REPLY=""
+          fi
+        else
+          REPLY=""
+        fi
+      fi
+    done
   fi
   GITROOT_DIR="$(git rev-parse --show-toplevel)"
-  env DEVELOPER="${USER}@doulos.com" make -f "${GITROOT_DIR}/GNUmakefile" "$@"
+  env DEVELOPER="${GIT_COMMITTER_EMAIL}" make -f "${GITROOT_DIR}/GNUmakefile" "$@"
 }
