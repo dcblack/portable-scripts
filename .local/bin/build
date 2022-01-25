@@ -12,6 +12,17 @@ SYNOPSIS
 
   $0 [-clean][-run|-test] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
 
+
+DESCRIPTION
+-----------
+Simple way to compile and run projects using cmake if we assume you have a
+proper CMakeLists.txt setup. Essentially all this does is:
+
+  clean -a # OPTIONAL
+  cmake -B build
+  cmake --build
+  ctest --test-dir build # OPTIONAL
+
 "
 
 # Setup
@@ -44,6 +55,11 @@ fi
 source "${SCRIPTS}/Essential-IO"
 Logfile build.log
 Log "% $0 $*"
+
+if [[ ! -r CMakeLists.txt ]]; then
+  Report_error "Missing CMakeLists.txt!"
+  exit 1
+fi
 
 #------------------------------------------------------------------------------
 # Scan for command-line options
