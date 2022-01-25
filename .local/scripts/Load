@@ -24,7 +24,7 @@ function Load() {
   fi
   SCRIPT="$(Firstreal "$(FindScript "$1")")"
   if [[ -z "${SCRIPT}" ]]; then
-    Error "Unable to find suitable script '$1'"
+    Report_error "Unable to find suitable script '$1'"
     return 1
   fi
   local prev_NOAUTORUN STATUS
