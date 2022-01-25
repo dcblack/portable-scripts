@@ -16,33 +16,14 @@ project(      {:NAME:}
   DESCRIPTION "{:DESCRIPTION:}"
   LANGUAGES   CXX
   )
-
-set( default_build_type "Debug" )
-set( CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to build all targets." )
-set( CMAKE_CXX_STANDARD_REQUIRED 17 CACHE BOOL "The with CMAKE_CXX_STANDARD selected C++ standard is a requirement." )
-include( $ENV{SCC_APPS}/cmake/SystemC.cmake )
-include( $ENV{SCC_APPS}/cmake/strict.cmake )
-include( $ENV{SCC_APPS}/cmake/BuildTypes.cmake )
+set( CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};$ENV{CMAKE_MODULE_PATH}" )
+include( project_defaults )
+include( systemc_defaults ) #< could move to project defaults
 
 # Packages
 find_package( fmt REQUIRED )
 #find_package( yaml-cpp CONFIG REQUIRED )
 #find_package( Boost REQUIRED filesystem )
-
-add_compile_definitions( SC_INCLUDE_FX SC_INCLUDE_DYNAMIC_PROCESSES )
-
-# add a target to generate API documentation with Doxygen
-find_package( Doxygen REQUIRED dot )
-if( DOXYGEN_FOUND )
-  set( DOXYGEN_OUTPUT_DIRECTORY ../doc )
-  set( DOXYGEN_IMAGE_PATH .. )
-  set( DOXYGEN_EXTRACT_ALL yes )
-  set( DOXYGEN_EXTRACT_PRIVATE yes )
-  set( DOXYGEN_EXTRACT_STATIC yes )
-  set( DOXYGEN_TOC_INCLUDE_HEADINGS 1 )
-  set( DOXYGEN_EXCLUDE_PATTERNS */build*/* )
-  doxygen_add_docs( docs )
-endif( DOXYGEN_FOUND )
 
 add_executable( {:lc:NAME:} )
 target_include_directories( {:lc:NAME:} PRIVATE . )
