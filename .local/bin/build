@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 export SHELL
 SHELL=/bin/bash
+SYNTAX="
+NAME
+----
+
+$0 - use cmake to build and optionally run or test
+
+SYNOPSIS
+--------
+
+  $0 [-clean][-run|-test] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
+
+"
 
 # Setup
 #------------------------------------------------------------------------------
@@ -13,6 +25,7 @@ APPS="${HOME}/.local/apps"
 GITROOT_DIR="$(git rev-parse --show-toplevel)"
 CLEAN=0
 INSTALL=0
+ACTION=
 OPTS_SEP=0
 BUILD_OPTS=
 TEST_OPTS=
@@ -22,20 +35,31 @@ for CDIR in "${GITROOT_DIR}" "${GITROOT_DIR}/externs/lib" "${APPS}" "${APPS}/lib
     CMAKE_MODULE_PATH="${CMAKE_MODULE_PATH};${CDIR}/cmake"
   fi
 done
+EXECUTABLE="$(basename "${EXERCISE}")"
+if [[ "${EXERCISE}" =~ (answer|solution) ]]; then
+  EXECUTABLE="${EXECUTABLE}-ans"
+fi
 
 # shellcheck disable=SC1091
 source "${SCRIPTS}/Essential-IO"
 Logfile build.log
+Log "% $0 $*"
 
 #------------------------------------------------------------------------------
 # Scan for command-line options
 #------------------------------------------------------------------------------
 while [[ $# != 0 ]]; do
-  if   [[ "$1" =~ ^-{1,2}clean$ ]]; then
+  if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    Echo "${SYNTAX}"; exit
+  elif [[ "$1" =~ ^-{1,2}clean$ ]]; then
     CLEAN=1;
   elif [[ "$1" =~ ^-{1,2}install$ ]]; then
     INSTALL=1
-  elif [[ "$1" == "--" ]]; then
+  elif [[ "$1" =~ ^-{1,2}test$ ]]; then
+    ACTION="test"
+  elif [[ "$1" =~ ^-{1,2}run$ ]]; then
+    ACTION="run"
+  elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
     OPTS_SEP=1
   elif [[ ${OPTS_SEP} == 0 ]]; then
     BUILD_OPTS="${BUILD_OPTS} $1"
@@ -46,9 +70,13 @@ while [[ $# != 0 ]]; do
 done
 
 #------------------------------------------------------------------------------
+# Clear screen and add horizontal line to help if visually scrolling backward
+#------------------------------------------------------------------------------
 clear
 ruler
 
+#------------------------------------------------------------------------------
+# Optionally start with a clean slate
 #------------------------------------------------------------------------------
 if [[ ${CLEAN} == 1 ]]; then
   Report_info "Cleaning ${EXERCISE}"
@@ -62,12 +90,19 @@ _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_MODULE_PATH="${CMAKE_MODULE_PA
 #------------------------------------------------------------------------------
 Report_info "Compiling ${EXERCISE}"
 # shellcheck disable=SC2086
-_do cmake --build build ${BUILD_OPTS} || exit
+_do cmake --build "${BLD_DIR}" ${BUILD_OPTS} || exit
 
 #------------------------------------------------------------------------------
 Report_info "Running ${EXERCISE}"
-# shellcheck disable=SC2086
-_do ctest --test-dir build ${TEST_OPTS} || exit
+if [[ "${ACTION}" == run ]]; then
+  # shellcheck disable=SC2086
+  _do "${BLD_DIR}/${EXECUTABLE}" ${TEST_OPTS} || exit
+elif [[ "${ACTION}" == test ]]; then
+  # shellcheck disable=SC2086
+  _do ctest --test-dir "${BLD_DIR}" ${TEST_OPTS} || exit
+else
+  Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time add -run."
+fi
 
 #------------------------------------------------------------------------------
 if [[ ${INSTALL} == 1 ]]; then
