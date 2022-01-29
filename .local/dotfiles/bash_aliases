@@ -34,14 +34,14 @@ for SCRIPT_NAME in bash_debug bash_functions bash_env; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
-    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
   SCRIPT_PATH="${HOME}/.${SCRIPT_NAME}-local"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
-    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
@@ -114,7 +114,7 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 for SCRIPT_NAME in bash_paths; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
-    if [[ "${BASH_DEBUG}" == 1 ]]; then REPORT_DEBUG "source ${SCRIPT_PATH}"; fi
+    if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
