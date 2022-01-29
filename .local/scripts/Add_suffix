@@ -3,7 +3,7 @@
 function Add_suffix()
 {
   #| Usage "$# -gt 1" Add_suffix PREFIX LIST
-  if [[ $# -lt 2 ]]; then Error "$0 needs at least two arguments"; return; fi
+  if [[ $# -lt 2 ]]; then Report_error "$0 needs at least two arguments"; return; fi
   if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
