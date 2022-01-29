@@ -7,7 +7,7 @@ export FINDSCRIPT_COUNT SCRIPTDIRS
 function FindScript()
 {
   if [[ $# == 0 ]]; then
-    Error "Syntax: FindScript SCRIPTNAME(S)"
+    Report_error "Syntax: FindScript SCRIPTNAME(S)"
     return 1
   fi
   export FINDSCRIPT_COUNT
