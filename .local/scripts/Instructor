@@ -17,7 +17,7 @@ function Instructor()
       EXPIRATION="$(date -d '1:00 next Saturday' +%s)"
       break
     else
-      Error "This is for Doulos instructors only. If you are an instructor, please use the Doulos e-mail address."
+      Report_error "This is for Doulos instructors only. If you are an instructor, please use the Doulos e-mail address."
     fi
     (( --count ))
   done
