@@ -46,7 +46,7 @@ TEXT
   elif [[ $# == 0 ]]; then
     printf "$0 version %s\n" "${Essential_IO_VERSION}"
   else
-    Error "Unexpected syntax"
+    Report_error "Unexpected syntax"
     Usage -h "Essential-IO [--help]"
   fi
 }
@@ -293,10 +293,11 @@ function _do()
   #@ Echo and then execute arguments as a command
   #| _do COMMAND [ARGS]
   local NX
+  export NOTREALLY
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
-    Echo "${CBLU}${NX}%${NONE} $*"
+    Echo "$*"
     return;
   else
     Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
@@ -310,26 +311,41 @@ function _do()
 #-------------------------------------------------------------------------------
 function Report_info()
 {
-  #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
-  #| Report_info [-n][-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
+#@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
+  local SYNTAX
+  SYNTAX="
+NAME
+----
+  Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
+
+SYNOPSIS
+--------
+  Report_info [-n][-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
+
+"
   if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
   fi
   local PRE TAG EOL
   PRE="${NONE}"
-  TAG="Info: "
   EOL=""
+  TAG="Info: "
+  if [[ -n "${NOTREALLY}" ]]; then
+    TAG="# Info: ";
+  fi
   while [[ "$1" =~ ^-[[:alpha:]]{1,3}$ ]]; do
     case "$1" in
+      -h)   Echo "${SYNTAX}"; return ;;
       -n)   EOL="-n"      ; shift ;;
-      -pre) PRE="${2}"    ; shift  ; shift ;;
-      -cyn) PRE="${CCYN}" ; shift ;;
-      -red) PRE="${CRED}" ; shift ;;
-      -grn) PRE="${CGRN}" ; shift ;;
-      -ylw) PRE="${CYLW}" ; shift ;;
-      -blu) PRE="${CBLU}" ; shift ;;
-      -mag) PRE="${CMAG}" ; shift ;;
-      -wht) PRE="${CWHT}" ; shift ;;
+      -clr) PRE="${NONE}"       ; shift  ; shift ;;
+      -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
+      -cyn) PRE="${PRE}${CCYN}" ; shift ;;
+      -red) PRE="${PRE}${CRED}" ; shift ;;
+      -grn) PRE="${PRE}${CGRN}" ; shift ;;
+      -ylw) PRE="${PRE}${CYLW}" ; shift ;;
+      -blu) PRE="${PRE}${CBLU}" ; shift ;;
+      -mag) PRE="${PRE}${CMAG}" ; shift ;;
+      -wht) PRE="${PRE}${CWHT}" ; shift ;;
       -tag) TAG="${2}";
             if [[ "${#TAG}" -gt 1 ]]; then TAG="${TAG}:" ; fi
             if [[ "${#TAG}" -gt 0 ]]; then TAG="${TAG} " ; fi
@@ -455,7 +471,7 @@ function Assert()
 function Report_error()
 {
   #@ Echo tagged error message (i.e., SC_REPORT_ERROR) - logged and counted
-  #| Error MESSAGE
+  #| Report_error MESSAGE
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   (( ++ERRORS ))
   export ERRORS
@@ -468,7 +484,7 @@ function Report_error()
 function Report_warning()
 {
   #@ Echo tagged warning message (i.e., SC_REPORT_WARNING) - logged and counted
-  #| Error MESSAGE
+  #| Report_warning MESSAGE
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   (( ++WARNINGS ))
   export WARNINGS
