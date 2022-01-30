@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
 function Prepend_path() { # only if 2nd arg does not exist in first
-  # USAGE: Prepend_path VAR PATH
-  Usage "$1" "Prepend_path VAR PATH" || return 1
-  if [[ $# != 2 ]]; then Error "Prepend_path requires two arguments"; return 1; fi
-  local var arg plscript
-  var="$1"
-  arg="$(Realpath "$2")"; shift
+  #|Usage "$1" "Prepend_path VAR PATH" || return 1
+  if [[ $# != 2 ]]; then Report_error "Prepend_path requires two arguments"; return 1; fi
+  local VAR ARG EVAL
+  VAR="$1"
+  ARG="$(Realpath "$2")"; shift
   # shellcheck disable=SC2016
-  plscript='$v=shift;$p=shift;$e=$ENV{$v};$e=~s/^./:$&/;printf qq{%s="%s%s"; export %s},$v,$p,$e,$v;print ""'
-  Has_path "${var}" "${arg}" || eval "$(perl -le "${plscript}" "${var}" "${arg}")"
+  if ! Has_path "${VAR}" "${ARG}"; then
+     EVAL="${VAR}=\"${ARG}:\$${VAR}\"; export ${VAR}"
+     eval "${EVAL}"
+  fi
 }
 
