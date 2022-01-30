@@ -2,6 +2,9 @@
 #
 # Run solutions
 
+export SHELL
+SHELL=/bin/bash
+
 
 function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
@@ -11,7 +14,8 @@ ORIG_DIR="$(Realpath .)"
 LAB_DIR="$(git rev-parse --show-toplevel)"
 LAB_NAME="${LAB_DIR//.*\///}"
 
-SCRIPT="$(dirname "$(Realpath "$0")")/utils.bash"
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
 if [[ -x "${SCRIPT}" ]]; then
   # shellcheck source=utils.bash disable=SC1091
   source "${SCRIPT}" "$0"
@@ -21,7 +25,7 @@ fi
 SetupLogdir "$0"
 
 if [[ -z "${LAB_DIR}" ]]; then
-  Error "This script must be run from within a valid set of exercises"
+  Report_error "This script must be run from within a valid set of exercises"
 fi
 _do cd "${LAB_DIR}" || Die "Unable to find working path from '${ORIG_DIR}'"
 
@@ -33,15 +37,30 @@ function Clean_exercise() {
 }
 
 function Do_exercise() {
+  local ANSWER_DIR EXERCISE_DIR
+  ANSWER_DIR="$1"
+  EXERCISE_DIR="$2"
   echo ""
-  Ruler -blu "${1}"
-  _do rsync -av "${1}/" "${2}/";
-  _do make -C "${2}" clean run || echo "# FAILED ${1}";
-# make -C "${2}" stats;
+  Ruler -blu "${ANSWER_DIR}"
+  # Choose type of test to run based on files found in respective answers directory
+  if [[ -f "${ANSWER_DIR}/GNUmakefile" || -f "${ANSWER_DIR}/Makefile}" ]]; then
+    _do make -C "${EXERCISE_DIR}" clean run || echo "# FAILED ${ANSWER_DIR}";
+  elif [[ -f "${ANSWER_DIR}/CMakeLists.txt" && -d "${ANSWER_DIR}/tests/CMakeLists.txt" ]]; then
+    _do build -C "${ANSWER_DIR}" -clean -test || echo "# FAILED ${ANSWER_DIR}";
+  elif [[ -f "${ANSWER_DIR}/CMakeLists.txt" ]]; then
+    _do build -C "${ANSWER_DIR}" -clean -run || echo "# FAILED ${ANSWER_DIR}";
+  elif [[ -f "${ANSWER_DIR}/GNUmakefile" || -f "${ANSWER_DIR}/Makefile}" ]]; then
+    _do rsync -av "${ANSWER_DIR}/" "${EXERCISE_DIR}/";
+    _do make -C "${EXERCISE_DIR}" clean run || echo "# FAILED ${ANSWER_DIR}";
+  else
+    echo "# No make automation files found for ${EXERCISE_DIR}"
+  fi
+# make -C "${EXERCISE_DIR}" stats;
 }
 
 #-------------------------------------------------------------------------------
-Report_info "$(date "+Regression test %c %Z") for ${LAB_NAME}"
+NOW="$(date "+Regression test %c %Z")"
+Report_info "${NOW} for ${LAB_NAME}"
 
 if [[ $# == 0 ]]; then
   for f in ./ex[0-9]* ; do
@@ -54,6 +73,7 @@ else
 fi
 
 if [[ $# == 0 ]]; then
+  # shellcheck disable=SC2312
   (
     for f in ex[0-9]*; do
       if [[ -d "answers/${f}/part1" ]]; then
@@ -67,6 +87,7 @@ if [[ $# == 0 ]]; then
     done
   ) 2>&1 | Log
 else
+  # shellcheck disable=SC2312
   (
     for f in "$@"; do
       if [[ "${f}" =~ / ]]; then
@@ -87,9 +108,13 @@ if [[ ${FAILURES} == 0 ]]; then
   Report_info -grn "# Passed all tests"
 else
   grep FAILED "${LOGFILE:?}"
-  Error "# Failed ${FAILURES} tests"
+  Report_error "# Failed ${FAILURES} tests"
 fi
-Report_info "$(date "+# Completed %c %Z") from ${LAB_NAME}"
+NOW="$(date "+# Completed %c %Z")"
+Report_info "${NOW} from ${LAB_NAME}"
 Ruler -blu
 Report_info "REMINDER: Exercises are not clean."
-Report_info "Results in $(realpath "${LOGFILE:?}")"
+LOGPATH="$(Realpath "${LOGFILE:?}")"
+Report_info "Results in ${LOGPATH}"
+
+# vim:nospell
