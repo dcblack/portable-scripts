@@ -51,25 +51,29 @@ function Realpath() {
 export WARNINGS ERRORS
 WARNINGS=0
 ERRORS=0
-function Info() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Info: $*" ; }
-function Warn() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Warning: $*" ; (( ++WARNINGS )) ; }
-function Error() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Error: $*" ; (( ++ERRORS )) ; }
+function Report_info()    { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Info: $*" ; }
+function Report_warning() { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Warning: $*" ; (( ++WARNINGS )) ; }
+function Report_error()   { while [[ "$1" =~ ^- ]]; do shift; done ; echo "Error: $*" ; (( ++ERRORS )) ; }
 function Summary() { echo "${ERRORS} errors. ${WARNINGS} warnings." ; }
-function Append_path() {
 function Has_path() {
+  #| USAGE: Has_path VAR PATH
   local arg plscript
   arg="$(Realpath "$2")"
   # shellcheck disable=SC2016
   plscript='$v=$ARGV[0]; $p=$ARGV[1]; for $d (split(qq{:},$ENV{$v})) { next if !-d $d; exit 0 if$p eq abs_path($d); } exit 1'
-  if [[ "${arg}" == "" ]]; then return 1; fi
+  if [[ -z "${arg}" ]]; then return 1; fi
   perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
 }
-  local var arg plscript
-  var="$1"
-  arg="$(Realpath "$2")"; shift
-  # shellcheck disable=SC2016
-  plscript='$v=shift;$p=shift;$e=$ENV{$v};$e=~s/.$/$&:/;printf qq{%s="%s%s"; export %s},$v,$e,$p,$v;print ""'
-  Has_path "${var}" "${arg}" || eval "$(perl -le "${plscript}" "${var}" "${arg}")"
+function Append_path() {
+  #|Usage "$1" "Append_path VAR PATH" || return 1
+  if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
+  local VAR ARG
+  VAR="$1"
+  ARG="$(Realpath "$2")"; shift
+  if ! Has_path "${VAR}" "${ARG}"; then 
+     EVAL="${VAR}=\"\$${VAR}:${ARG}\"; export ${VAR}"
+    eval "${EVAL}"
+  fi
 }
 
 PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
@@ -99,7 +103,7 @@ function portable-setup() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -c|check)
-        Info "Checking links"
+        Report_info "Checking links"
         CHECK=1
         ;;
       -h|--help)
@@ -116,36 +120,39 @@ function portable-setup() {
         VERBOSE=1
         ;;
       *)
-        Error "ERROR: Unknown option '$1'"
+        Report_error "ERROR: Unknown option '$1'"
         exit 1
         ;;
     esac
     shift
   done
 
-  if [[ ${VERBOSE} == 1 ]]; then Info "Hostname $(hostname)"; fi
+  local HOSTNAME PORTABLE_PATH TO_PATH FROM_PATH
+  HOSTNAME="$(hostname)"
+  if [[ ${VERBOSE} == 1 ]]; then Report_info "Hostname ${HOSTNAME}"; fi
 
   if [[ ${UPDATE} == 1 ]]; then 
-    Info "Updating portable-scripts"
+    Report_info "Updating portable-scripts"
     git -C "${PORTABLE_ROOT_DIR}" pull
   fi
 
   if [[ ! -d "${PORTABLE_DIR}" ]]; then
     if [[ ${CHECK} != 0 ]]; then
-      Error "Missing '${PORTABLE_DIR}'"
+      Report_error "Missing '${PORTABLE_DIR}'"
     elif [[ -d "${PORTABLE_ROOT_DIR}/.local" ]]; then
       bash -v -c "ln -s ${HOME}/portable-scripts/.local ${PORTABLE_DIR}"
     else
-      Error "Unable to find ${PORTABLE_ROOT_DIR}/.local to link as ${PORTABLE_DIR}! Please link manually."
+      Report_error "Unable to find ${PORTABLE_ROOT_DIR}/.local to link as ${PORTABLE_DIR}! Please link manually."
       return
     fi
   elif [[ ${CHECK} != 0 ]]; then
-    if [[ "${PORTABLE_ROOT_DIR}/.local" == "$(Realpath "${PORTABLE_DIR}")" ]]; then
+    PORTABLE_PATH="$(Realpath "${PORTABLE_DIR}")"
+    if [[ "${PORTABLE_ROOT_DIR}/.local" == "${PORTABLE_PATH}" ]]; then
       if [[ ${VERBOSE} == 1 ]]; then
-        Info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
+        Report_info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
       fi
     else
-      Error "'${PORTABLE_DIR}' does NOT reference '${PORTABLE_ROOT_DIR}'"
+      Report_error "'${PORTABLE_DIR}' does NOT reference '${PORTABLE_ROOT_DIR}'"
     fi
   fi
   
@@ -157,37 +164,39 @@ function portable-setup() {
     if [[ -r "${TO_FILE}" ]]; then
       if [[ -h "${FROM_LINK}" ]]; then
         # Exists as symbolic link
-        if [[ "$(Realpath "${FROM_LINK}")" ==  "$(Realpath "${TO_FILE}")" ]]; then
+        FROM_PATH="$(Realpath "${FROM_LINK}")"
+        TO_PATH="$(Realpath "${TO_FILE}")"
+        if [[ "${FROM_PATH}" ==  "${TO_PATH}" ]]; then
           # Good
-          Info "'${DOTFILE}' -> '${TO_FILE}'"
+          Report_info "'${DOTFILE}' -> '${TO_FILE}'"
         else
-          Warn ".${DOTFILE} refers to '$(Realpath "${FROM_LINK}")' instead of '${TO_FILE}'"
+          Report_warning ".${DOTFILE} refers to '${FROM_PATH}' instead of '${TO_FILE}'"
         fi
         # Nothing more to be done for this one
         continue
       elif [[ -d "${HOME}/.${DOTFILE}" ]]; then
         # Directory found - not much we can do
-        Warn ".${DOTFILE} is a directory - manual intervention needed"
+        Report_warning ".${DOTFILE} is a directory - manual intervention needed"
         continue
       elif [[ -e "${HOME}/.${DOTFILE}" ]]; then
         # Exists as something else
         if [[ ${CHECK} == 1 ]]; then
-          Warn "Missing .${DOTFILE} Will be renamed"
+          Report_warning "Missing .${DOTFILE} Will be renamed"
         else
-          Info "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
+          Report_info "Saved old version as '${HOME}/.${DOTFILE}-${TIMESTAMP}'"
           bash -v -c "mv '${HOME}/.${DOTFILE}' '${HOME}/.${DOTFILE}-${TIMESTAMP}'";
         fi
       fi
       if [[ ${CHECK} == 1 ]]; then
-        Info "Will create link ${FROM_LINK} to ${TO_FILE}"
+        Report_info "Will create link ${FROM_LINK} to ${TO_FILE}"
       else
         if [[ ${VERBOSE} == 1 ]]; then
-          Info "Linking ${FROM_LINK} -> ${TO_FILE}"
+          Report_info "Linking ${FROM_LINK} -> ${TO_FILE}"
         fi
         bash -v -c "ln -s '${PORTABLE_DIR}/dotfiles/${DOTFILE}' '${HOME}/.${DOTFILE}'";
       fi
     else
-      Error "Missing ${PORTABLE_DIR}/dotfiles/${DOTFILE}"
+      Report_error "Missing ${PORTABLE_DIR}/dotfiles/${DOTFILE}"
     fi
   done
   
@@ -210,7 +219,7 @@ function portable-setup() {
 function Unique_path() {
   # DESCR: Removes duplicate paths in specified variable
   # USAGE: Unique_path VAR
-  local PERL_SCRIPT
+  local PERL_SCRIPT EVAL_TEXT
   # shellcheck disable=SC2016
   PERL_SCRIPT='
     $v=$ARGV[0];
@@ -224,7 +233,8 @@ function Unique_path() {
     }
     printf qq{%s="%s"\n},$v,join(":",@e);
   '
-  eval "$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+  EVAL_TEXT="$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+  eval "${EVAL_TEXT}"
 }
 
 function portable-env() {
@@ -239,11 +249,12 @@ function portable-env() {
   for f in ${APPS}/sc-templates; do
     Append_path TEMPLATEPATH "${f}"
   done
+  CDPATH="${HOME}/Favorites:${HOME}"
 
   Unique_path PATH
   Unique_path TEMPLATEPATH
 
-  export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME PATH
+  export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME CDPATH PATH
 
 }
 
