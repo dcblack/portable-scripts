@@ -2,21 +2,40 @@
 
 function Unique_path()
 {
+  # DESCR: Removes duplicate paths in specified variable
   # USAGE: unique_path [-v] VAR
-  local VERBOSE PLSCRIPT ASSIGNMENT
+  local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT
   VERBOSE=0
-  if [[ "$1" == "-v" ]]; then
-    VERBOSE=1
+  NOEXECUTE=0
+  while [[ "$1" =~ ^-.* ]]; do
+    case "$1" in
+      -v) VERBOSE=1 ;;
+      -n) NOEXECUTE=1 ;;
+       *) echo "Error: Unknown option '$1' to Unique_path" 1>&2; return 1 ;;
+    esac
     shift
-  fi
+  done
   if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
   # shellcheck disable=SC2016
-  PLSCRIPT='$v=$ARGV[0]; for my $d(split(qr{:},$ENV{$v})){ next if ! -d $d; $e=abs_path($d); if( ! exists $e{$e} ){ $e{$e}=1; push(@e,$e); } } printf qq{%s="%s"\n},$v,join(":",@e);'
-  ASSIGNMENT="$(perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "$1")"
-  if [[ "${VERBOSE}" == 1 ]]; then
-    Echo "Evaluating ${ASSIGNMENT}"
+  PERL_SCRIPT='
+    $v=$ARGV[0];
+    for my $d(split(qr{:},$ENV{$v})){
+      next if ! -d $d;
+      $e=abs_path($d);
+      if( ! exists $e{$e} ){
+        $e{$e}=1;
+        push(@e,$e);
+      }
+    }
+    printf qq{%s="%s"\n},$v,join(":",@e);
+    '
+  EVAL_TEXT="$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+  if [[ ${VERBOSE} == 1 ]]; then
+    Echo "% eval ${EVAL_TEXT}"
   fi
-  eval "${ASSIGNMENT}"
+  if [[ ${NOEXECUTE} == 0 ]]; then
+    eval "${EVAL_TEXT}"
+  fi
 }
