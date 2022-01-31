@@ -77,7 +77,8 @@ function Append_path() {
 }
 
 PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
-PORTABLE_ROOT_DIR="$(git -C "$(dirname "${PORTABLE_SETUP_SCRIPT}")" rev-parse --show-toplevel)"
+PORTABLE_SETUP_DIR="$(dirname "${PORTABLE_SETUP_SCRIPT}")"
+PORTABLE_ROOT_DIR="$(git -C "${PORTABLE_SETUP_DIR}" rev-parse --show-toplevel)"
 export PORTABLE_SETUP_SCRIPT PORTABLE_ROOT_DIR
 
 function Portable_setup_help() {
