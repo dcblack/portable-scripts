@@ -20,7 +20,8 @@ function Unique_path()
   fi
   # shellcheck disable=SC2016
   PERL_SCRIPT='
-    $v=$ARGV[0];
+    $v=shift @ARGV;
+    exit 1 if not exists $ENV{$v};
     for my $d(split(qr{:},$ENV{$v})){
       next if ! -d $d;
       $e=abs_path($d);
