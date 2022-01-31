@@ -1,0 +1,109 @@
+#!new # vim:syntax=sh:tw=72
+# DEFAULTS
+TYPE=int
+LAST=end
+
+# BRIEF
+#! Creates a C++11 enumeration with support routines for string I/O.
+
+=pod
+
+=head1 NAME
+
+B<cpp-enum template> - Creates an enumeration with support routines for string I/O.
+
+=head1 SYNOPSIS
+
+B<new> B<cpp-enum> [-d {:I<DIR>:}] {:I<NAME>:} [B<ELT0>={:elt:} B<ELT1>={:elt:}...]
+
+=head1 DESCRIPTION
+
+In what follows, the following notation applies:
+
+=over
+
+=item {:lc:NAME:} - lower-case name
+
+=item {:sc:NAME:} - sentence-case name
+
+=item {:uc:NAME:} - upper-case name
+
+=back
+
+This template defines a C++11 header file (.hpp) with an B<enum class>
+for an enumeration named {:sc:NAME:} with elements name
+{:sc:NAME:}::{:ELTi}, and support routine prototypes.  The support
+routines are implemented in the accompanying C++11 source file (.cpp).
+
+Two files are produced:
+
+      {:lc:NAME:}_enum.hpp -- header -- EDIT THIS FILE
+      {:lc:NAME:}_enum.cpp -- implementation of support routines
+
+This header file must be edited before it will compile.
+
+Support routines include:
+
+      std::string to_string( const {:sc:NAME:}& )
+      bool        is_{:sc:NAME:}( const std::string& )
+      {:sc:NAME:} to_{:sc:NAME:}( const std::string& )
+      operator<<( std::ostream&, const {:sc:NAME:}& )
+      operator>>( std::ostream&, {:sc:NAME:}& )
+      bool operator<( {:sc:NAME:} ) allows use in STL algorithms with containers
+      operator++( {:sc:NAME:} )
+      {:sc:NAME:} begin() returns fthe first element and allows ranged for-loops
+      {:sc:NAME:} end() returns the number of elements and allows ranged for-loops
+
+Self-test and an example are built-in by defining the macro
+{:uc:NAME:}_ENUM_EXAMPLE and compiling. See E<EXAMPLE>.
+
+=head1 PARAMETERS
+
+=over
+
+=item B<ELT0..ELTn>
+
+The enumeration elements
+
+=item B<LAST>
+
+The last element and defaults to 'end'. May be used as a sentinel or deleted as needed.
+
+=item B<TYPE>
+
+The underlying typename and must be integral (e.g.  uint16_t). Defaults to E<int>.
+
+=back
+
+=head1 REQUIREMENTS
+
+C++11 compliant compiler
+
+=head1 EXAMPLE
+
+    % new cpp-enum color ELT0=black ELT1=red ELT2=green ELT3=yellow ELT4=blue ELT5=magenta ELT6=cyan ELT7=white
+    % perl -pi -e '$_="" if m/DELETE THIS LINE/ or m/{:ELT.:}/;' color_enum.?pp
+    % g++ -std=c++11 -DCOLOR_ENUM_EXAMPLE -o color_test color_enum.cpp
+    % ./color_test
+
+=head1 COPYRIGHT
+
+This file is licensed under the Apache License, Version 2.0 (the "License").
+You may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 AUTHOR
+
+David C Black <david.black@doulos.com>
+
+=cut
+
+#END $Id: .newrc,v 1.2 2007/02/27 17:29:25 dcblack Exp $
