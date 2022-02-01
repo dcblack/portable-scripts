@@ -30,7 +30,7 @@ Extracts hostname and email information from CoCalc course files (JSON format).
 If a debrief*.md file exists, the names will also be extracted if contains lines
 of the format:
 
-FIRST LAST <EMAIL@COMPANY.DOMAIN>;
+FIRST LAST <EMAIL\@COMPANY.DOMAIN>;
 
 Options
 -------
