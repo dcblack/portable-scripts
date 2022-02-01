@@ -2,9 +2,23 @@
 #
 # git-swap - Changes remote repo specification protocol to/from `https` from/to `ssh`
 #
-# SYNTAX: git swap [-v|-n]
-
 use strict;
+
+our $SYNTAX = '
+NAME
+----
+git swap -- changes the remote URI reference between https and ssh.
+
+SYNOPSIS
+--------
+  git swap [-h] [-v|-n]
+
+';
+if( "@ARGV" =~ m/^--?h(elp)?$/ ) {
+  printf "%s\n", $SYNTAX;
+  exit
+}
+
 our %OPT;
 while(scalar @ARGV) {
   my $arg = shift @ARGV;
