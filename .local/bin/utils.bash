@@ -22,9 +22,9 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | Pass                       | Sets success status (0)
 | Fail                       | Sets error status (1)
 | PassFail "_MESSAGE_"       | Displays message with pass/fail status
-| Report_info "_MESSAGE_"           | Echo an informational message
+| Report_info "_MESSAGE_"    | Echo an informational message
 | Comment "_MESSAGE_"        | Does nothing but provide NOP comment
-| Debug "_MESSAGE_"          | Echo a debug message
+| Report_debug "_MESSAGE_"   | Echo a debug message
 | Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
 | Report_fatal "_MESSAGE_"   | Echo a fatal message and exit with fail
 | Report_error "_MESSAGE_"   | Echo an error message
@@ -132,7 +132,7 @@ function Needs() {
   for X in "$@"; do
     (( ++I ));
     for D in $(perl -le 'print join(q{\n},split(/:/,$ENV{PATH}))'); do
-      Debug "Testing  ${D}/${X}"
+      Report_debug "Testing  ${D}/${X}"
       P="$(Realpath "${D}/${X}")"
       if [[ -n "${P}" && -x "${P}" && ! -d "${P}" ]]; then
         (( ++J ));
@@ -158,7 +158,7 @@ Color-Setup on
 function ShowBuildOpts() {
   Ruler -blu "Build Options"
   for (( i=0; i<${#ARGV[@]}; ++i )); do
-    Debug "ARGV[${i}]='${ARGV[${i}]}'"
+    Report_debug "ARGV[${i}]='${ARGV[${i}]}'"
   done
   ShowVars \
     APPS \
@@ -317,9 +317,12 @@ function GetBuildOpts() {
       Report_fatal "Unable to determine C++ compiler"
     fi
   fi
-  GITROOT_DIR="Unknown"
-  git rev-parse --show-toplevel 2>&/dev/null 1>&/dev/null && \
-  GITROOT_DIR="$(git rev-parse --show-toplevel)"
+  if git rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
+    GITROOT_DIR="$(git rev-parse --show-toplevel)"
+  else
+    Report_warning "Not inside a git controlled area"
+    GITROOT_DIR="Unknown"
+  fi
 
   #-------------------------------------------------------------------------------
   # Scan command-line for options
