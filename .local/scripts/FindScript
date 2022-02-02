@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # Locate all instances of named script(s)
+# Dependencies: Realpath Append_path
 
 export FINDSCRIPT_COUNT SCRIPTDIRS
 
