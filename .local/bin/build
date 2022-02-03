@@ -7,27 +7,27 @@ NAME
 
 $0 - use cmake to build and optionally run, test, or install
 
-SYNOPSIS
---------
+## SYNOPSIS
 
   $0 -h|--help
   $0 [-n] [-C DIR] [-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
 
 
-DESCRIPTION
------------
+## DESCRIPTION
+
 Simple way to compile and run projects using cmake if we assume you have a
 proper CMakeLists.txt setup. Essentially all this does is:
 
   clean -a # OPTIONAL
   cmake -B build
-  cmake --build
+  cmake --build build
   ctest --test-dir build # OPTIONAL
+  cmake --install
 
 IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
 
-OPTIONS
--------
+## OPTIONS
+
   -help    Display this text
   -n       Don't actually do anything except show commands that would have been done
   -C DIR   Change to specified directory before doing anything else
@@ -36,8 +36,8 @@ OPTIONS
   -test    When done building, run the tests
   -install When done building, install as specified by INSTALL_DIR
 
-CONFIGURATION
--------------
+## CONFIGURATION
+
   Several variables are setup inside the script for the default locations.
 
 "
