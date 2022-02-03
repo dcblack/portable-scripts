@@ -1,10 +1,12 @@
 #!/bin/bash
 
+export CDPATH
 function SetupPaths() {
 
   #-----------------------------------------------------------------------------
   # Setup for quicker navigation (e.g., `cd ex1`) using CDPATH
   #-----------------------------------------------------------------------------
+  export CDPATH
   CDPATH="." ;#< Should ALWAYS have . first!
   for dir in "${HOME}" "${HOME}/favs}" "${HOME}/Favorites}"; do
     Prepend_path CDPATH "${dir}"
@@ -20,7 +22,6 @@ function SetupPaths() {
   fi
   CDPATH=".:${CDPATH}"
   Unique_path CDPATH
-  export CDPATH
 
   #-----------------------------------------------------------------------------
   # Add local bin directories to PATH
