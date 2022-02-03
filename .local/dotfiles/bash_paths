@@ -5,8 +5,8 @@ function SetupPaths() {
   #-----------------------------------------------------------------------------
   # Setup for quicker navigation (e.g., `cd ex1`) using CDPATH
   #-----------------------------------------------------------------------------
-  CDPATH="${HOME}"
-  for dir in "${HOME}/favs}" "${HOME}/Favorites}"; do
+  CDPATH="." ;#< Should ALWAYS have . first!
+  for dir in "${HOME}" "${HOME}/favs}" "${HOME}/Favorites}"; do
     Prepend_path CDPATH "${dir}"
   done
   if [[ $# -gt 0 ]]; then
