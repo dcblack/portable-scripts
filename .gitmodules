@@ -1,0 +1,3 @@
+[submodule ".local/apps/cmake/platform"]
+	path = .local/apps/cmake/platform
+	url = https://gitlab.com/embeddedlinux/libs/platform.git
