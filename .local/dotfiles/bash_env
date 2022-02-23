@@ -17,7 +17,7 @@ function portable-env() {
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
   PERL5LIB="$(Realpath "${PSCR}/lib")"
   TEMPLATEPATH="$(Realpath "${HOME}/TEMPLATES")"
-  for f in "${APPS}/sc-templates" "${HOME}/TEMPLATES"; do
+  for f in "${APPS}/templates" "${HOME}/TEMPLATES"; do
     Append_path TEMPLATEPATH "${f}"
   done
 
