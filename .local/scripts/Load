@@ -4,45 +4,57 @@
 
 export LOADED
 
-function Usage() { if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Usage: $*"; return 1; fi }
+function Run() {
+  Load "$1"
+  "$@"
+}
 
 function Load() {
-  Usage "$1" "Load [-v][-n] SCRIPTNAME" || return
-  local VERBOSE NOTREALLY DIR SCRIPT
-  VERBOSE=0
+  export Load_VERSION=1.4
+  #|Usage "$1" "Load [-v][-n] SCRIPTNAME(S)" || return 0
+  # Dependencies: Firstreal, FindScript, Report_info, Report_warning, Report_error
+  local VERBOSITY NOTREALLY DIR SCRIPT STATUS prev_NOAUTORUN
+  VERBOSITY=0
   NOTREALLY=0
-  while [[ "$1" =~ ^- ]]; do
-    case "$1" in
-      -n) NOTREALLY=1 ;;
-      -v) VERBOSE=1 ;;
-       *) return 1 ;;
-    esac
+  STATUS=0
+  while [[ $# -gt 0 ]]; do
+    Report_info "Loading $1"
+    while [[ "$1" =~ ^- ]]; do
+      case "$1" in
+        -n) NOTREALLY=1 ;;
+        -v) VERBOSITY=1 ; Report_info "Verbosity ${VERBOSITY}";;
+        -q) VERBOSITY=0 ;;
+         *) return 1 ;;
+      esac
+      shift
+    done
+    if [[ "${SHELL}" =~ zsh ]]; then
+      set -o shwordsplit
+    fi
+    SCRIPT="$(FindScript "$1")"
+    SCRIPT="$(Firstreal "${SCRIPT}")"
+    if [[ -z "${SCRIPT}" ]]; then
+      Report_error "Unable to find suitable script '$1'"
+      return 1
+    fi
+    prev_NOAUTORUN=""
+    if [[ -n "${NOAUTORUN}" ]]; then prev_NOAUTORUN="${NOAUTORUN}" ; fi
+    NOAUTORUN=1
+    export NOAUTORUN
+    if [[ ${NOTREALLY} == 1 ]]; then
+      Report_info -tag % "source ${SCRIPT}" ;
+      return 0
+    fi
+    # shellcheck disable=SC1090
+    if ! source "${SCRIPT}"; then
+      (( STATUS=STATUS | $? ))
+      Report_warning "Failed to load ${SCRIPT}"
+    elif [[ ${VERBOSITY} -gt 0 ]]; then
+      Report_info "Loaded ${SCRIPT}"
+    fi
+    if [[ -n "${prev_NOAUTORUN}" ]]; then NOAUTORUN="${prev_NOAUTORUN}" ; else unset NOAUTORUN ; fi
     shift
   done
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
-  SCRIPT="$(Firstreal "$(FindScript "$1")")"
-  if [[ -z "${SCRIPT}" ]]; then
-    Report_error "Unable to find suitable script '$1'"
-    return 1
-  fi
-  local prev_NOAUTORUN STATUS
-  prev_NOAUTORUN=""
-  if [[ -n "${NOAUTORUN}" ]]; then prev_NOAUTORUN="${NOAUTORUN}" ; fi
-  NOAUTORUN=1
-  export NOAUTORUN
-  if [[ "${VERBOSE}" == 1 ]]; then
-    Report_info "source ${SCRIPT}"
-  fi
-  if [[ ${NOTREALLY} == 1 ]]; then
-    Report_info -tag % "source ${SCRIPT}" ;
-    return 0
-  fi
-  # shellcheck disable=SC1090
-  source "${SCRIPT}" "$@"
-  STATUS="$?"
-  if [[ -n "${prev_NOAUTORUN}" ]]; then NOAUTORUN="${prev_NOAUTORUN}" ; else unset NOAUTORUN ; fi
   return "${STATUS}"
 }
 
@@ -53,11 +65,11 @@ function Unload()
 
 function Reload()
 {
-  Usage "$1" "Reload [-v]" || return
-  local VERBOSE DIR NAME SCRIPT
-  VERBOSE=0
+  #|Usage "$1" "Reload [-v]" || return
+  local VERBOSITY DIR NAME SCRIPT
+  VERBOSITY=0
   if [[ "$1" == "-v" ]]; then
-    VERBOSE=1
+    VERBOSITY=1
     shift
   fi
   if [[ "${SHELL}" == /bin/zsh ]]; then
@@ -93,7 +105,7 @@ function Reload()
     for NAME in ${FUNCS}; do
       SCRIPT="${DIR}/${NAME}"
       if [[ -x "${SCRIPT}" ]]; then
-        if [[ "${VERBOSE}" == 1 ]]; then
+        if [[ ${VERBOSITY} -gt 0 ]]; then
           Report_info "Loading ${SCRIPT}"
         fi
         # shellcheck disable=SC1090
@@ -107,3 +119,5 @@ function Reload()
     unset NOAUTORUN
   fi
 }
+
+# vim:nospell
