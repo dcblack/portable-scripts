@@ -49,7 +49,8 @@ done
 
 # enable color support of ls and also add handy aliases
 if [[ -r ~/.dircolors ]]; then
-  eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+  EVAL_TEXT="$(dircolors -b ~/.dircolors)" || EVAL_TEXT="$(dircolors -b)"
+  eval "${EVAL_TEXT}"
 fi
 
 #-------------------------------------------------------------------------------
@@ -85,6 +86,15 @@ alias vial='"${VI}"    -f "$(dotfile bash_aliases)";   source "$(dotfile bash_al
 alias vibash='"${VI}"  -f "$(dotfile bashrc)";         source "$(dotfile bashrc)"'
 alias vienv='"${VI}"   -f "$(dotfile bashenv)";        source "$(dotfile bashenv)"'
 alias vifuncs='"${VI}" -f "$(dotfile bash_functions)"; source "${HOME}"/.bash_functions'
+function vitemplate() {
+  export LOCAL
+  local TEMPLATE
+  while [[ $# != 0 ]]; do
+    TEMPLATE="$("${LOCAL}/bin/new" -P "$1")"
+    shift
+    _do gvim "${TEMPLATE}"
+  done
+}
 alias .alias='source "$(dotfile bash_aliases)"'
 alias .bash='source  "$(dotfile bashrc)"'
 alias .env='source   "$(dotfile bash_env)"'
