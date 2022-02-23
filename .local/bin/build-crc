@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#
+# Install CRC++ under current project.
+# IMPORTANT; Must be run inside project git repository.
+
+LIBNAME="CRC++"
+GIT_URL="https://github.com/d-bahr/CRCpp.git"
+
+function Die() {
+  echo "FAILED to build and install ${LIBNAME}! $*" 1>&2
+  exit 1
+}
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+TOOL_PATH="$(Realpath "$0")"
+echo "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
+HERE="$(pwd)"
+if [[ "${HERE}" =~ .*/externs ]]; then
+  cd "${HERE/externs*/}" || Die "Trying to escape externs sub-directory failed"
+fi
+PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
+REPO_DIR="$(basename "${GIT_URL}" .git)"
+INSTALL_DIR="${PROJECT_DIR}/externs"
+mkdir -p "${INSTALL_DIR}"
+cd "${INSTALL_DIR}" || Die "Unable to enter ${INSTALL_DIR}"
+if [[ -d "${REPO_DIR}/.git" ]]; then
+  git -C "${REPO_DIR}" pull
+else
+  rm -fr "${REPO_DIR}"
+  git clone "${GIT_URL}" || Die "Unable to clone"
+fi
+rsync -av "${REPO_DIR}/inc/CRC.h" "${INSTALL_DIR}/include/" || Die "Unable to install"
+echo "Successfully built ${LIBNAME}"
+
+# vim:nospell
