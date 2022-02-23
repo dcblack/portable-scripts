@@ -2,7 +2,7 @@
 #
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
 
-export Essential_IO_VERSION=1.3
+export Essential_IO_VERSION=1.4
 
 #-------------------------------------------------------------------------------
 function Essential-IO()
@@ -106,26 +106,15 @@ function Color-Setup()
   fi
   if [[ ${USE_COLOR} == 10 ]]; then
     # shellcheck disable=SC2034
-    BOLD="${ESC}[01m" UBLD="${ESC}[21m"
-    DARK="${ESC}[02m" UDRK="${ESC}[22m"
-    UNDR="${ESC}[04m" UNUN="${ESC}[24m"
-    INVS="${ESC}[07m" UNVS="${ESC}[27m"
-    CBLK="${ESC}[90m" NONE="${ESC}[00m"
-    CRED="${ESC}[91m" 
-    CGRN="${ESC}[92m" 
-    CYLW="${ESC}[93m" 
-    CBLU="${ESC}[94m" 
-    CMAG="${ESC}[95m" 
-    CCYN="${ESC}[96m" 
-    CWHT="${ESC}[97m" 
-    BBLK="${ESC}[100m"
-    BRED="${ESC}[101m"
-    BGRN="${ESC}[102m"
-    BYLW="${ESC}[103m"
-    BBLU="${ESC}[104m"
-    BMAG="${ESC}[105m"
-    BCYN="${ESC}[106m"
-    BWHT="${ESC}[107m"
+    BOLD="${ESC}[01m"  UBLD="${ESC}[21m"
+    DARK="${ESC}[02m"  UDRK="${ESC}[22m"
+    UNDR="${ESC}[04m"  UNUN="${ESC}[24m"
+    INVS="${ESC}[07m"  UNVS="${ESC}[27m"
+    CBLK="${ESC}[90m"  CRED="${ESC}[91m"  CGRN="${ESC}[92m"   CYLW="${ESC}[93m" 
+    CBLU="${ESC}[94m"  CMAG="${ESC}[95m"  CCYN="${ESC}[96m"   CWHT="${ESC}[97m" 
+    BBLK="${ESC}[100m" BRED="${ESC}[101m" BGRN="${ESC}[102m" BYLW="${ESC}[103m"
+    BBLU="${ESC}[104m" BMAG="${ESC}[105m" BCYN="${ESC}[106m" BWHT="${ESC}[107m"
+    NONE="${ESC}[00m"
   elif [[ ${USE_COLOR} -gt 0 ]]; then
     # shellcheck disable=SC2034
     ESC=""
@@ -133,22 +122,11 @@ function Color-Setup()
     DARK="${ESC}[02m" UDRK="${ESC}[22m"
     UNDR="${ESC}[04m" UNUN="${ESC}[24m"
     INVS="${ESC}[07m" UNVS="${ESC}[27m"
-    CBLK="${ESC}[30m" NONE="${ESC}[00m"
-    CRED="${ESC}[31m"
-    CGRN="${ESC}[32m"
-    CYLW="${ESC}[33m"
-    CBLU="${ESC}[34m"
-    CMAG="${ESC}[35m"
-    CCYN="${ESC}[36m"
-    CWHT="${ESC}[37m"
-    BBLK="${ESC}[40m"
-    BRED="${ESC}[41m"
-    BGRN="${ESC}[42m"
-    BYLW="${ESC}[43m"
-    BBLU="${ESC}[44m"
-    BMAG="${ESC}[45m"
-    BCYN="${ESC}[46m"
-    BWHT="${ESC}[47m"
+    CBLK="${ESC}[30m" CRED="${ESC}[31m" CGRN="${ESC}[32m" CYLW="${ESC}[33m"
+    CBLU="${ESC}[34m" CMAG="${ESC}[35m" CCYN="${ESC}[36m" CWHT="${ESC}[37m"
+    BBLK="${ESC}[40m" BRED="${ESC}[41m" BGRN="${ESC}[42m" BYLW="${ESC}[43m"
+    BBLU="${ESC}[44m" BMAG="${ESC}[45m" BCYN="${ESC}[46m" BWHT="${ESC}[47m"
+    NONE="${ESC}[00m"
   else
     # shellcheck disable=SC2034
     NONE=""
@@ -194,11 +172,11 @@ function Logfile()
     else
       Report_info "Logging to ${LOGFILE}"
     fi
-    return
+    return 0
   fi
   if [[ "$1" =~ ^-{1,2}(off)? ]]; then
     LOGFILE=""
-    return
+    return 0
   fi
   local APPEND PREV_LOGFILE
   APPEND=0
@@ -241,7 +219,7 @@ function Log()
   #@ Send text to current logfile if $LOGFILE is defined
   #| Log [-n] "MESSAGE"
   #| COMMAND | Log
-  if [[ -z "${LOGFILE}" ]]; then return; fi
+  if [[ -z "${LOGFILE}" ]]; then return 0; fi
   if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
@@ -298,7 +276,7 @@ function _do()
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
     Echo "$*"
-    return;
+    return 0;
   else
     Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
   fi
@@ -335,7 +313,7 @@ SYNOPSIS
   fi
   while [[ "$1" =~ ^-[[:alpha:]]{1,3}$ ]]; do
     case "$1" in
-      -h)   Echo "${SYNTAX}"; return ;;
+      -h)   Echo "${SYNTAX}"; return 0 ;;
       -n)   EOL="-n"      ; shift ;;
       -clr) PRE="${NONE}"       ; shift  ; shift ;;
       -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
@@ -376,8 +354,8 @@ function PassFail()
 function Report_debug()
 {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
-  #| Debug MESSAGE
-  if [[ "$1" == "-f" || -n "${DEBUG}" && "${DEBUG}" -gt 0 ]]; then
+  #| Report_debug MESSAGE
+  if [[ "$1" == "-f" || -n "${DEBUG}" && ! "${DEBUG}" =~ ^0?$ ]]; then
     if [[ "${SHELL}" =~ zsh ]]; then
       set -o shwordsplit
     fi
@@ -458,8 +436,8 @@ function Report_fatal()
 function Assert()
 {
   #@ Similar to sc_assert
-  if [[ -n "${NDEBUG}" ]]; then return; fi
-  test "$@" && return
+  if [[ -n "${NDEBUG}" ]]; then return 0; fi
+  test "$@" && return 0
   local FNC FIL LNO
   FNC="${FUNCNAME[1]}"
   FIL="${BASH_SOURCE[1]}"
