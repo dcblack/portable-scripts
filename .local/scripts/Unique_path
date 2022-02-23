@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-function Unique_path()
-{
+function Unique_path() {
+  export Unique_path_VERSION=1.4
   # DESCR: Removes duplicate paths in specified variable
   # USAGE: unique_path [-v] VAR
-  local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT
+  local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT VAR VAL
   VERBOSE=0
   NOEXECUTE=0
   while [[ "$1" =~ ^-.* ]]; do
@@ -15,6 +15,8 @@ function Unique_path()
     esac
     shift
   done
+  VAR="$1"
+  eval "VAL=\$${VAR}"
   if [[ "${SHELL}" =~ zsh ]]; then
     set -o shwordsplit
   fi
@@ -32,7 +34,7 @@ function Unique_path()
     }
     printf qq{%s="%s"\n},$v,join(":",@e);
     '
-  EVAL_TEXT="$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+  EVAL_TEXT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
   if [[ ${VERBOSE} == 1 ]]; then
     Echo "% eval ${EVAL_TEXT}"
   fi

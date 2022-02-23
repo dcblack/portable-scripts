@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 
-function Remove_path()
-{
+function Remove_path() {
+  export Remove_path_VERSION=1.4
   # USAGE: remove_path VAR PATH
-  local plscript
-  # shellcheck disable=SC2016
-  plscript=' $v=$ARGV[0]; $p=abs_path($ARGV[1]); for (split(qr":",$ENV{$v})) { $e=abs_path($_); if($p ne $e) { $push(@e,$e); } } print "$v=",join(":",@e) '
-  eval "$(perl -M'Cwd(abs_path)' -e "${plscript}" "$1" "$2")"
+  if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
+  if [[ "$1" =~ ^[_A-Za-z][-_A-Za-z0-9]+$ ]]; then
+    local PLSCRIPT EVALSCRIPT VAR VAL REMOVE
+    VAR="$1"
+    REMOVE="$2"
+    eval "VAL=\$${VAR}"
+    # shellcheck disable=SC2016
+    PLSCRIPT='$v=$ARGV[0];$p=abs_path($ARGV[1]);@o=split(/:/,$ENV{$v});for(@o){$e=abs_path($_);push(@e,$e) if $p ne $e;} printf qq{$v="%s"\n},join(":",@e);'
+    EVALSCRIPT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "${VAR}" "${REMOVE}")"
+    eval "${EVALSCRIPT}"
+  else
+    Report_error "Remove_path requires first argument be a simple variable name"
+    return 1
+  fi
 }
-
+# vim:nospell

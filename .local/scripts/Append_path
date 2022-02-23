@@ -2,15 +2,21 @@
 
 function Append_path() # only if 2nd arg does not exist in first
 {
+  export Append_path_VERSION=1.4
   #|Usage "$1" "Append_path VAR PATH" || return 1
-  # Dependencies: Realpath Has_path Report_error
-  if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
-  local VAR ARG
-  VAR="$1"
-  ARG="$(Realpath "$2")"; shift
-  if ! Has_path "${VAR}" "${ARG}"; then 
-     EVAL="${VAR}=\"\$${VAR}:${ARG}\"; export ${VAR}"
-    eval "${EVAL}"
+  # Dependencies: Realpath Has_path Report_error Remove_path Unique_path
+  if [[ "$1" == "-undo" ]]; then
+    shift
+    Remove_path "$1" "$2"
+  else
+    if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
+    local VAR ARG EVAL
+    VAR="$1"
+    ARG="$(Realpath "$2")"; shift
+    if ! Has_path "${VAR}" "${ARG}"; then 
+       EVAL="${VAR}=\"\$${VAR}:${ARG}\"; export ${VAR}"
+      eval "${EVAL}"
+    fi
   fi
 }
 
