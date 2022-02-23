@@ -45,7 +45,8 @@ USAGE
 Source this as follows inside your bash script:
 
 ```sh
-function Realpath() {
+function Realpath()
+{
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 SCRIPT="$(Realpath "$0")"
@@ -95,7 +96,8 @@ export VERBOSITY
 export WARNINGS
 export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
-function Realpath () {
+function Realpath ()
+{
   /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
 }
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
@@ -107,7 +109,8 @@ fi
 source "$SCRIPTDIR/Essential-IO"
 
 #-------------------------------------------------------------------------------
-function Require() { # FILE(S) to source
+function Require()
+{ # FILE(S) to source
   local BINDIR SCPT REQD
   if [[ $# != 1 ]]; then
     echo "Fatal: Require only allows one argument" 1>&2; exit 1
@@ -126,7 +129,8 @@ function Require() { # FILE(S) to source
 #-------------------------------------------------------------------------------
 # Verify existance of tools in search path
 
-function Needs() {
+function Needs()
+{
   local I J X D P
   I=0 J=0
   for X in "$@"; do
@@ -155,7 +159,8 @@ function Needs() {
 
 Color-Setup on
 
-function ShowBuildOpts() {
+function ShowBuildOpts()
+{
   Ruler -blu "Build Options"
   for (( i=0; i<${#ARGV[@]}; ++i )); do
     Report_debug "ARGV[${i}]='${ARGV[${i}]}'"
@@ -189,7 +194,8 @@ function ShowBuildOpts() {
   Ruler -blu
 }
 
-function ConfirmBuildOpts() {
+function ConfirmBuildOpts()
+{
   ShowBuildOpts
   while true; do
     printf "Confirm above options (Y/n)? "
@@ -202,7 +208,8 @@ function ConfirmBuildOpts() {
   done
 }
 
-function GetBuildOpts() {
+function GetBuildOpts()
+{
 
 # Establishes options for building
 #
@@ -588,7 +595,8 @@ function GetBuildOpts() {
 
 }
 
-function SetupLogdir() {
+function SetupLogdir()
+{
   # Creates log directory and sets initial LOGFILE
   LOGDIR="${HOME}/logs"
   mkdir -p "${LOGDIR}"
@@ -610,14 +618,16 @@ function SetupLogdir() {
 }
 
 # Make directory and enter
-function Create_and_Cd() {
+function Create_and_Cd()
+{
   Assert $# = 1
   _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}"
   _do cd "${1}" || Report_fatal "Unable to enter ${1} directory"
 }
 
 # Download and enter directory
-function GetSource_and_Cd() {
+function GetSource_and_Cd()
+{
   Assert $# = 2
   if [[ -n "${CLEAN}" && "${CLEAN}" == 1 ]]; then
     _do rm -fr "${1}"
@@ -640,7 +650,9 @@ function GetSource_and_Cd() {
 
 # Arguments are optional
 # shellcheck disable=SC2120
-function Generate() {
+function Configure_tool()
+{
+  Report_info -grn "Configuring ${TOOL_NAME}"
   if [[ $# == 1 ]]; then # option generator
     GENERATOR="$1"
     shift
@@ -651,11 +663,18 @@ function Generate() {
   case "${GENERATOR}" in
     cmake)
       _do rm -fr "${BUILD_DIR}"
-      _do mkdir -p "${BUILD_DIR}" || Report_fatal "Unable to create build directory"
-      _do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR} directory"
-      _do cmake\
+      local HOST_OS TARGET_ARCH APPLE
+      HOST_OS="$(uname -s)"
+      TARGET_ARCH="$(uname -m)"
+      # Handle Apple Silicon
+      APPLE=
+      if [[ "${HOST_OS}" == Darwin ]]; then
+        APPLE="-DCMAKE_APPLE_SILICON_PROCESSOR=${TARGET_ARCH}"
+      fi
+      _do cmake -B "${BUILD_DIR}"\
           -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
           -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+          "${APPLE}"\
           ..
       ;;
     autotools)
@@ -670,8 +689,45 @@ function Generate() {
       ;;
   esac
 }
+alias Generate=Configure_tool
+ 
+# Arguments are optional
+# shellcheck disable=SC2120
+function Compile_tool()
+{
+  Report_info -grn "Compiling ${TOOL_NAME}"
+  case "${GENERATOR}" in
+    cmake)
+      _do cmake --build "${BUILD_DIR}"
+      ;;
+    autotools)
+      _do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
+      _do make
+      ;;
+    *)
+      Report_error "Unknown generator '${GENERATOR}'"
+      ;;
+  esac
+}
 
-function Cleanup() {
+function Install_tool()
+{
+  Report_info -grn "Installing ${TOOL_NAME} to final location"
+  case "${GENERATOR}" in
+    cmake)
+      _do cmake --install "${BUILD_DIR}"
+      ;;
+    autotools)
+      _do make install
+      ;;
+    *)
+      Report_error "Unknown generator '${GENERATOR}'"
+      ;;
+  esac
+}
+
+function Cleanup()
+{
   Assert $# = 1
   if [[ -n "${CLEANUP}" && "${CLEANUP}" == 1 ]]; then
     cd "${SRC}" || Report_fatal "Unable to enter source directory"
