@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+#
+# $Info: build version 1.0 $
+export SHELL
+SHELL=/bin/bash
+SYNTAX="
+NAME
+----
+
+$0 - use cmake to build and optionally run, test, or install
+
+## SYNOPSIS
+
+  $0 -h|--help
+  $0 [-n] [-C DIR] [-debug][-verbose][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
+
+
+## DESCRIPTION
+
+This script was written to simplify using _cmake_ and educate along they. It provides a single command to configure, compile, link and run or test projects.  It assume a proper CMakeLists.txt has been setup. Bascially, all this does is:
+
++ clean -a # OPTIONAL
++ cmake -B build
++ cmake --build build
++ ctest --test-dir build # OPTIONAL -OR- run
++ cmake --install --config Debug
+
+IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
+
+## OPTIONS
+
++ -help    Display this text
++ -n       Don't actually do anything except show commands that would have been done
++ -C DIR   Change to specified directory before doing anything else
++ -clean   Remove all build files and other output bits
++ -debug   Output information to help debug CMakeLists.txt etc.
++ -run     When done building, run the executable
++ -test    When done building, run the tests
++ -install When done building, install
+
+## CONFIGURATION
+
+  Several variables are setup inside the script for the default locations.
+
+"
+
+function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
+
+# Setup
+#------------------------------------------------------------------------------
+export PROJECT_DIR SUBPROJ_DIR DEBUG
+SRC_DIR="."
+BLD_DIR="build"
+PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
+SUBPROJ_DIR="$(pwd)"
+APPS="${HOME}/.local/apps"
+CLEAN=0
+DEBUG=""
+INSTALL=0
+PREFIX=
+ACTION=
+OPTS_SEP=0
+declare -a BUILD_OPTS TEST_OPTS
+BUILD_OPTS=()
+TEST_OPTS=()
+
+SCRIPTS="${PROJECT_DIR}/bin"
+if [[ ! -f "${SCRIPTS}/Essential-IO" ]]; then
+  SCRIPTS="${HOME}/.local/scripts"
+fi
+if [[ ! -f "${SCRIPTS}/Essential-IO" ]]; then
+  Die "Unable to find Essential-IO in ${SCRIPTS}"
+fi
+# shellcheck disable=SC1091
+source "${SCRIPTS}/Essential-IO"
+Logfile build.log
+Log "% $0 $*"
+
+#------------------------------------------------------------------------------
+# Scan for command-line options
+#------------------------------------------------------------------------------
+while [[ $# != 0 ]]; do
+  if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    Echo "${SYNTAX}"; exit
+  elif [[ "$1" == "-C" ]]; then
+    if [[ $# -lt 2 ]]; then
+      Report_error "-C requires a directory argument"
+    elif [[ ! -d "$2" ]]; then
+      Report_error "'$2' is not a directory as required by -C"
+    else
+      if ! cd "$2"; then
+        Report_error "Failed to change directory!?"; exit 1;
+      fi
+      SUBPROJ_DIR="$(pwd)"
+      shift
+    fi
+  elif [[ "$1" == "-n" ]]; then
+    export NOTREALLY
+    NOTREALLY="-n"
+  elif [[ "$1" =~ ^-{1,2}clean$ ]]; then
+    CLEAN=1;
+  elif [[ "$1" =~ ^-{1,2}debug$ ]]; then
+    DEBUG="--debug-output";
+  elif [[ "$1" =~ ^-{1,2}install$ ]]; then
+    INSTALL=1
+  elif [[ "$1" =~ ^--prefix$ ]]; then
+    PREFIX="$2"
+    if [[ ! -d "${PREFIX}" ]]; then
+      PREFIX=""
+      Report_error "--prefix must be followed by a valid installation directory"; exit 1;
+    else
+      shift
+    fi
+  elif [[ "$1" =~ ^-{1,2}test$ ]]; then
+    ACTION="test"
+  elif [[ "$1" =~ ^-{1,2}run$ ]]; then
+    ACTION="run"
+  elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
+    OPTS_SEP=1
+  elif [[ ${OPTS_SEP} == 0 ]]; then
+    BUILD_OPTS=("${BUILD_OPTS[@]}" "$1")
+  elif [[ "$1" =~ ^-v$ ]]; then
+    BUILD_OPTS=("-v")
+  elif [[ "$1" =~ ^-V$ ]]; then
+    TEST_OPTS=("-V")
+  else
+    TEST_OPTS=("${TEST_OPTS[@]}" "$1")
+  fi
+  shift
+done
+
+#-------------------------------------------------------------------------------
+# Validate environment
+#-------------------------------------------------------------------------------
+if [[ ! -r CMakeLists.txt ]]; then
+  Report_error "Missing CMakeLists.txt!"
+  exit 1
+elif ! grep '^cmake_minimum_required' CMakeLists.txt; then
+  Report_error "CMakeLists.txt missing cmake_minimum_required directive -- are you in the right directory?"
+  exit 1
+elif ! grep '^project' CMakeLists.txt; then
+  Report_error "CMakeLists.txt missing project directive -- are you in the right directory?"
+  exit 1
+fi
+
+TARGETS="$(perl -lne '/add_executable[[:space:]]*[(][[:space:]]*([^[:space:]]+)/i && print $1' CMakeLists.txt)"
+#-------------------------------------------------------------------------------
+# Locate cmake modules that we assume
+#-------------------------------------------------------------------------------
+export CMAKE_PREFIX_PATH
+CMAKE_PREFIX_PATH=
+for CDIR in "${SUBPROJ_DIR}" "${PROJECT_DIR}" "${PROJECT_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+  if [[ -d "${CDIR}/cmake" ]]; then
+    if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
+      CMAKE_PREFIX_PATH="${CDIR}"
+    else
+      CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH};${CDIR}"
+    fi
+  fi
+done
+
+#------------------------------------------------------------------------------
+# Clear screen and add horizontal line to help if visually scrolling backward
+#------------------------------------------------------------------------------
+clear
+ruler
+if [[ -n "${DEBUG}" ]]; then
+  Report_debug -f "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
+fi
+
+#------------------------------------------------------------------------------
+# Optionally start with a clean slate
+#------------------------------------------------------------------------------
+if [[ ${CLEAN} == 1 ]]; then
+  Report_info "Cleaning ${SUBPROJ_DIR}"
+  _do rm -fr "${BLD_DIR}"
+fi
+
+#------------------------------------------------------------------------------
+Report_info "Configuring ${SUBPROJ_DIR}"
+_do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}"|| exit
+
+#------------------------------------------------------------------------------
+Report_info "Compiling ${SUBPROJ_DIR}"
+# shellcheck disable=SC2086
+_do cmake --build "${BLD_DIR}" "${BUILD_OPTS[@]}" || exit
+
+#------------------------------------------------------------------------------
+Report_info "Running ${SUBPROJ_DIR}"
+if [[ "${ACTION}" == run ]]; then
+  for EXECUTABLE in ${TARGETS}; do
+  # shellcheck disable=SC2086
+  _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || exit
+  done
+elif [[ "${ACTION}" == test ]]; then
+  # shellcheck disable=SC2086
+  _do ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}" || exit
+elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
+  if grep -q add_test CMakeLists.txt; then
+    Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test."
+  else
+    Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -run."
+  fi
+else
+  Report_info "Executables in ${BLD_DIR}/"
+fi
+
+#------------------------------------------------------------------------------
+if [[ ${INSTALL} == 1 ]]; then
+  if [[ -n "${PREFIX}" ]]; then
+    Report_info "Installing ${SUBPROJ_DIR}"
+    _do cmake --install "${BLD_DIR}" --config Debug --prefix "${PREFIX}"
+  else
+    Report_info "Installing ${SUBPROJ_DIR}"
+    _do cmake --install "${BLD_DIR}" --config Debug
+  fi
+fi
+
+# vim:nospell
