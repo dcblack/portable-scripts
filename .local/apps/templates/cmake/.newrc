@@ -3,7 +3,7 @@
 # REQUIREMENTS & DEFAULTS
 #-require SRCS=[a-zA-Z].*[.]c.*
 --default APPS=/apps
---default VERS=0.0
+--default VERS=1.0
 
 # BRIEF
 #! Creates CmakeLists.txt for named PROJECT that uses cmake

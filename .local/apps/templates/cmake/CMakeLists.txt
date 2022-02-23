@@ -2,41 +2,36 @@
 #
 # See $ENV{APPS}/cmake/ABOUT_CMAKE.md for more information.
 
-cmake_minimum_required( VERSION 3.11 )
+cmake_minimum_required( VERSION 3.21 )
 
 project(      {:NAME:}
-  VERSION     {:VERS:} # n.n[.n[.n]]
+  VERSION     {:VERS:}
   DESCRIPTION "{:DESC:}"
-  LANGUAGES   CXX
+  LANGUAGES   C CXX
   )
-set( CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};$ENV{CMAKE_MODULE_PATH}" )
+
+list( PREPEND CMAKE_MODULE_PATH "$ENV{PROJECT_DIR}/cmake" )
 include( project_defaults )
 
-# Packages
+# Packages for this project
 find_package( fmt REQUIRED )
-#find_package( yaml-cpp CONFIG REQUIRED )
-#find_package( Boost REQUIRED filesystem )
 
-# add a target to generate API documentation with Doxygen
-
-add_executable( {:NAME:} )
-target_include_directories( {:lc:NAME:} PRIVATE . )
-target_sources( {:lc:NAME:} PRIVATE
+add_executable( {:lc:NAME:} )
+target_sources( {:lc:NAME:}
+  PRIVATE
   {:if:SRCS:}
   {:sp:SRCS:}
   {:else:SRCS:}
-  {:qx:ls -1 *.cpp:}
+  {:qx:ls -1 *pp:}
   {:endif:SRCS:}
 )
-add_test( ex9 COMMAND ./ex9-ans )
+target_link_libraries(         {:lc:NAME:} PRIVATE fmt::fmt )
+#> target_compile_definitions( {:lc:NAME:} PRIVATE MYEXAMPLE )
+#> target_compile_features(    {:lc:NAME:} PUBLIC cxx_std_11 )
+add_test( NAME {:TESTNAME:} COMMAND {:lc:NAME:} {:OPTIONS:} )
 
-# Uncomment the following only as needed
-#> target_compile_definitions( {:NAME:} PRIVATE MYEXAMPLE )
-#> target_link_libraries( {:NAME:} fmt )
-#> target_link_libraries( {:NAME:} yaml-cpp )
-#> target_compile_features( {:NAME:} PUBLIC cxx_std_11 )
-#> target_include_directories( {:NAME:} includes )
-#>
+#> add_subdirectory( tests )
+
 #> include(doxygen)
 
 # vim:syntax=cmake:nospell

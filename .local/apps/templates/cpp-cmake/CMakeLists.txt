@@ -2,29 +2,33 @@
 #
 # See $ENV{APPS}/cmake/ABOUT_CMAKE.md for more information.
 
-cmake_minimum_required( VERSION 3.11 )
+cmake_minimum_required( VERSION 3.21 )
 
 project(      {:NAME:}
-  VERSION     {:VERS:} # n.n[.n[.n]]
+  VERSION     {:VERS:}
   DESCRIPTION "{:DESC:}"
-  LANGUAGES   CXX
+  LANGUAGES   C CXX
   )
-set( CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};$ENV{CMAKE_MODULE_PATH}" )
+list( PREPEND CMAKE_MODULE_PATH "$ENV{PROJECT_DIR}/cmake" )
 include( project_defaults )
 
-# Packages as needed
+# Packages for this project
 find_package( fmt REQUIRED )
-#find_package( yaml-cpp CONFIG REQUIRED )
-#find_package( Boost REQUIRED filesystem )
 
-add_executable( {:NAME:} )
-target_include_directories( {:lc:NAME:} PRIVATE . )
-target_sources( {:lc:NAME:} PRIVATE
+add_executable( {:lc:NAME:} )
+target_sources( {:lc:NAME:}
+  PRIVATE
   {:if:SRCS:}
   {:sp:SRCS:}
   {:else:SRCS:}
-  {:qx:ls -1 *.cpp:}
+  {:qx:ls -1 *pp:}
   {:endif:SRCS:}
 )
+target_link_libraries(         {:lc:NAME:} PRIVATE fmt::fmt )
+#> target_compile_definitions( {:lc:NAME:} PRIVATE MYEXAMPLE )
+#> target_compile_features(    {:lc:NAME:} PUBLIC cxx_std_11 )
+add_test( NAME {:TESTNAME:} COMMAND {:lc:NAME:} {:OPTIONS:} )
 
+#> add_subdirectory( tests )
+#> include(doxygen)
 # vim:syntax=cmake:nospell
