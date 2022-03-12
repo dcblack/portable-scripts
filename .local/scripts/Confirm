@@ -13,7 +13,7 @@ function Confirm()
     if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
       PROMPT="${PROMPT}?"
     fi
-    if [[ "${SHELL}" == /bin/zsh ]]; then
+    if [[ "${SHELL}" =~ zsh ]]; then
       read -r "ANS?${PROMPT} "
     else
       read -r -p "${PROMPT} " ANS

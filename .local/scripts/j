@@ -63,7 +63,7 @@ Examples
   j ~/syscfund/ex01/ex01.cpp
 
 EOT
-        return
+        return 0
         ;;
       -d | --debug )
         J_DEBUG=1
@@ -84,7 +84,7 @@ EOT
         else
           echo "No favorites directory specified" 1>&2
         fi
-        return
+        return 0
         ;;
       -mk )
         shift
@@ -126,13 +126,13 @@ EOT
         else
           echo "No favorites directory specified" 1>&2
         fi
-        return
+        return 0
         ;;
       -[1-9])
         ;;
       * ) 
         echo 1>&2 "ERROR: Unknown option $1"
-        return
+        return 0
         ;;
       esac
       shift
@@ -284,4 +284,6 @@ EOT
   if command -v set_icon 1>/dev/null; then
     set_icon "${TMP2}"
   fi
+
+  unset ACTION
 }

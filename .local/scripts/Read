@@ -8,7 +8,7 @@ function Read()
   if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
     PROMPT="${PROMPT}?"
   fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ "${SHELL}" =~ zsh ]]; then
     read -r "REPLY?${PROMPT} "
   else
     read -r -p "${PROMPT} "

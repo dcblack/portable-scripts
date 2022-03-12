@@ -2,9 +2,10 @@
 
 function Prepend_path() { # only if 2nd arg does not exist in first
   export Prepend_path_VERSION=1.4
+  export ACTION
   #|Usage "$1" "Prepend_path VAR PATH" || return 1
   # Dependencies: Realpath Has_path Report_error Remove_path Unique_path
-  if [[ "$1" == "-undo" ]]; then
+  if [[ "$1" == "-undo" || "${ACTION}" == "rm" ]]; then
     shift
     Remove_path "$1" "$2"
   else
