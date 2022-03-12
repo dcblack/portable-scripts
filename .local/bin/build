@@ -37,6 +37,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 + -run     When done building, run the executable
 + -test    When done building, run the tests
 + -install When done building, install
++ -targets List explicit targets
 
 ## CONFIGURATION
 
@@ -111,6 +112,8 @@ while [[ $# != 0 ]]; do
     else
       shift
     fi
+  elif [[ "$1" =~ ^-{1,2}(list-)?targets$ ]]; then
+    ACTION="list"
   elif [[ "$1" =~ ^-{1,2}test$ ]]; then
     ACTION="test"
   elif [[ "$1" =~ ^-{1,2}run$ ]]; then
@@ -143,7 +146,17 @@ elif ! grep '^project' CMakeLists.txt; then
   exit 1
 fi
 
-TARGETS="$(perl -lne '/add_executable[[:space:]]*[(][[:space:]]*([^[:space:]]+)/i && print $1' CMakeLists.txt)"
+# shellcheck disable=SC2016
+PERLSCRIPT='
+chomp; chomp;
+next if m{[{}]};
+print " $2" if m{(add_executable|set_target)[( "]+([^" )]+)};
+'
+TARGETS="$(perl -ne "${PERLSCRIPT}" CMakeLists.txt)"
+if [[ "${ACTION}" == list ]]; then
+  Report_info "Targets are ${TARGETS}"
+  exit 0
+fi
 #-------------------------------------------------------------------------------
 # Locate cmake modules that we assume
 #-------------------------------------------------------------------------------
@@ -188,10 +201,12 @@ _do cmake --build "${BLD_DIR}" "${BUILD_OPTS[@]}" || exit
 #------------------------------------------------------------------------------
 Report_info "Running ${SUBPROJ_DIR}"
 if [[ "${ACTION}" == run ]]; then
-  for EXECUTABLE in ${TARGETS}; do
-  # shellcheck disable=SC2086
-  _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || exit
-  done
+  if [[ -n "${TARGETS}" ]]; then
+    for EXECUTABLE in ${TARGETS}; do
+      # shellcheck disable=SC2086
+      _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || exit
+    done
+  fi
 elif [[ "${ACTION}" == test ]]; then
   # shellcheck disable=SC2086
   _do ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}" || exit
