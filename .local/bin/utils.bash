@@ -61,6 +61,7 @@ SetupLogdir "$0"
 ```
 } end_markdown
 EOF
+
 export SHELL
 SHELL=/bin/bash
 
@@ -98,7 +99,7 @@ export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
 function Realpath ()
 {
-  /usr/bin/perl '-MCwd(abs_path)' -le "print abs_path(qq($*)) if -e qq($*)"
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -d "${SCRIPTDIR}" ]]; then
@@ -735,7 +736,8 @@ function Cleanup()
   fi
 }
 
-function Main() {
+function Main()
+{
   Assert "${BASH_VERSINFO[0]}" -ge 5
   if [[ $# != 0 ]]; then
     GetBuildOpts "$0" "$@"
