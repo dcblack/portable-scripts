@@ -5,11 +5,16 @@
 TITLE="{:DESCRIPTION:}"
 export ACTION
 
+#-------------------------------------------------------------------------------
+# Useful functions
 function Report_info()  { echo "Info: $*" ; }
 function Report_warning() { echo "Warning: $*" 1>&2; }
 function Report_error() { echo "Error: $*" 1>&2 ; return 1; }
-function Realpath() { /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*" ; }
-function Has_path() {
+function Realpath() { # Determines the full Linuix pathname of a file or directory
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*" ;
+}
+function Has_path() { # Determines if environment variable contains a particular path
+  # Has_path VARIABLE_NAME PATH_TO_FIND
   local arg plscript
   arg="$(Realpath "$2")"
   # shellcheck disable=SC2016
@@ -17,7 +22,8 @@ function Has_path() {
   if [[ -z "${arg}" ]]; then return 1; fi
   perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
 }
-function Unique_path() {
+function Unique_path() { # Removes duplicates from environment variables (e.g., PATH)
+  # Unique_path VARIABLE_NAME
   local PERL_SCRIPT EVAL_TEXT
   if [[ "${SHELL}" =~ zsh ]]; then set -o shwordsplit ; fi
   # shellcheck disable=SC2016
@@ -27,7 +33,27 @@ function Unique_path() {
   EVAL_TEXT="$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
   eval "${EVAL_TEXT}"
 }
+function Remove_path() { # Removes specified path from environment variables (e.g., PATH)
+  # Remove_path VARIABLE_NAME PATH_TO_REMOVE
+  export Remove_path_VERSION=1.4
+  # USAGE: remove_path VAR PATH
+  if [[ $# != 2 ]]; then Report_error "Remove_path requires two arguments"; return 1; fi
+  if [[ "$1" =~ ^[_A-Za-z][-_A-Za-z0-9]*$ ]]; then
+    local PLSCRIPT EVALSCRIPT VAR VAL REMOVE
+    VAR="$1"
+    REMOVE="$2"
+    eval "VAL=\$${VAR}"
+    # shellcheck disable=SC2016
+    PLSCRIPT='$v=$ARGV[0];$p=abs_path($ARGV[1]);@o=split(/:/,$ENV{$v});for(@o){$e=abs_path($_);push(@e,$e) if $p ne $e;} printf qq{$v="%s"\n},join(":",@e);'
+    EVALSCRIPT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "${VAR}" "${REMOVE}")"
+    eval "${EVALSCRIPT}"
+  else
+    Report_error "Remove_path requires first argument be a simple variable name"
+    return 1
+  fi
+}
 function Prepend_path() { # only if 2nd arg does not exist in first
+  # Prepend_path VARIABLE_NAME PATH_TO_INSERT
   if [[ $# != 2 ]]; then Report_error "Prepend_path requires two arguments"; return 1; fi
   local VAR ARG EVAL
   VAR="$1"
@@ -37,10 +63,12 @@ function Prepend_path() { # only if 2nd arg does not exist in first
   Unique_path "${VAR}"
 }
 
+#-------------------------------------------------------------------------------
 # Directory where shared includes, libraries and applications are installed.
 # Using home installation when /usr/local is not possible.
 APPS="${HOME}/.local/apps"
 
+#-------------------------------------------------------------------------------
 # Point to the top-level of this repository
 if git rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
   PROJECT_DIR="$(git rev-parse --show-toplevel)"
@@ -50,14 +78,23 @@ else
 fi
 export APPS PROJECT_DIR
 
-Prepend_path MANPATH "${PROJECT_DIR}/externs/share/man"
-Prepend_path PATH "${PROJECT_DIR}/externs/bin"
-Prepend_path PATH "${PROJECT_DIR}/bin"
+if [[ "${ACTION}" != rm ]]; then
+  Prepend_path MANPATH "${PROJECT_DIR}/externs/share/man"
+  Prepend_path PATH "${PROJECT_DIR}/externs/bin"
+  Prepend_path PATH "${PROJECT_DIR}/bin"
+else
+  Remove_path  MANPATH "${PROJECT_DIR}/externs/share/man"
+  Remove_path  PATH "${PROJECT_DIR}/externs/bin"
+  Remove_path  PATH "${PROJECT_DIR}/bin"
+fi
 
+#-------------------------------------------------------------------------------
 # Cmake should refer to project and group directories to find scripts
 CMAKE_PREFIX_PATH="${PROJECT_DIR}/cmake;${APPS}/cmake;${PROJECT_DIR}/externs/lib/cmake"
 export CMAKE_PREFIX_PATH
 
+#-------------------------------------------------------------------------------
+# Check installation
 if [[ ! -d "${APPS}/cmake" ]]; then
   Report_warning "${APPS} missing!? Did you install portable scripts?"
 fi
@@ -65,7 +102,9 @@ if [[ ! -d "${PROJECT_DIR}/externs/lib/cmake" ]]; then
   Report_warning "${PROJECT_DIR}/externs/lib/cmake missing!? Did you build GoogleTest?"
 fi
 
-if [[ "${ACTION}" != xdd ]]; then
+#-------------------------------------------------------------------------------
+# Display current project "title"
+if [[ "${ACTION}" == add ]]; then
   Report_info "${TITLE}"
 fi
 
