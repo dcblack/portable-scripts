@@ -1,5 +1,4 @@
-eval 'exec perl -S $0 ${1+"$@"}'
-  if 0;#$running_under_some_shell;
+#!/usr/bin/env perl
 # vim:sw=2:tw=69:lines=42:columns=90:fdm=marker:fmr=<<<,>>>
 
 # @(#)$Info: Envv.pm - Perl module to manipulate shell environments. $
