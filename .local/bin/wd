@@ -122,7 +122,7 @@ function Wd_parse() # internal
         # shellcheck source=$HOME/.local/bin/wd disable=SC2250,SC1091
         source "${HOME}/.local/bin/wd" -init
         ;;
-      -h|-help|--help)   lwd_help ;;
+      -h|-help|--help)   Wd_help ;;
       -l|-list|--list)
         if [[ -n "${wd_pset}" ]]; then
           Report_info "wd_set=${wd_pset} wd_dir=${wd_pdir}"
