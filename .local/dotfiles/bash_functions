@@ -5,38 +5,62 @@
 #-------------------------------------------------------------------------------
 LOCAL="${HOME}/.local"
 export LOCAL
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Realpath"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Has_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Append_path"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/FindScript"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Load"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Essential-IO"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Firstreal"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Prepend_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Unique_path"
 
 #-------------------------------------------------------------------------------
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Nargs"
-source "${LOCAL}/scripts/Firstreal"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Find"
-source "${LOCAL}/scripts/Has_path"
-source "${LOCAL}/scripts/Unique_path"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Remove_path"
-source "${LOCAL}/scripts/Append_path"
-source "${LOCAL}/scripts/Prepend_path"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Add_prefix"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Add_suffix"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Unique_list"
 
 #-------------------------------------------------------------------------------
 # Personal habits
 #-------------------------------------------------------------------------------
 
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/j"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/lx"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/lns"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/h"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/show-colors"
+# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Tcpip"
 
 function use-cmake() {
-  source "${LEADER}/.local/bin/use-cmake"
+  # shellcheck disable=SC1091
+  source "${LOCAL}/.local/bin/use-cmake"
 }
 
+# shellcheck disable=SC1091
 source "${LOCAL}/bin/wd" -init
 
 # vim:nospell
