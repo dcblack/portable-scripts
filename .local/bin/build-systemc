@@ -8,7 +8,7 @@ TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS=2.3.3
 
 export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS
-export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX
+export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON_PROCESSOR
 
 #-------------------------------------------------------------------------------
 # The following is formatted for use with -help
@@ -66,15 +66,15 @@ Create_and_Cd "${SRC}"
 Report_info -grn "Obtaining ${TOOL_NAME} source"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
 
-Report_info -grn "Compiling ${TOOL_NAME}"
+Report_info -grn "Building ${TOOL_NAME}"
 # shellcheck disable=SC2119,SC2312
-Generate | Log
-_do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
-_do make
+Configure_tool | Log
+# shellcheck disable=SC2119,SC2312
+Compile_tool   | Log
 
 if [[ -z "${NOINSTALL+x}" ]]; then
-  Report_info -grn "Installing ${TOOL_NAME} to final location"
-  _do make install
+  # shellcheck disable=SC2119,SC2312
+  Install_tool | Log
 
   # Optional clean up
   if [[ "${CLEAN}" == 1 ]]; then
