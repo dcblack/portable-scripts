@@ -182,6 +182,9 @@
 :nmap <C-Y> @a
 "-------------------------------------------------------------------------------
 " Conveniences
-:cmap bs buffers
-:cmap cs colorscheme
+:ca bs buffers
+:ca dt diffthis
+:ca du diffupdate
+:ca cs colorscheme
+
 :syntax on
