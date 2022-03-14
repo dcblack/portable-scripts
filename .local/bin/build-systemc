@@ -5,7 +5,7 @@ TOOL_NAME="SystemC"
 TOOL_INFO='Go to 'https://accellera.org/downloads/standards/systemc' for more information.'
 TOOL_SRC="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
-TOOL_VERS=2.3.3
+TOOL_VERS=2.3.4
 
 export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS
 export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON_PROCESSOR
