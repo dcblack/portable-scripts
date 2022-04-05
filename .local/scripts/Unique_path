@@ -23,8 +23,10 @@ function Unique_path() {
   # shellcheck disable=SC2016
   PERL_SCRIPT='
     $v=shift @ARGV;
+    $s=q{:};
+    $s=q{;} if $ENV{$v} =~ q{;};
     exit 1 if not exists $ENV{$v};
-    for my $d(split(qr{:},$ENV{$v})){
+    for my $d(split(qr{$s},$ENV{$v})){
       next if ! -d $d;
       $e=abs_path($d);
       if( ! exists $e{$e} ){
@@ -32,7 +34,7 @@ function Unique_path() {
         push(@e,$e);
       }
     }
-    printf qq{%s="%s"\n},$v,join(":",@e);
+    printf qq{%s="%s"\n},$v,join($s,@e);
     '
   EVAL_TEXT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
   if [[ ${VERBOSE} == 1 ]]; then

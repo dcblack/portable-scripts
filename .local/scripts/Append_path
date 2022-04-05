@@ -10,12 +10,30 @@ function Append_path() # only if 2nd arg does not exist in first
     shift
     Remove_path "$1" "$2"
   else
+    local VAR VAL SEP ARG EVAL
+    SEP=''
+    if [[ "$1" == "-sep" ]]; then
+      SEP="$2"
+      shift; shift
+    fi
     if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
-    local VAR ARG EVAL
     VAR="$1"
     ARG="$(Realpath "$2")"; shift
     if ! Has_path "${VAR}" "${ARG}"; then 
-       EVAL="${VAR}=\"\$${VAR}:${ARG}\"; export ${VAR}"
+      EVAL="VAL=\$${VAR}"
+      eval "${EVAL}"
+      if [[ -z "${SEP}" ]]; then
+        if [[ "${VAL}" =~ .*[:].* ]]; then
+          SEP=';'
+        else
+          SEP=':'
+        fi
+      fi
+      if [[ -z "${VAL}" ]]; then
+        EVAL="${VAR}=\"${ARG}\"; export ${VAR}"
+      else
+        EVAL="${VAR}=\"\$${VAR}${SEP}${ARG}\"; export ${VAR}"
+      fi
       eval "${EVAL}"
     fi
   fi
