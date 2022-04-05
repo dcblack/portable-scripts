@@ -1,23 +1,28 @@
 #!cmake .
-cmake_minimum_required ( VERSION 3.21 )
+cmake_minimum_required ( VERSION 3.20 )
+
+message( "Setting up cmake" )
 
 # Header style guard for multiple inclusion protection
 if( DEFINED PROJECT_DEFAULTS )
   return()
 endif()
-set( MODERN_CMAKE_UTILS ON )
+set( PROJECT_DEFAULTS ON )
 
-#-------------------------------------------------------------------------------
-# Extend module path
-#-------------------------------------------------------------------------------
-if( DEFINED ENV{CMAKE_PREFIX_PATH} )
-  foreach( _dir $ENV{CMAKE_PREFIX_PATH} )
-    if( EXISTS "${_dir}" )
-      list( INSERT CMAKE_MODULE_PATH 1 "${_dir}" )
-    endif()
+#set(CMAKE_CXX_VISIBILITY_PRESET hidden) 
+
+if( DEFINED ENV{PROJECT_DIR} )
+  set( PROJECT_DIRS "$ENV{PROJECT_DIR}/externs;$ENV{APPS}" )
+  foreach( _dir ${PROJECT_DIRS} )
+     if( EXISTS "${_dir}" )
+       list( APPEND CMAKE_PREFIX_PATH "${_dir}" )
+     endif()
   endforeach()
+  list( REMOVE_DUPLICATES CMAKE_PREFIX_PATH )
+  include_directories( . "$ENV{PROJECT_DIR}" )
+else()
+  message( WARNING "PROJECT_DIR environment variable was not defined" )
 endif()
-list( REMOVE_DUPLICATES CMAKE_MODULE_PATH )
 
 #-------------------------------------------------------------------------------
 # Increase sensitivity to all warnings
@@ -27,13 +32,14 @@ include( strict )  # << Report as many compilation issues as able
 #------------------------------------------------------------------------------
 # Choose minimum C++ standard for remainder of code
 #------------------------------------------------------------------------------
+set( SystemC_CXX_STANDARD        17 CACHE STRING "C++ standard for SystemC compilation." )
 set( CMAKE_CXX_STANDARD          17 CACHE STRING "C++ standard to build all targets." )
 set( CMAKE_CXX_STANDARD_REQUIRED 17 CACHE BOOL   "The CMAKE_CXX_STANDARD selected C++ standard is a requirement." )
 set( CMAKE_C_STANDARD            11 CACHE STRING "C standard to build all targets." )
 set( CMAKE_C_STANDARD_REQUIRED   11 CACHE BOOL   "The CMAKE_CXX_STANDARD selected C standard is a requirement." )
 
 if( DEFINED ENV{SYSTEMC_HOME} )
-  include( SystemC )
+  include( systemc )
 else()
   message( SEND_ERROR "SYSTEMC_HOME environment variable needs to be setup" )
 endif()
@@ -41,6 +47,7 @@ endif()
 enable_testing()
 
 include( set_target )
+include( show_vars ) # Useful for debug of cmake
 
 # Simplify life
 add_compile_definitions( SC_INCLUDE_FX SC_INCLUDE_DYNAMIC_PROCESSES )
