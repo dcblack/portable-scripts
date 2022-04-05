@@ -5,13 +5,25 @@ function Remove_path() {
   # USAGE: remove_path VAR PATH
   if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
   if [[ "$1" =~ ^[_A-Za-z][-_A-Za-z0-9]*$ ]]; then
-    local PLSCRIPT EVALSCRIPT VAR VAL REMOVE
+    local PLSCRIPT EVALSCRIPT VAR VAL SEP REMOVE
+    SEP=''
+    if [[ "$1" == "-sep" ]]; then
+      SEP="$2"
+      shift; shift
+    fi
     VAR="$1"
     REMOVE="$2"
     eval "VAL=\$${VAR}"
+    if [[ -z "${SEP}" ]]; then
+      if [[ "${VAL}" =~ .*[:].* ]]; then
+        SEP=';'
+      else
+        SEP=':'
+      fi
+    fi
     # shellcheck disable=SC2016
-    PLSCRIPT='$v=$ARGV[0];$p=abs_path($ARGV[1]);@o=split(/:/,$ENV{$v});for(@o){$e=abs_path($_);push(@e,$e) if $p ne $e;} printf qq{$v="%s"\n},join(":",@e);'
-    EVALSCRIPT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "${VAR}" "${REMOVE}")"
+    PLSCRIPT='$s=shift@ARGV;$v=$ARGV[0];$p=abs_path($ARGV[1]);@o=split(/$s/,$ENV{$v});for(@o){$e=abs_path($_);push(@e,$e) if $p ne $e;} printf qq{$v="%s"\n},join("$s",@e);'
+    EVALSCRIPT="$(env "${VAR}=${ARG}" perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "${SEP}" "${VAR}" "${REMOVE}")"
     eval "${EVALSCRIPT}"
   else
     Report_error "Remove_path requires first argument be a simple variable name"
