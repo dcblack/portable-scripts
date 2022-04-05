@@ -22,7 +22,7 @@ function Mk()
     while [[ -z "${GIT_COMMITTER_EMAIL}" ]]; do
       REPLY=""
       if [[ -z "${REPLY}" ]]; then
-        Read "What's your Doulos e-mail?"
+        Read "What's your proper work e-mail address?"
         if [[ "${REPLY}" =~ ^[A-Za-z]+[-A-Za-z0-9_.]+[A-Za-z0-9][@]doulos[.]com$ ]]; then
           if Confirm "Is ${REPLY} correct (y|n)?"; then
             GIT_COMMITTER_EMAIL="${REPLY}"
