@@ -1,5 +1,5 @@
 #!cmake .
-cmake_minimum_required ( VERSION 3.21 )
+cmake_minimum_required( VERSION "3.20" )
 
 # Header style guard for multiple inclusion protection
 if( DEFINED PROJECT_DEFAULTS )
@@ -33,12 +33,31 @@ set( CMAKE_C_STANDARD            11 CACHE STRING "C standard to build all target
 set( CMAKE_C_STANDARD_REQUIRED   11 CACHE BOOL   "The CMAKE_CXX_STANDARD selected C standard is a requirement." )
 
 #------------------------------------------------------------------------------
+# If using local installation of libraries
+#------------------------------------------------------------------------------
+if( EXISTS $ENV{PROJECT_DIR}/externs )
+  include_directories( $ENV{PROJECT_DIR}/externs/include )
+  link_directories( $ENV{PROJECT_DIR}/externs/lib )
+endif()
+
+#------------------------------------------------------------------------------
+# Setup Boost if available
+#------------------------------------------------------------------------------
+find_package( Boost )
+if( Boost_FOUND )
+  message( VERBOSE "Boost found and available" )
+  include_directories( ${Boost_INCLUDE_DIRS} )
+endif()
+
+#------------------------------------------------------------------------------
 # Setup GoogleTest
 #------------------------------------------------------------------------------
-find_package( GTest REQUIRED )
-include_directories( $ENV{PROJECT_DIR}/externs/include ${GTEST_INCLUDE_DIRS} )
-link_directories( AFTER $ENV{PROJECT_DIR}/externs/lib )
-link_libraries(  gtest gmock gtest_main pthread )
+find_package( GTest )
+if( GTest_FOUND )
+  message(VERBOSE  "GTest found and available" )
+  include_directories( ${GTEST_INCLUDE_DIRS} )
+  link_libraries(  GTest::gtest GTest::gmock GTest::gtest_main pthread )
+endif()
 
 enable_testing()
 
