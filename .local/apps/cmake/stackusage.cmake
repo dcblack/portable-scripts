@@ -1,5 +1,5 @@
 # Per https://www.adacore.com/uploads/technical-papers/Stack_Analysis.pdf
-cmake_minimum_required( VERSION "3.21" )
+cmake_minimum_required( VERSION "3.20" )
 
 if ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" )
   # using GCC
