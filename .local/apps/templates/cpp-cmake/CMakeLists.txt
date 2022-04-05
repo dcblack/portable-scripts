@@ -2,32 +2,23 @@
 #
 # See $ENV{APPS}/cmake/ABOUT_CMAKE.md for more information.
 
-cmake_minimum_required( VERSION 3.21 )
+cmake_minimum_required( VERSION 3.20 )
 
-project(      {:NAME:}
-  VERSION     {:VERS:}
-  DESCRIPTION "{:DESC:}"
-  LANGUAGES   C CXX
-  )
+project( {:NAME:} VERSION {:VERS:} DESCRIPTION "{:DESC:}" LANGUAGES C CXX )
+
 list( PREPEND CMAKE_MODULE_PATH "$ENV{PROJECT_DIR}/cmake" )
 include( project_defaults )
 
 # Packages for this project
 find_package( fmt REQUIRED )
 
-add_executable( {:lc:NAME:} )
-target_sources( {:lc:NAME:}
-  PRIVATE
-  {:if:SRCS:}
-  {:sp:SRCS:}
-  {:else:SRCS:}
-  {:qx:ls -1 *pp:}
-  {:endif:SRCS:}
-)
-target_link_libraries(         {:lc:NAME:} PRIVATE fmt::fmt )
-#> target_compile_definitions( {:lc:NAME:} PRIVATE MYEXAMPLE )
-#> target_compile_features(    {:lc:NAME:} PUBLIC cxx_std_11 )
-add_test( NAME {:TESTNAME:} COMMAND {:lc:NAME:} {:OPTIONS:} )
+set_target( {:lc:NAME:} )
+add_executable( "${TARGET}" )
+target_sources( "${TARGET}" PRIVATE {:lc:NAME:}.cpp )
+target_link_libraries( "${TARGET}" PRIVATE fmt::fmt )
+#> target_compile_definitions( "${TARGET}" PRIVATE MYEXAMPLE )
+#> target_compile_features(    "${TARGET}" PUBLIC cxx_std_11 )
+add_test( NAME test-"${TARGET}" COMMAND "${TARGET}" {:OPTIONS:} )
 
 #> add_subdirectory( tests )
 #> include(doxygen)
