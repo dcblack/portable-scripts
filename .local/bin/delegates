@@ -20,7 +20,7 @@ $0 - extract delegate information from CoCalc courses
 Synopsis
 --------
 
-  $0 [-ssh|-who=_PATT_] _COURSEFILE(S)_...
+  $0 [-doall|-ssh|-who=_PATT_] _COURSEFILE(S)_...
   $0 _EMAIL_
 
 Description
@@ -37,6 +37,7 @@ Options
 
 OPTION      | DESCRIPTION
 ------      | -----------
+-doall      | generates a bash script to visit all delegate machines and perform an action
 -ssh        | generates \$HOME/.ssh/config entries instead of a simple list
 -ssh/config | greps your ~/.ssh/config file for delegates
 -who        | allows filtering by delegate e-mail address.
@@ -54,7 +55,7 @@ while( $ARGV[0] =~ m/^-/ ) {
   if( $opt =~ m/=/ ) {
     $OPT{$`} = $';
   } else {
-    $OPT{$opt}=1;
+    $OPT{$opt}=$;;
   }#endif
 }
 # Shortcuts
@@ -117,10 +118,10 @@ if( $ARGV[0] =~ m/[@]/ ) {
   exit 0;
 }
 
+my $date = `date`;
 if( exists $OPT{-ssh} ) {
   $sshconfig = "config" if $sshconfig eq "$ENV{HOME}/.ssh/config";
   open SSHCONFIG,'>',$sshconfig;
-  my $date = `date`;
   print SSHCONFIG << "EOT";
 # ssh config file (place under $ENV{HOME}/.ssh/ as 'config')
 # created on $date
@@ -129,7 +130,21 @@ Host localhost
     HostKeyAlias myself
 
 EOT
-  }
+}
+my $doall = 'doall.sh';
+if( exists $OPT{-doall} ) {
+  open DOALL,'>',$doall;
+  printf DOALL <<'EOT' if exists $OPT{-doall};
+#!/usr/bin/env bash
+
+source "${HOME}/.local/scripts/Essential-IO"
+function Report_info() {
+  local ESC
+  ESC=$(perl -le "print chr(27)")
+  echo "${ESC}[95,01m$*${ESC}[00m";
+}
+EOT
+}
 
 for my $course_file ( @ARGV ) {
   if( $course_file !~ m/[.]course$/ ) {
@@ -158,6 +173,11 @@ for my $course_file ( @ARGV ) {
       printf SSHCONFIG "    User   %s\n", $user;
       printf SSHCONFIG "    Hostname ssh.cocalc.com\n";
       printf SSHCONFIG "\n";
+    } elsif( exists $OPT{-doall} ) {
+      my $who = $OPT{-who};
+      next unless $who ne $; and not ($email =~ m/$who/i or $name{$email} =~ m/$who/i);
+      my $info=sprintf( "%d %s <%s>", $idx, $name, $email );
+      printf DOALL "Report_info '%s' ssh %s\@ssh.cocalc.com ;\n", $info, $user;
     } elsif( exists $OPT{-who} ) {
       my $who = $OPT{-who};
       next unless $email =~ m/$who/i or $name{$email} =~ m/$who/i;
@@ -169,7 +189,7 @@ for my $course_file ( @ARGV ) {
     }
   }#endwhile
   printf "Found %d students in course file\n", $idx if exists $OPT{-verbose};
-  printf SSHCONFIG "#} Delegates above here from  %s\n", $course_file if exists $OPT{-ssh};
+  printf( SSHCONFIG "#} Delegates above here from  %s\n", $course_file ) if exists $OPT{-ssh};
   close COURSE;
 
 }#endfor
@@ -192,6 +212,12 @@ Host *
 EOT
   close SSHCONFIG;
   printf "Created %s\n", $sshconfig;
+}
+
+if( exists $OPT{-doall} ) {
+  printf( DOALL "# created on %s", $date );
+  close DOALL;
+  printf "Created %s\n", $doall;
 }
 
 exit 0;
