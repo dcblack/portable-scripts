@@ -178,10 +178,14 @@ function Git_setup()
   git config --global alias.unstage  'reset HEAD'
   git config --global alias.untrack  'rm --cached'
   git config --global alias.hash     'hash-object'
-  git config --global alias.history  'log --pretty=format:'%h %s' --graph'
+  git config --global alias.history  'log --pretty=format:"%h %s" --graph'
   git config --global alias.ignored  'ls-files -o'
   git config --global alias.br       'branch'
   git config --global alias.co       'checkout'
+  git config --global alias.diffs    '!git diff $(git ls-files -m)'
+  git config --global alias.remotes  'remote -v'
+  git config --global alias.top 'rev-parse --show-toplevel'
+  git config --global alias.url 'remote get-url origin'
 
   for COURSE in syscfund tlm-2; do
     if [[ -d "${HOME}/${COURSE}" && ! -d "${HOME}/${COURSE}/.git" ]]; then
