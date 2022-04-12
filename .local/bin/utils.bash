@@ -675,8 +675,7 @@ function Configure_tool()
       _do cmake -B "${BUILD_DIR}"\
           -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
           -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
-          "${APPLE}"\
-          ..
+          "${APPLE}"
       ;;
     autotools)
       reconfigure
