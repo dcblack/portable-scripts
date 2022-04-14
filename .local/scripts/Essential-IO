@@ -25,7 +25,7 @@ A collection of useful functions for output in bash/zsh.
 | HelpText [-md] "_FILE_"       | Displays help for specified file
 | Log [-n] "_MESSAGE_"          | Adds message to logfile
 | Logfile [--append] _FILE_     | Establishes a logfile name
-| PassFail $? "_MESSAGE_"       | Displays message with pass/fail status
+| PassFail [$?] "_MESSAGE_"       | Displays message with pass/fail status
 | Realpath FILESPEC             | Echo the real pathname for a file specification
 | Read "_PROMPT_"               | Shell independent read returns REPLY
 | Report_debug "_MESSAGE_"      | Echo a debug message
@@ -342,7 +342,10 @@ SYNOPSIS
 function PassFail()
 { # Reports success or failure
   local STATUS=$?
-  shift
+  if [[ $# == 2 ]]; then
+    STATUS="$1"
+    shift
+  fi
   if [[ $# == 0 ]]; then
     if [[ ${STATUS} == 0 ]]; then Report_info "${BOLD}${CGRN}success${NONE}"; else Report_info "${BOLD}${CRED}failure${NONE}"; fi
   else
