@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-#
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+  echo "Don't run $0, source it" >&2
+  exit 1
+fi
+
 # source this file to setup project
 
 TITLE="{:DESCRIPTION:}"
