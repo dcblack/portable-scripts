@@ -1,0 +1,6 @@
+#!new # vim:syntax=sh
+−−require NAME=^[a−zA−Z]\w*$
+#! Create a header/implementation file pair for a C++ class
+#: Create a header/implementation file pair for a C++ class
+
+# @(#)$Id$

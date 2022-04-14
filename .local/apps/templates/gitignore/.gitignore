@@ -1,0 +1,29 @@
+# Files to ignore in git
+
+# Archives
+*.tgz
+*.zip
+*.7z
+*.tar
+*.tbz
+
+# Windows only files
+thumbs.db
+
+# Mac only files
+.DS_Store
+*.graffle
+*.screenflow
+
+# Temporaries
+*#*
+*~*
+*~
+.*.sw[op]
+tmp*
+*.tmp
+
+# Generated files
+*.[dPoax]
+build/
+build-*/

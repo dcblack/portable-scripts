@@ -1,0 +1,6 @@
+#!new # vim:syntax=sh
+−−require NAME=^[a−zA−Z]\w*$
+#! Create a implementation file for C++
+#: Create a implementation file for C++
+
+# @(#)$Id$ vim:syntax=csh

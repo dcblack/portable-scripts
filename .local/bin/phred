@@ -1,0 +1,696 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if 0;#running_under_some_shell;
+
+# vim600:tw=72:syntax=perl:foldmethod=manual
+#
+#@(#)$Info: phred - Place Holder Replacement EDitor. $
+# @(#)$Copyright: (C) 2003-2022 David C Black. $
+# @(#)$Licensing: Apache License, Version 2.0 $
+# @(#)$Email: <dcblack@mac.com>. $
+# @(#)$Id: phred 1129 2010-07-15 19:34:21Z dcblack $
+require 5.0; #<<<1
+use warnings;
+use strict;
+use English;
+use FileHandle;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+use FindBin qw($RealBin $RealScript);
+use File::Find ();
+
+our $auth = 'David C Black <dcblack@mac.com>';
+our $tool = $RealScript;
+our $TOOL = uc $tool;
+our $revn = 1.5; #< manually update
+our $user = getlogin || (getpwuid($<))[0] || "Intruder!";
+our $date = scalar localtime;
+
+our $tool_var = "${TOOL}RC";
+our (%OPT,%REPL,%FS,%CMND_LN);
+our $using_stdout = 0;
+our $once = 0;
+our $fix = '-';
+our @FIX;
+our $CMND_LN  = 1;
+
+# Predefined/builtin (not allowed to override) #<<<1
+our @PRECIOUS = qw(
+  Author
+  Date
+  DATE
+  FDIR
+  FILE
+  Header
+  HOST
+  Id
+  Locker
+  Log
+  MDY2
+  Name
+  NAME
+  NEW_VERSION
+  PATH
+  RCSfile
+  RDIR
+  Revision
+  Source
+  State
+  TDIR
+  TYPE
+  USER
+  YEAR
+);
+our $recurse = 5;
+
+# SUBROUTINES #<<<1
+
+###############################################################################
+sub System { #<<<2
+  my $cmd = "@_";
+  printf "%s\n",$cmd  unless exists $OPT{-q} or $using_stdout;
+  return system($cmd) unless exists $OPT{-n};
+}
+
+###############################################################################
+sub help() { #<<<2
+  open MAN,"|pod2man|nroff -man|less";
+  MAN->autoflush(1);
+  while (<DATA>) {
+    s/B<ph>/B<$tool>/g;
+    s/PH/$tool_var/;
+    print MAN $_;
+  }#endwhile
+  close MAN;
+  exit 0;
+}#endsub help
+
+###############################################################################
+sub save_existing($) { #<<<2
+  # Rename existing filenames to prepare for new
+  for my $target (@_) {
+    my $i;
+    if (-e $target) {
+      $i = 1;
+      while (-e "$target-old$i") {
+        ++$i;
+      }#endif
+      &System("mv $target $target-old$i");
+    }#endif
+  }#endfor
+}#endsub save_existing
+
+###############################################################################
+###############################################################################
+#sub exe($$) { #<<<2
+our %warned;
+sub exe($$) {
+  my ($fn,$text) = @_;
+  $fn = lc $fn; # case insenstive
+  if ($fn eq 'new') {
+    $text =~ s/:/ /g;
+    $text = qx{new -out - $text};
+    chomp $text;
+  } elsif ($fn eq 'qx') {
+    $text =~ s/:/ /g;
+    $text = qx{$text};
+    chomp $text;
+  } elsif ($fn eq 'uc') {
+    $text = uc $text;
+  } elsif ($fn eq 'lc') {
+    $text = lc $text;
+  } elsif ($fn eq 'sc') {
+    $text = uc(substr($text,0,1)).lc(substr($text,1));
+  } elsif ($fn eq 'wc') {
+    $text = lc $text;
+    while ($text =~ m{\b\l\w}) {
+      my $uc = uc $&;
+      $text = s{\b\l\w}{$uc};
+    }#endwhile
+    while ($text =~ m{_\l\w}) {
+      my $uc = uc $&;
+      $text = s{_\l\w}{$uc};
+    }#endwhile
+  } elsif ($fn ne '' and not exists $warned{$fn}) {
+    warn "Unknown function '$fn' encountered.\n";
+    $warned{$fn} = 1;
+  }#endif
+  return $text;
+}#endsub exe
+
+###############################################################################
+sub recurse_placeholder($$$;$) { #<<<2
+  my ($repl_count,$phld_count) = (0,0);
+  my ($repl_temp,$phld_temp,$previous);
+  my ($line,$lhe,$rhe,$rfile) = @_;
+  for my $repeat (1..$recurse) {
+    $previous = $line;
+    if (wantarray) {
+      ($line,$repl_temp,$phld_temp) = &replace_placeholder($line,$lhe,$rhe,$rfile);
+      $repl_count += $repl_temp;
+      $phld_count += $phld_temp;
+    } else {
+      $line = &replace_placeholder($line,$lhe,$rhe,$rfile);
+    }#endif
+    last if $line eq $previous;
+  }#endfor
+  if (wantarray) {
+    return $line,$repl_count,$phld_count;
+  } else {
+    return $line;
+  }#endif
+}#endsub recurse_placeholder
+
+###############################################################################
+sub replace_placeholder { #<<<2
+  my ($repl_c,$phld_c) = (0,0);
+  # $phld_c = count of placeholders untouched
+  # $repl_c = count of placeholders replaced
+  my ($line,$lhe,$rhe,$rfile) = @_;
+  #----------------------------------------------------------------------------
+  # Quick return if no placeholders
+  #----------------------------------------------------------------------------
+  # rcm: this regex is broken, it allows unmatched "<>" but that is ok
+  # rcm: here. It is not ok below.
+  goto SKIP unless $line =~ m/${lhe}([<]?[\$]?\w[-:=.[:word:]]*[>]?)${rhe}/;
+  #----------------------------------------------------------------------------
+  # Find all the placeholders
+  #----------------------------------------------------------------------------
+  my @placeholder = ();
+  my $i = 0;
+  my $t = sprintf("$;%d$;",$i);
+  # rcm: this regex is broken, it allows unmatched "<>" that is not ok
+  # rcm: here. 
+  # rcm while ($line =~ s/${lhe}(([<])?[\$]?\w[-.[:word:]]*([>])?)${rhe}/$t/s) {
+  while ($line =~ s/${lhe}(([<])?[\$]?\w[-.[:word:]]*([>])?)${rhe}/$t/s) {
+    push @placeholder,$1;
+    $_ = $line;
+    if (/</ != />/) {
+        warn "Invalid placeholder, mismatched '<' and '>'!?\n"
+    }
+    $t = sprintf("$;%d$;",++$i);
+  }#endwhile
+  #----------------------------------------------------------------------------
+  # Perform the replacements
+  #----------------------------------------------------------------------------
+  my $fn = '';
+  for $i (0..$#placeholder) {
+    $t = sprintf("$;%d$;",$i);
+    $fn = '';
+    my $ph = $placeholder[$i];
+    if ($ph =~ m{:}) {
+      ($fn,$ph) = ($`,$');
+    }#endif
+    if (substr($ph,0,1) eq '<' or $fn eq 'include') {
+      #------------------------------------------------------------------------
+      # Include file
+      #------------------------------------------------------------------------
+      my $incfile = $ph;
+      $incfile =~ s/[<>]//g;
+      $incfile = $ENV{substr($incfile,1)} 
+        if substr($ph,0,1) eq '$' and exists $ENV{substr($incfile,1)};
+      $incfile = $REPL{$incfile} 
+        if exists $REPL{$incfile} and not -r $incfile;
+      $incfile = $FS{$rfile}{$incfile}
+        if exists $FS{$rfile}{$incfile};
+      while(1) {
+        next if !-r $incfile;
+        my $INC;
+        if (open $INC,"<$incfile") {
+          my $repl = join('',<$INC>);
+          close $INC;
+          $repl = &recurse_placeholder($repl,$lhe,$rhe,$rfile);
+          $line =~ s/$t/$repl/;
+          ++$repl_c;
+          last;
+        }#endif
+      } continue {
+        $ph =~ s/</<?/;
+        my $repl = $lhe.$ph.$rhe;
+        $line =~ s/$t/$repl/;
+        ++$phld_c;
+        last;
+      }#endwhile
+    } elsif (substr($ph,0,1) eq '$') {
+      #------------------------------------------------------------------------
+      # Simple environment variable replacement
+      #------------------------------------------------------------------------
+      if (exists $ENV{substr($ph,1)}) {
+        my $repl = $ENV{substr($ph,1)};
+        $repl = exe $fn,$repl;
+        $line =~ s/$t/$repl/;
+        ++$repl_c;
+      } else { # Leave untouched
+        my $repl = $lhe.'$'.$ph.$rhe;
+        $line =~ s/$t/$repl/;
+        ++$phld_c;
+      }#endif
+    } elsif (exists $FS{$rfile}{$ph}) {
+      #------------------------------------------------------------------------
+      # File specific placeholder
+      #------------------------------------------------------------------------
+      my $repl = $FS{$rfile}{$ph};
+      $repl = exe $fn,$repl;
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } elsif (exists $REPL{$ph}) {
+      #------------------------------------------------------------------------
+      # Global placeholder
+      #------------------------------------------------------------------------
+      my $repl = $REPL{$ph};
+      $repl = exe $fn,$repl;
+      $line =~ s/$t/$repl/;
+      ++$repl_c;
+    } else {
+      #------------------------------------------------------------------------
+      # Leave untouched
+      #------------------------------------------------------------------------
+      my $repl = $lhe.$ph.$rhe;
+      $line =~ s/$t/$repl/;
+      ++$phld_c;
+    }#endif
+  }#endfor $i
+  SKIP:
+  if (wantarray) {
+    return $line,$repl_c,$phld_c;
+  } else {
+    return $line;
+  }#endif
+}#endsub replace_placeholder
+
+###############################################################################
+sub addargs { #<<<2
+  my @hold = ();
+  ARG: while (@_) {
+    my $arg = shift(@_);
+    #--------------------------------------------------------------------------
+    # STDIN/STDOUT
+    #--------------------------------------------------------------------------
+    if ($arg eq '-') {
+      push @hold,$arg;
+    #--------------------------------------------------------------------------
+    # Nil
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--') {
+    #--------------------------------------------------------------------------
+    # Edit
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m/^--edit/       or $arg eq '-e') {
+      $OPT{-edit} = 'vi';
+      $OPT{-edit} = $ENV{EDITOR} if exists $ENV{EDITOR};
+      $OPT{-edit} = $ENV{VISUAL} if exists $ENV{VISUAL};
+      $OPT{-edit} = $' if $arg =~ m/^--edit=/;
+      $OPT{-edit} = shift(@_) if $arg eq '-e' and scalar(@_) and $_[0] !~ m/^-/;
+    #--------------------------------------------------------------------------
+    # File specifies args
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--file'         or $arg eq '-f') {
+      $arg = shift @_;
+      unshift @_,&readargs($arg);
+    #--------------------------------------------------------------------------
+    # Version
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m{^-+version$}           or $arg eq '-V') {
+      print "Tool: $tool\nVersion: $revn\n";
+      exit 0;
+    #--------------------------------------------------------------------------
+    # Help!
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m/^-+help$/           or $arg eq '-h') {
+      help;
+    #--------------------------------------------------------------------------
+    # Not really
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--notreally'    or $arg eq '-n') {
+      $OPT{-n} = 1;                   
+    #--------------------------------------------------------------------------
+    # Specify output file
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--out'          or $arg eq '-o') {
+      if ($_[0] =~ m/^-./ or not @_) {
+        $OPT{-o} = 'phred.txt';
+      } else {
+        $OPT{-o} = shift(@_);                   
+      }#endif
+    #--------------------------------------------------------------------------
+    # Info
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--info'        or $arg eq '-i') {
+      $OPT{-i} = 1;                   
+    #--------------------------------------------------------------------------
+    # Quiet
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--quiet'        or $arg eq '-q') {
+      $OPT{-q} = 1;                   
+    #--------------------------------------------------------------------------
+    # Recursive
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--recursive'        or $arg eq '-r') {
+      $OPT{-r} = 1;                   
+    #--------------------------------------------------------------------------
+    # Verbosity
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--verbose'      or $arg eq '-v') {
+      if (defined $OPT{-v}) {
+        ++$OPT{-v};
+      } else {
+        $OPT{-v} = 1;
+      }#endif
+    #--------------------------------------------------------------------------
+    # Macro definition
+    #--------------------------------------------------------------------------
+    } elsif ($arg =~ m/^([^-\s][^=]*)=/) { # Macro definition
+      my ($t,$r) = ($1,$');
+      if ($t =~ m/:/) {
+        my ($f,$t) = ($`,$');
+        warn "Duplicate replacement $f:$t overwritten!?\n"
+          if exists $FS{$f}{$t} and (not $CMND_LN or ($CMND_LN == 0 and exists $CMND_LN{$t}{$f}));
+        $FS{$f}{$t} = $r unless exists $CMND_LN{$t}{$f} and $CMND_LN != 0;
+        $CMND_LN{$t}{$f} = 1 if $CMND_LN;
+      } else {
+        warn "Duplicate replacement $t overwritten!?\n"
+          if exists $REPL{$t} and (not $CMND_LN or ($CMND_LN == 0 and exists $CMND_LN{$t}{$;}));
+        $REPL{$t} = $r unless exists $CMND_LN{$t} and $CMND_LN != 0;
+        $CMND_LN{$t}{$;} = 1 if $CMND_LN == 0;
+      }#endif
+    #--------------------------------------------------------------------------
+    # File to work on
+    #--------------------------------------------------------------------------
+    } else {
+      push @hold,$arg;
+    }#endif
+  }#endwhile
+  #
+  #            # Set the variable $File::Find::dont_use_nlink if you're
+  #            using AFS,
+  #            # since AFS cheats.
+  #
+  #            # for the convenience of &wanted calls, including -eval
+  #            statements:
+  #
+  #            sub wanted;
+  #
+  #
+  #
+  #            # Traverse desired filesystems
+  if (exists $OPT{-r}) {
+    our @FOUND=();
+    File::Find::find({wanted => \&wanted}, 't');
+    sub wanted {
+       my ($dev,$ino,$mode,$nlink,$uid,$gid);
+       next unless (($dev,$ino,$mode,$nlink,$uid,$gid) = lstat($_));
+       push @FOUND,$File::Find::name if -T $_;
+    }
+    push @hold,@FOUND if @FOUND;
+  }#endif
+  # rcm: @hold may contain duplicate filenames, remove them here
+  # rcm: return @hold;
+  my @new_hold = sort @hold;
+  # if there is only one element, there can't be duplicates
+  for (my $i = 1; $i < scalar(@new_hold); $i++ ) {
+    if ($new_hold[$i] eq $new_hold[$i-1]) {
+       splice(@new_hold, $i-1, 1); 
+    }
+  }
+  return @new_hold;
+}#endsub addargs
+
+###############################################################################
+sub readargs { #<<<2
+  my $file = shift(@_);
+  my @args = ();
+  open RC,"<$file"
+    or die "FATAL: Unable to read $file!?\n";
+  while (<RC>) {
+    chomp; chomp; # remove EOL
+    s/^\s+//; # remove leading space
+    s/\s+$//; # remove trailing space
+    s/^#.*// or s{^//.*}{}; # remove comments
+    if (m/^-/) {s/\s+/ /}; # condense first space
+    next unless m/\S/; # Anything left?
+    next if m/=$/;
+    if (m/^-/ and m/ /) {
+      push @args,$`,$';
+    } else {
+      push @args,$_;
+    }#endif
+  }#endwhile
+  close RC;
+  ++$CMND_LN;
+  @args = &addargs(@args);
+  --$CMND_LN;
+  return @args;
+}#endsub readargs
+
+###############################################################################
+#------------------------------------------------------------------------------
+# Main body #<<<1
+# Process command line arguments #<<<2
+#------------------------------------------------------------------------------
+our @ORIG = @ARGV;
+$CMND_LN = 0;
+our @files = &addargs(@ARGV);
+$CMND_LN = 1;
+
+if (scalar @files) {
+  my ($repl_total,$phld_total) = (0,0);
+  # $phld_total = total count of placeholders untouched
+  # $repl_total = total count of placeholders replaced
+  my ($file,%TMPL,%FILE);
+  for $file (@files) {
+    # Process files <<<2
+    $using_stdout = 1 if $file eq '-';
+    open FILE,"<$file" or die "ERROR: Unable to read file $file!?\n";
+    if (scalar %REPL or scalar %FS) {
+      next unless scalar %REPL or exists $FS{$file};
+      # Perform substitutions <<<3
+      my $new = $file.'-new';
+      $new = '-' if $file eq '-';
+      open NEW,">$new" or die "ERROR: Unable to write file $file!?\n";
+      NEW->autoflush(1);
+      my $line;
+      my ($repl_file,$phld_file) = (0,0);
+      # $phld_file = file count of placeholders untouched
+      # $repl_file = file count of placeholders replaced
+      while ($line = <FILE>) {
+        my ($repl_cnt,$phld_cnt);
+        ($line,$repl_cnt,$phld_cnt) = &recurse_placeholder($line,'{:',':}',$file);
+        $repl_file += $repl_cnt;
+        $phld_file += $phld_cnt;
+        print NEW $line;
+      }#endwhile <FILE>
+      close NEW;
+      $repl_total += $repl_file;
+      $phld_total += $phld_file;
+      # Rename backup <<<3
+      my $bak = $file.'-bak';
+      save_existing $bak;
+      rename $file,$bak or die "ERROR: Unable to rename $file to $bak!?\n";
+      #rcm: wrong filenames in message
+      #rename $new,$file or die "ERROR: Unable to rename $file to $bak!?\n";
+      rename $new,$file or die "ERROR: Unable to rename $new to $file!?\n";
+    } else {
+      # Extract templates <<<3
+      unless ($once++) {
+        $fix = $OPT{-o} if exists $OPT{-o};
+        save_existing $fix;
+        push @FIX,"# Automatically extracted template information\n" if not exists $OPT{-i};
+      }#endunless
+      my $line;
+      while ($line = <FILE>) {
+        while ($line =~ s/\{:(\w[^:]*):\}//) {
+          my $tmpl = $1;
+          next if grep($tmpl eq $_,@PRECIOUS);
+          if (exists $TMPL{$tmpl}) {
+            if (exists $TMPL{$tmpl}{$file}) {
+              ++$TMPL{$tmpl}{$file};
+            } else {
+              $TMPL{$tmpl}{$file} = 1;
+            }#endif
+          } else {
+            $TMPL{$tmpl}{$file} = 1;
+          }#endif
+          if (exists $FILE{$file}) {
+            ++$FILE{$file};
+          } else {
+            $FILE{$file} = 1;
+          }#endif
+        }#endwhile =~ {::}
+      }#endwhile <FILE>
+    }#endif
+    close FILE;
+  }#endfile
+  if (scalar %TMPL) {
+    my $info;
+    # List templates <<<3
+    for my $tmpl (sort keys %TMPL) {
+      if (exists $OPT{-v}) {
+        $info = '';
+        for $file (sort keys %{$TMPL{$tmpl}}) {
+          my $cnt = $TMPL{$tmpl}{$file};
+          $info .= "$file($cnt) ";
+        }#endfor
+        chop $info;
+        push @FIX,sprintf("%s=%s\n",$tmpl,$info);
+      } else {
+        if (scalar(@files) == scalar(keys %{$TMPL{$tmpl}})) {
+          push @FIX,sprintf("%s=\n",$tmpl);
+        }#endif
+        if (not exists $OPT{-i}) {
+          for $file (sort keys %{$TMPL{$tmpl}}) {
+            push @FIX,sprintf("%s:%s=\n",$file,$tmpl);
+          }#endfor
+        }#endif
+      }#endif
+    }#endfor
+    push @FIX,sprintf("\n") if not exists $OPT{-i};
+    # List files <<<3
+    if (not exists $OPT{-i}) {
+      for $file (sort keys %FILE) {
+        if (exists $OPT{-v}) {
+          $info = ' has '.$FILE{$file}.' placeholders';
+        } else {
+          $info = '';
+        }#endif
+        push @FIX,sprintf("%s%s\n",$file,$info);
+      }#endfor
+      push @FIX,sprintf("# End extraction\n");
+    }#endif
+    if ( scalar @FIX > 1 ) {
+      open FIX,">$fix" or die "Unable to open $fix for writing.";
+      print FIX "@FIX";
+      close FIX;
+    }
+    &System("$OPT{-edit} $fix") if exists $OPT{-edit} and $fix ne '-';
+  }#endif
+  if (not $using_stdout and $repl_total) {
+    printf "%d replacements for %d placeholders\n",$repl_total,$repl_total+$phld_total;
+  }#endif
+} else {
+  # help <<<2
+  help;
+}#endif
+
+exit 0;
+
+#END $Id: phred,v 1.0 2022/03/22 12:02:29 dcblack Exp $
+__DATA__
+# DOCUMENTATION #<<<1
+
+=pod
+
+=head1 NAME
+
+B<phred> - Place Holder Replacement EDitor
+
+=head1 SYNOPSIS
+
+B<phred> -h  ###### provides this help
+
+B<phred> {:FILENAME:} ###### display list of available placholders
+
+B<phred> [I<{:OPTIONS:}>] I<{:PLACEHOLDER=VALUE:}...> I<{:TYPE:}> I<{:FILENAME:}>
+
+=head1 DESCRIPTION
+
+This tool extracts placeholders left in template skeletons and provides a means
+to quickly replace them in one or more files.
+
+=head1 OPTIONS
+
+=over
+
+=item B<->
+
+Specifies that the filename is STDIN/STDOUT.
+
+=item B<-->
+
+Specifies a nil option. Use when specifying B<-e> without
+an editor specification.
+
+=item B<--edit>[=I<FILENAME>]
+
+Specifies that the text editor should be launched if a
+replacement file is created.
+Aka B<-e>.
+
+=item B<--file> I<FILENAME>
+
+Specifies a file to read arguments from. Aka B<-f>.
+
+=item B<--help>
+
+Help (this text). Aka B<-h>.
+
+=item B<--notreally>
+
+Don't actually execute commands. Aka B<-n>.
+
+=item B<--out> I<FILENAME>
+
+Specifies an output file for result. This is only valid
+when scanning. Aka B<-o>.
+
+=item B<--quiet>
+
+Quiet mode. Aka B<-q>.
+
+=item B<--verbose>
+
+Verbose mode. Aka B<-v>.
+
+=back
+
+=head1 ENVIRONMENT
+
+The EDITOR or VISUAL environment variables will be used if set in the
+environment for the --edit option.
+
+=head1 EXAMPLES
+
+new harness whoa
+
+phred whoa_harness.h -o replacements
+
+=over
+
+=item # fill in values for placeholders in file replacements, each line
+
+=item # contains the name of a placeholder. If it is not preceeded by a file
+
+=item # name, then it is considered the global default value. If a 
+
+=item # placeholder is preceeded by a file name, the value specified 
+
+=item # will apply only to that file.
+
+=back
+
+phred -f replacements whoa_harness.h
+
+=head1 COPYRIGHT/LICENSE
+
+Copyright (C) 2003-2007 ESLX Inc. All rights reserved.
+
+Copyright (C) 2009-2010 XtremeEDA Corporation. All rights reserved.
+
+Copyright (C) 2012-2013 David C Black. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 AUTHOR
+
+David C. Black <dcblack@mac.com>
+
+=cut

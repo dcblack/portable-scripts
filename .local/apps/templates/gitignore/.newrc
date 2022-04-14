@@ -1,0 +1,4 @@
+#!new # vim:syntax=sh
+#! Git ignore file for C/C++ coding
+
+# $Id: .newrc,v 1.0 2022/01/18 06:01:26 dcblack Exp $
