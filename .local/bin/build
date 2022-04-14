@@ -42,6 +42,7 @@ function Build()
   + -clean   Remove all build files and other output bits
   + -debug   Output information to help debug CMakeLists.txt etc.
   + -quiet   Remove verbosity when -test invoked
+  + -P DIR   Set PROJECT_DIR. PROJECT_DIR should contain .git/
   + -run     When done building, run the executable
   + -S DIR   Name of source directory -- defaults to \".\"
   + -test    When done building, run the tests verbosely unless -q supplied
@@ -63,11 +64,10 @@ function Build()
 
   # Setup
   #------------------------------------------------------------------------------
-  export PROJECT_DIR SUBPROJ_DIR DEBUG
+  export SUBPROJ_DIR DEBUG
   local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET
   SRC_DIR="."
   BLD_DIR="build"
-  PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
   SUBPROJ_DIR="$(pwd)"
   APPS="${HOME}/.local/apps"
   CLEAN=0
@@ -82,7 +82,7 @@ function Build()
   TEST_OPTS=()
 
   local SCRIPTS_DIR
-  SCRIPTS_DIR="${PROJECT_DIR}/bin"
+  SCRIPTS_DIR="$(dirname "$0")"
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     SCRIPTS_DIR="${HOME}/.local/scripts"
   fi
@@ -97,6 +97,8 @@ function Build()
   #------------------------------------------------------------------------------
   # Scan for command-line options
   #------------------------------------------------------------------------------
+  export PROJECT_DIR
+  PROJECT_DIR="" ;#< Do not allow environment in
   while [[ $# != 0 ]]; do
     if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
       Echo "${SYNTAX}"; return 0
@@ -119,9 +121,23 @@ function Build()
         SUBPROJ_DIR="$(pwd)"
         shift
       fi
+    elif [[ "$1" == "-P" ]]; then
+      if [[ $# -lt 2 ]]; then
+        Report_error "-P requires a directory argument"
+      elif [[ ! -d "$2" ]]; then
+        Report_error "'$2' is not a directory as required by -P"
+      else
+        PROJECT_DIR="$2"
+        if [[ ! -d "$2/.git" ]]; then
+          Report_warning "'$2' does not contain .git/ as recommended."
+        fi
+        shift
+      fi
     elif [[ "$1" == "-S" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_error "-S requires a directory argument"
+      elif [[ ! -d "$2" ]]; then
+        Report_error "'$2' is not a directory as required by -S"
       else
         SRC_DIR="$2"
         shift
@@ -166,6 +182,9 @@ function Build()
     fi
     shift
   done
+  if [[ -z "${PROJECT_DIR}" ]]; then
+    PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
+  fi
 
   if [[ ${QUIET} == 0 ]]; then
     TEST_OPTS=(-V "${TEST_OPTS[@]}")
