@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+function Pid()
+{
+  perl -le 'print getppid'
+}
