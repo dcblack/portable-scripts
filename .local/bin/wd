@@ -82,6 +82,7 @@ lwds
 | -init  | Initialize/reload these scripts
 | -list  | List current set
 | -vers  | Display version
+| -print | Display path instead of going there
 
 EOT
 }
@@ -90,7 +91,7 @@ EOT
 function Wd_parse() # internal
 {
   if [[ "${SHELL}" == /bin/zsh ]]; then set -o shwordsplit ; fi # compatible
-  export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
+  export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers wd_print
   wd_vers=1.0.3
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
@@ -98,6 +99,7 @@ function Wd_parse() # internal
   wd_force=false
   wd_verb=false
   wd_debug=false
+  wd_print=false
   wd_notreally=false
   if [[ -n "${wd_set}" ]]; then
     wd_pset="${wd_set}"
@@ -151,9 +153,8 @@ function Wd_parse() # internal
                -[0-9]) wd_set=$(( -"${arg}" )) ;;
             [ci][0-9]) wd_set="${arg}" ;;
                 [0-9]) wd_set="${arg}" ;;
-      -*)
-        Report_error "Unknown option: '${arg}'" || return 1
-        ;;
+      -P|-print|--print) wd_print=true ;;
+      -*) Report_error "Unknown option: '${arg}'" || return 1 ;;
       *)
         if [[ -z "${ARGS}" ]]; then
           ARGS="${arg}"
@@ -198,6 +199,10 @@ function lwd() # lwd_func
   if [[ -d "${wd_favs}/wd-${wd_set}" ]]; then
     local target
     target="$(Realpath "${wd_favs}/wd-${wd_set}")"
+    if [[ ${wd_print} == true ]]; then
+      echo "${target}"
+      return 0
+    fi
     # shellcheck disable=SC2086 # intended expansion
     j "${target}" ${ARGS} || Report_error "Whoops! Unable to cd into '${wd_favs}/wd-${wd_set}'"
   else
