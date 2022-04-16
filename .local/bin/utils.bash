@@ -202,8 +202,8 @@ function ConfirmBuildOpts()
     printf "Confirm above options (Y/n)? "
     read -r REPLY
     case "${REPLY}" in
-      y) return 0 ;;
-      n) return 1 ;;
+      y|Y|yes|YES|Yes) return 0 ;;
+      n|n|no|NO|No) return 1 ;;
       *) REPLY=""; echo "Must reply with 'y' or 'n'" ;;
     esac
   done
