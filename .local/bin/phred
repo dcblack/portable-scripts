@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-eval 'exec perl -S $0 ${1+"$@"}'
+eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
   if 0;#running_under_some_shell;
 
 # vim600:tw=72:syntax=perl:foldmethod=manual

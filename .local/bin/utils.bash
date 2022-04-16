@@ -136,7 +136,7 @@ function Needs()
   I=0 J=0
   for X in "$@"; do
     (( ++I ));
-    for D in $(perl -le 'print join(q{\n},split(/:/,$ENV{PATH}))'); do
+    for D in $(/usr/bin/perl -le 'print join(q{\n},split(/:/,$ENV{PATH}))'); do
       Report_debug "Testing  ${D}/${X}"
       P="$(Realpath "${D}/${X}")"
       if [[ -n "${P}" && -x "${P}" && ! -d "${P}" ]]; then
@@ -202,8 +202,8 @@ function ConfirmBuildOpts()
     printf "Confirm above options (Y/n)? "
     read -r REPLY
     case "${REPLY}" in
-      y|Y|yes|YES|Yes) return 0 ;;
-      n|n|no|NO|No) return 1 ;;
+      y) return 0 ;;
+      n) return 1 ;;
       *) REPLY=""; echo "Must reply with 'y' or 'n'" ;;
     esac
   done

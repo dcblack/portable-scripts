@@ -7,6 +7,6 @@ function Has_path() {
   # shellcheck disable=SC2016
   plscript='$v=$ARGV[0]; $p=$ARGV[1]; for $d (split(qq{:},$ENV{$v})) { next if !-d $d; exit 0 if$p eq abs_path($d); } exit 1'
   if [[ -z "${arg}" ]]; then return 1; fi
-  perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
+  /usr/bin/perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
 }
 

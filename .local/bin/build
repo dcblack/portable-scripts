@@ -210,7 +210,7 @@ function Build()
   next if m{[{}]};
   print " $2" if m{(add_executable|set_target)[( "]+([^" )]+)};
   '
-  TARGETS="$(perl -ne "${PERLSCRIPT}" CMakeLists.txt)"
+  TARGETS="$(/usr/bin/perl -ne "${PERLSCRIPT}" CMakeLists.txt)"
   if [[ "${ACTION}" == list ]]; then
     Report_info "Targets are ${TARGETS}"
     return 0

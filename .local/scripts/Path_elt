@@ -2,5 +2,5 @@
 
 function Path_elt()
 {
-  perl -le '$n=shift;@_=reverse(split(q{/},shift@ARGV));print $_[$n]' "$1" "$(Realpath "$2")"
+  /usr/bin/perl -le '$n=shift;@_=reverse(split(q{/},shift@ARGV));print $_[$n]' "$1" "$(Realpath "$2")"
 }

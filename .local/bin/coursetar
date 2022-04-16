@@ -108,7 +108,7 @@ TMPFILE="${HOME}/tmpfilelist.tmp"
 # one-liner to strip off the trailing numbers. So, if the username is
 # vhdl8, COURSEUSER gets set to "vhdl"
 
-COURSEUSER="$("${ID}" -u -n | perl -e '<STDIN> =~ /[a-z]+/i and print $&')"
+COURSEUSER="$("${ID}" -u -n | /usr/bin/perl -e '<STDIN> =~ /[a-z]+/i and print $&')"
 
 # What sort of course is this? This determines the tar file name
 

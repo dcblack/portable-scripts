@@ -2,5 +2,5 @@
 
 function Pid()
 {
-  perl -le 'print getppid'
+  /usr/bin/perl -le 'print getppid'
 }

@@ -6,7 +6,7 @@
 CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
 
 function Ruler() {
-  perl -le 'printf qq{\n%80.80s\n},"@ARGV"x80' "$*"
+  /usr/bin/perl -le 'printf qq{\n%80.80s\n},"@ARGV"x80' "$*"
 }
 
 # Ensure that error messages are clearly seen

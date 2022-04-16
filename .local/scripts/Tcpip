@@ -3,5 +3,5 @@
 function  Tcpip()
 {
   # shellcheck disable=SC2312
-  ifconfig | perl -lane 'next if m/127.0.0.1/; $t=$F[0] if m/^[[:alpha:]]/;m/netmask/ and print $t,$_'
+  ifconfig | /usr/bin/perl -lane 'next if m/127.0.0.1/; $t=$F[0] if m/^[[:alpha:]]/;m/netmask/ and print $t,$_'
 }

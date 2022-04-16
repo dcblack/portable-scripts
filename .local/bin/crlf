@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-eval 'exec perl -S $0 ${1+"$@"}'
+eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
   if 0;#running_under_some_shell;
 
 # @(#)$About: crlf - carriage-return line-feed text file problem fixer. $

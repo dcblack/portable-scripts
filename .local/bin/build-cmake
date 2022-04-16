@@ -52,7 +52,7 @@ fi
 while [[ $# != 0 ]]; do
   case "$1" in
   -h|-help)
-    perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' "$0";
+    /usr/bin/perl -ne '$p = $ARGV; $p =~ s{.*/}{}; if ( $_ =~ s{^#\|}{} ) { $_ =~ s{\$0}{$p}; print; }' "$0";
     exit 0;
     ;;
   -git|-wget|-curl)

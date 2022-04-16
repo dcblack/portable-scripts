@@ -3,5 +3,5 @@
 function Columns()
 {
   # shellcheck disable=SC2312
-  stty -a | perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
+  stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
 }
