@@ -1,0 +1,135 @@
+#!/bin/bash
+
+function mkbin_help()
+{
+  cat <<'DOCUMENTATION'
+## NAME
+
+mkbin - Create an executable script
+
+## SYNOPSIS
+
+**mkbin** _OPTIONS_ _EXECUTABLE_
+
+## DESCRIPTION
+
+Creates a new executable script with a bare minimum template. The result contains a hashbang and is made executable.
+
+## OPTIONS
+
+OPTION                                 | DESCRIPTION
+------                                 | -----------
+-/_HASHBANG_                           | Specify an alternate hashbang line
+-perl\|-python2\|-python3\|-bash\|-zsh | Select a language (default: bash)
+--script\|-s                           | Place in scripts
+--bin\-b                               | Place in $HOME/bin
+-dir=_DIRECTORY_                       | Place EXECUTABLE under DIRECTORY
+--edit[=_editor_\|-e                   | Enter the specified editor after creation
+--help\|-h                             | Display this text
+
+DOCUMENTATION
+}
+
+
+function Regex
+{
+  perl -e 'if ($ARGV[1]=~m/$ARGV[2]/){exit 0;}else{exit 1;}' - "$1" "$2"
+}
+
+function Mkbin()
+{
+  local HASHBANG DIRECTORY EDIT SCRIPT OPTION
+  HASHBANG="/usr/bin/env bash"
+  DIRECTORY=""
+  EDIT=""
+  while [[ "$1" =~ ^- ]]; do
+    OPTION="$1"
+    shift
+    if [[ "${OPTION}" =~ ^-{1,2}h(elp)?$ ]]; then
+      mkbin_help
+      exit 1
+    elif Regex "${OPTION}" "^/" ; then
+      HASHBANG="${OPTION}"
+    elif [[ "${OPTION}" =~ ^-{1,2}perl[45]? ]]; then
+      HASHBANG="/usr/bin/env perl5"
+    elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?2 ]]; then
+      HASHBANG="/usr/bin/env python2"
+    elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?3? ]]; then
+      HASHBANG="/usr/bin/env python3"
+    elif [[ "${OPTION}" =~ ^-{1,2}zsh ]]; then
+      HASHBANG="/usr/bin/env zsh"
+    elif [[ "${OPTION}" =~ ^-{1,2}(ba)sh ]]; then
+      HASHBANG="/usr/bin/env bash"
+    elif [[ "${OPTION}" =~ ^-{1,2}e(dit) ]]; then
+      if [[ -n "${VISUAL}" ]]; then
+        EDIT="${VISUAL}"
+      else
+        EDIT="gvim"
+      fi
+    elif [[ "${OPTION}" =~ ^-{1,2}b(in)? ]]; then
+      if [[ -z "${DIRECTORY}" ]]; then
+        if [[ -d ${HOME}/bin ]]; then
+          DIRECTORY="${HOME}/bin"
+        else
+          Error "Unable to determine where the bin directory is located!"
+        fi
+      elif [[ -d "${DIRECTORY}/bin" ]]; then
+        DIRECTORY="${DIRECTORY}/bin"
+      else
+        Error "Missing ${DIRECTORY}/bin ?!"
+      fi
+    elif [[ "${OPTION}" =~ ^-{1,2}s(cript)? ]]; then
+      if [[ -z "${DIRECTORY}" ]]; then
+        if [[ -d ${HOME}/scripts ]]; then
+          DIRECTORY="${HOME}/scripts"
+        elif [[ -d ${HOME}/.local/scripts ]]; then
+          DIRECTORY="${HOME}/.local/scripts"
+        else
+          Error "Unable to determine where the scripts directory is located!"
+        fi
+      elif [[ -d "${DIRECTORY}/scripts" ]]; then
+        DIRECTORY="${DIRECTORY}/scripts"
+      else
+        Error "Missing ${DIRECTORY}/scripts ?!"
+      fi
+    elif [[ "${OPTION}" =~ ^-{1,2}d(ir)? ]]; then
+      if Regex "${OPTION}" "=" ; then
+        DIRECTORY="${1:s/.*=/}"
+      elif [[ $# -gt 0 ]]; then
+        DIRECTORY="$1"
+        shift
+      else
+        Error "-dir must specify a directory"
+      fi
+    fi
+  done
+
+  if [[ -z "${DIRECTORY}" ]]; then
+    SCRIPT="${1}"
+  elif [[ -d "${DIRECTORY}" ]]; then
+    SCRIPT="${DIRECTORY}/${1}"
+  else
+    Error "Bad directory specification: ${DIRECTORY}"
+  fi
+  shift
+
+  # Create file with hashbang line if non-existent
+  test -s "${SCRIPT?}" || printf "#%s\n\n" "${HASHBANG?}" >"${SCRIPT}"
+
+  # Add ! to hashbang if needed
+  perl -pi -e 'if($.== 1){ s{^#/}{#\041/};}' "${SCRIPT}"
+
+  # Make readable
+  test -r "${SCRIPT}" || chmod a+r "${SCRIPT}"
+
+  # Make executable
+  test -x "${SCRIPT}" || chmod a+x "${SCRIPT}"
+
+  if [[ -n "${EDIT}" ]]; then
+    "${EDIT}" "${SCRIPT}"
+  fi
+}
+
+Mkbin "$@"
+
+
