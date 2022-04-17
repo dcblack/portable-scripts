@@ -62,9 +62,6 @@ SetupLogdir "$0"
 } end_markdown
 EOF
 
-export SHELL
-SHELL=/bin/bash
-
 declare -a ARGV
 export APPS
 export ARGV

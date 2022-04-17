@@ -17,10 +17,8 @@ function Realpath ()
 }
 
 function Firstreal() {
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
-  perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }
 
 SCRIPTDIR="${HOME}/.local/scripts"
@@ -90,7 +88,7 @@ EOT
 #-------------------------------------------------------------------------------
 function Wd_parse() # internal
 {
-  if [[ "${SHELL}" == /bin/zsh ]]; then set -o shwordsplit ; fi # compatible
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers wd_print
   wd_vers=1.0.3
   local real_favs
@@ -253,9 +251,7 @@ function rwd() # rwd_func
 function wds() # wds_func
 {
   Comment "List saved working directories"
-  if [[ "${SHELL}" == /bin/zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   export wd_favs
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"

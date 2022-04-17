@@ -77,14 +77,14 @@ function Realpath()
 function Columns()
 {
   # shellcheck disable=SC2312
-  stty -a | perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
+  stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
 }
 
 #-------------------------------------------------------------------------------
 function Rows()
 {
   # shellcheck disable=SC2312
-  stty -a | perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
+  stty -a | /usr/bin/perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
 }
 
 #-------------------------------------------------------------------------------
@@ -220,9 +220,7 @@ function Log()
   #| Log [-n] "MESSAGE"
   #| COMMAND | Log
   if [[ -z "${LOGFILE}" ]]; then return 0; fi
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   if [[ $# == 0 ]]; then # pipe
@@ -256,9 +254,7 @@ function Echo()
 function Printf()
 {
   #@ Printf with logging
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   local TEXT
   # shellcheck disable=SC2059
   TEXT="$(builtin printf "$@")"
@@ -280,9 +276,7 @@ function _do()
   else
     Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
   fi
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   "$@"
 }
 
@@ -359,9 +353,7 @@ function Report_debug()
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Report_debug MESSAGE
   if [[ "$1" == "-f" || -n "${DEBUG}" && ! "${DEBUG}" =~ ^0?$ ]]; then
-    if [[ "${SHELL}" =~ zsh ]]; then
-      set -o shwordsplit
-    fi
+    if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
     if [[ "$1" == "-f" ]]; then shift; fi
     if [[ "$1" =~ % ]]; then
       local FMT
@@ -500,13 +492,13 @@ function Warnings()
 #-------------------------------------------------------------------------------
 function Read()
 {
-  export REPLY SHELL
+  export REPLY
   local PROMPT
   PROMPT="$*"
   if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
     PROMPT="${PROMPT}?"
   fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ -n "${ZSH_VERSION}" ]]; then
     read -r "REPLY?${PROMPT} "
   else
     read -r -p "${PROMPT} "
@@ -520,14 +512,13 @@ function Confirm()
     Report_error "Confirm need to have a prompt"
     return 1
   fi
-  export SHELL
   local ANS PROMPT
   while [[ -z "${ANS}" ]]; do
     PROMPT="$*"
     if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
       PROMPT="${PROMPT}?"
     fi
-    if [[ "${SHELL}" == /bin/zsh ]]; then
+    if [[ -n "${ZSH_VERSION}" ]]; then
       read -r "ANS?${PROMPT} "
     else
       read -r -p "${PROMPT} " ANS
@@ -575,9 +566,7 @@ function Summary()
 #-------------------------------------------------------------------------------
 function HelpText()
 {
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   local HELPSCRIPT
   if [[ "$1" == "-md" ]]; then
     shift
@@ -594,9 +583,7 @@ function HelpText()
 #-------------------------------------------------------------------------------
 function ShowVars()
 {
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   local DLR VAR VAL
   for VAR in "$@"; do
     DLR='$'

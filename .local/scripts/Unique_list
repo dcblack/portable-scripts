@@ -2,9 +2,7 @@
 
 function Unique_list() {
   Comment Unique_list V1 V2... returns unique values only
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
-  perl -e 'for $e (@ARGV){next if exists $u{$e};$u{$e}=1;push @o,$e;}print join("\n",@o),"\n";' "$@"
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  /usr/bin/perl -e 'for $e (@ARGV){next if exists $u{$e};$u{$e}=1;push @o,$e;}print join("\n",@o),"\n";' "$@"
 }
 

@@ -3,9 +3,7 @@
 function Add_prefix()
 {
   if [[ $# -lt 2 ]]; then Report_error "$0 needs at least two arguments"; return; fi
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   local prefix="$1"
   shift
   for element in "$@"; do

@@ -144,9 +144,7 @@ EOT
   #-----------------------------------------------------------------------------
   local working_script='setup.profile'
 
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
 
   # Last working directory
   local prev_lwd="${lwd}"
@@ -163,7 +161,7 @@ EOT
       else
         local PART GLOB
         PART="$1"
-        GLOB="$(perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
+        GLOB="$(/usr/bin/perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
         if [[ ${J_DEBUG} == 1 ]]; then
           Report_debug -f "DEBUG: PART='%s'" "${PART}"
           Report_debug -f "DEBUG: GLOB='%s'" "${GLOB}"

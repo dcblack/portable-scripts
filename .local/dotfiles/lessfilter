@@ -23,7 +23,7 @@ case "$1" in
         pygmentize -f 256 -l zsh "$1";;
 
     *)
-        HASHBANG=$(perl -lane 's/ .*//;s{^[#][!](.*/)?}{};print;exit' "$1")
+        HASHBANG=$(/usr/bin/perl -lane 's/ .*//;s{^[#][!](.*/)?}{};print;exit' "$1")
         if [[ -s "${HASHBANG}" ]]; then
             pygmentize -f 256 -l "${HASHBANG}" "$1"
         elif grep -q "#\!/bin/bash" "$1" 2> /dev/null; then

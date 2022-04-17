@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
 function lns() { # Display symbolic links
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   if [[ $# == 0 ]]; then
     # shellcheck disable=SC2012
     ls -lA | cut -c 40- | grep -F -- '->'
@@ -15,7 +13,7 @@ function lns() { # Display symbolic links
         local dir
         dir="$(Realpath "${arg}")"
         find "${dir}" -type l -print0 | while IFS= read -r -d '' full; do 
-          link="$(perl -le 'my($b,$h)=@ARGV;$h=~s{^$b/}{};print $h' "${dir}" "${full}")"
+          link="$(/usr/bin/perl -le 'my($b,$h)=@ARGV;$h=~s{^$b/}{};print $h' "${dir}" "${full}")"
           printf "%s -> %s\n" "${link}" "$(Realpath "${full}")"
         done
       else

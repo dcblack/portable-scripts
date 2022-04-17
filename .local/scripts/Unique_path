@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 function Unique_path() {
-  export Unique_path_VERSION=1.4
+  export Unique_path_VERSION=1.5
   # DESCR: Removes duplicate paths in specified variable
-  # USAGE: unique_path [-v] VAR
+  # USAGE: Unique_path [-n][-v] VAR
   local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT VAR VAL
   VERBOSE=0
   NOEXECUTE=0
@@ -17,9 +17,7 @@ function Unique_path() {
   done
   VAR="$1"
   eval "VAL=\$${VAR}"
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   # shellcheck disable=SC2016
   PERL_SCRIPT='
     $v=shift @ARGV;
@@ -27,16 +25,14 @@ function Unique_path() {
     $s=q{;} if $ENV{$v} =~ q{;};
     exit 1 if not exists $ENV{$v};
     for my $d(split(qr{$s},$ENV{$v})){
-      next if ! -d $d;
       $e=abs_path($d);
-      if( ! exists $e{$e} ){
-        $e{$e}=1;
-        push(@e,$e);
-      }
+      next if exists $e{$e};
+      $e{$e}=1;
+      push(@e,$d);
     }
     printf qq{%s="%s"\n},$v,join($s,@e);
     '
-  EVAL_TEXT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+  EVAL_TEXT="$(/usr/bin/env "${VAR}=${VAL}" /usr/bin/perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
   if [[ ${VERBOSE} == 1 ]]; then
     Echo "% eval ${EVAL_TEXT}"
   fi

@@ -30,7 +30,7 @@ function Has_path() { # Determines if environment variable contains a particular
 function Unique_path() { # Removes duplicates from environment variables (e.g., PATH)
   # Unique_path VARIABLE_NAME
   local PERL_SCRIPT EVAL_TEXT
-  if [[ "${SHELL}" =~ zsh ]]; then set -o shwordsplit ; fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   # shellcheck disable=SC2016
   PERL_SCRIPT='$v=shift @ARGV;exit 1 if not exists $ENV{$v};
     for $d(split(qr{:},$ENV{$v})){next if !-d $d;$e=abs_path($d);if(!exists $e{$e}){$e{$e}=1;push(@e,$e);}}

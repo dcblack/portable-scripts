@@ -14,9 +14,7 @@ function FindScript()
   export FINDSCRIPT_COUNT
   FINDSCRIPT_COUNT=0
   local DIR SCRIPT
-  if [[ "${SHELL}" =~ zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   #-----------------------------------------------------------------------------
   # Make sure we have directories to search
   #-----------------------------------------------------------------------------

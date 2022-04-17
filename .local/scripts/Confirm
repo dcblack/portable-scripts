@@ -6,14 +6,13 @@ function Confirm()
     Report_error "Confirm need to have a prompt"
     return 1
   fi
-  export SHELL
   local ANS PROMPT
   while [[ -z "${ANS}" ]]; do
     PROMPT="$*"
     if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
       PROMPT="${PROMPT}?"
     fi
-    if [[ "${SHELL}" =~ zsh ]]; then
+    if [[ -n "${ZSH_VERSION}" ]]; then
       read -r "ANS?${PROMPT} "
     else
       read -r -p "${PROMPT} " ANS

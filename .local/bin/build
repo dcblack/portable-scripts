@@ -6,8 +6,6 @@ function Die() { echo "FAILED to build! $*" 1>&2; return 1; }
 
 function Build()
 {
-  export SHELL
-  SHELL=/bin/bash
   local SYNTAX
   SYNTAX="
   NAME

@@ -16,13 +16,13 @@ fi
 #-------------------------------------------------------------------------------
 function Read()
 {
-  export REPLY SHELL
+  export REPLY
   local PROMPT
   PROMPT="$*"
   if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
     PROMPT="${PROMPT}?"
   fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
+  if [[ -n "${ZSH_VERSION}" ]]; then
     read -r "REPLY?${PROMPT} "
   else
     read -r -p "${PROMPT} "

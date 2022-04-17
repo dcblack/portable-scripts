@@ -28,7 +28,7 @@ function Load() {
       esac
       shift
     done
-    if [[ "${SHELL}" =~ zsh ]]; then
+    if [[ -n "${ZSH_VERSION}" ]]; then
       set -o shwordsplit
     fi
     SCRIPT="$(FindScript "$1")"
@@ -72,11 +72,9 @@ function Reload()
     VERBOSITY=1
     shift
   fi
-  if [[ "${SHELL}" == /bin/zsh ]]; then
-    set -o shwordsplit
-  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   local FUNCS
-  FUNCS=$(declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]')
+  FUNCS=$(declare -f | /usr/bin/perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]')
   if [[ -z "${SCRIPTDIRS+x}" ]]; then
     # Missing SCRIPTDIRS! Attempt default locations.
     for DIR in "${HOME}/scripts" "${HOME}/.local/scripts" ; do
