@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+Shell_is()
+{
+  local FOUND=sh
+  if [ -n "${ZSH_VERSION}" ]; then
+    FOUND=zsh
+  elif [ -n "${BASH_VERSION}" ]; then
+    FOUND=bash
+  elif [ -n "${KSH_VERSION}" ]; then
+    FOUND=ksh
+  fi
+  if [ $# = 0 ]; then
+    echo "${FOUND}";
+    return 0;
+  elif [ "$1" = "${FOUND}" ]; then
+    return 0;
+  else
+    return 1;
+  fi
+}

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+function Expand_path() {
+  export Expand_path_VERSION=1.0
+  # DESCR: Expands paths to their full name in specified variable
+  # USAGE: Expand_path [-n][-v] VAR
+  local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT VAR VAL
+  VERBOSE=0
+  NOEXECUTE=0
+  while [[ "$1" =~ ^-.* ]]; do
+    case "$1" in
+      -v) VERBOSE=1 ;;
+      -n) NOEXECUTE=1 ;;
+       *) echo "Error: Unknown option '$1' to Expand_path" 1>&2; return 1 ;;
+    esac
+    shift
+  done
+  VAR="$1"
+  eval "VAL=\$${VAR}"
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  # shellcheck disable=SC2016
+  PERL_SCRIPT='
+    $v=shift @ARGV;
+    $s=q{:};
+    $s=q{;} if $ENV{$v} =~ q{;};
+    exit 1 if not exists $ENV{$v};
+    for my $d(split(qr{$s},$ENV{$v})){
+      $e=abs_path($d);
+      push(@e,$e);
+    }
+    printf qq{%s="%s"\n},$v,join($s,@e);
+    '
+  EVAL_TEXT="$(/usr/bin/env "${VAR}=${VAL}" /usr/bin/perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
+  if [[ ${VERBOSE} == 1 ]]; then
+    Echo "% eval ${EVAL_TEXT}"
+  fi
+  if [[ ${NOEXECUTE} == 0 ]]; then
+    eval "${EVAL_TEXT}"
+  fi
+}
