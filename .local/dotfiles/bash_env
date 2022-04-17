@@ -8,37 +8,46 @@ set -o vi
 
 # Locations
 function portable-env() {
+
   # Environment
+  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME CDPATH PATH MANPATH PERL5LIB
+
   PSCR="$(Realpath "${HOME}/.local")"
   APPS="$(Realpath "${PSCR}/apps")"
   DOTBIN="$(Realpath "${PSCR}/bin")"
   APPSBIN="${PSCR}/apps/bin"
   SYSTEMC_HOME="${PSCR}/apps/systemc"
-  PATH="${DOTBIN}:${APPSBIN}:${PATH}"
+  PATH="${APPSBIN}:${PATH}"
+  PATH="${DOTBIN}:${PATH}"
+  PATH="${HOME}/bin:${PATH}"
   PERL5LIB="$(Realpath "${PSCR}/lib")"
-  TEMPLATEPATH="$(Realpath "${HOME}/TEMPLATES")"
-  for f in "${APPS}/templates" "${HOME}/TEMPLATES"; do
-    Append_path TEMPLATEPATH "${f}"
-  done
+  TEMPLATEPATH="$(Realpath "${HOME}/templates")"
+  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath "${HOME}/.local/templates")"
+  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath "${HOME}/.local/apps/templates")"
 
   Unique_path PATH
   Unique_path MANPATH
   Unique_path TEMPLATEPATH
 
-  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME PATH MANPATH PERL5LIB
-
   # Favorites
   FAVS="${HOME}"/Favorites
-  mkdir -p "${FAVS}"
+  if [[ ! -d "${FAVS}" ]]; then
+    mkdir -p "${FAVS}"
+    CDPATH="."
+    for dir in "${FAVS}" "${HOME}"; do
+      Append_path CDPATH "${dir}"
+    done
+  fi
 
   # Affect applications
   LESS="-afrMRXj4x4"
   CMAKE_VERSION="3.19"
   CMAKE_BUILD="7"
   # Change following if have and prefer clang
-  CC="gcc"
-  CXX="g++"
+  CC="clang"
+  CXX="clang++"
   EDITOR="vim"
+  VISUAL="vim"
 
   export FAVS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR
 }

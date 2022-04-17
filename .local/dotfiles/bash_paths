@@ -4,51 +4,14 @@ export CDPATH
 function SetupPaths() {
 
   #-----------------------------------------------------------------------------
-  # Setup for quicker navigation (e.g., `cd ex1`) using CDPATH
-  #-----------------------------------------------------------------------------
-  export CDPATH
-  CDPATH="." ;#< Should ALWAYS have . first!
-  for dir in "${HOME}" "${HOME}/favs}" "${HOME}/Favorites}"; do
-    Prepend_path CDPATH "${dir}"
-  done
   if [[ $# -gt 0 ]]; then
-      for dir in "${@}"; do
-        if [[ -z "${dir}" ]]; then continue; fi
-        COURSE="$(find "${HOME}" -type d -path '**/.snapshots' -prune -false -o "${dir}" 2>/dev/null)"
-        if [[ -d "${COURSE}" ]]; then
-          Prepend_path CDPATH "${COURSE}"
-        fi
-      done
-  fi
-  CDPATH=".:${CDPATH}"
-  Unique_path CDPATH
-
-  #-----------------------------------------------------------------------------
-  # Add local bin directories to PATH
-  #-----------------------------------------------------------------------------
-  for dir in \
-    "${HOME}/.local/bin" \
-    "${HOME}/bin" \
-    "./bin" \
-  ; do
-    Prepend_path PATH "${dir}"
-  done
-  Unique_path PATH
-
-  #-----------------------------------------------------------------------------
-  # Add local template directories (see `new` script) to TEMPLATEPATH
-  #-----------------------------------------------------------------------------
-  for dir in \
-    "${HOME}/.local/templates" \
-    "${HOME}/templates" \
-  ; do
-    Prepend_path TEMPLATEPATH "${dir}"
-  done
-  Unique_path TEMPLATEPATH
-  if [[ -n "${TEMPLATEPATH}" ]]; then
-    export TEMPLATEPATH
-  else
-    unset TEMPLATEPATH
+    for dir in "${@}"; do
+      if [[ -z "${dir}" ]]; then continue; fi
+      COURSE="$(find "${HOME}" -type d -path '**/.snapshots' -prune -false -o "${dir}" 2>/dev/null)"
+      if [[ -d "${COURSE}" ]]; then
+        Prepend_path CDPATH "${COURSE}"
+      fi
+    done
   fi
 
   #-----------------------------------------------------------------------------
