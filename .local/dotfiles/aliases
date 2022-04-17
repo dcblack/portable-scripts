@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+#-------------------------------------------------------------------------------
+#     #    #     ###    #     ####  #####  ####                                  
+#    # #   #      #    # #   #    # #     #    #                                 
+#   #   #  #      #   #   #  #      #     #                                      
+#  #     # #      #  #     #  ####  #####  ####                                  
+#  ####### #      #  #######      # #          #                                 
+#  #     # #      #  #     # #    # #     #    #                                 
+#  #     # ##### ### #     #  ####  #####  ####                                  
+#-------------------------------------------------------------------------------
+alias ls='ls -BCF --color=always'
+alias la='ls -A'
+alias ll='ls -l'
+alias dir='dir --color=auto'
+alias m='less'
+alias agl='ag -l --nocolor'
+alias cls='clear ; '
+# shellcheck disable=SC2154
+alias vivado-setup='source "${APPS}"/xilinx/2020.1/Vivado/2020.1/settings64.sh'
+export VI='vim'
+alias vial='"${VI}"    -f "$(dotfile aliases)";        source "$(dotfile aliases)"'
+alias vibash='"${VI}"  -f "$(dotfile bashrc)";         source "$(dotfile bashrc)"'
+alias vienv='"${VI}"   -f "$(dotfile bashenv)";        source "$(dotfile bashenv)"'
+alias vifuncs='"${VI}" -f "$(dotfile bash_functions)"; source "${HOME}"/.bash_functions'
+alias .alias='source "$(dotfile bash_aliases)"'
+alias .bash='source  "$(dotfile bashrc)"'
+alias .env='source   "$(dotfile bash_env)"'
+alias .funcs='source "$(dotfile bash_functions)"'
+alias aliases='alias | /usr/bin/perl -pe "s/alias //;s/=.*//" | fmt'
+alias funcs='declare -F|/usr/bin/perl -pe "s/declare -f//;"|fmt'
+alias func='declare -f'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# Add an "alert" alias for long running commands.  Use like so:
+#   sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'

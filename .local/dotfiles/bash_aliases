@@ -30,6 +30,7 @@ if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
 fi
 
 export SCRIPT_NAME SCRIPT_PATH
+source "${HOME}/.local/scripts/Essential-IO"
 for SCRIPT_NAME in bash_debug bash_functions bash_env; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
@@ -53,63 +54,7 @@ if [[ -r ~/.dircolors ]]; then
   eval "${EVAL_TEXT}"
 fi
 
-#-------------------------------------------------------------------------------
-#     #    #     ###    #     ####  #####  ####                                  
-#    # #   #      #    # #   #    # #     #    #                                 
-#   #   #  #      #   #   #  #      #     #                                      
-#  #     # #      #  #     #  ####  #####  ####                                  
-#  ####### #      #  #######      # #          #                                 
-#  #     # #      #  #     # #    # #     #    #                                 
-#  #     # ##### ### #     #  ####  #####  ####                                  
-#-------------------------------------------------------------------------------
-alias ls='ls -BCF --color=always'
-alias la='ls -A'
-alias ll='ls -l'
-alias dir='dir --color=auto'
-alias m='less'
-alias agl='ag -l --nocolor'
-alias cls='clear ; '
-# shellcheck disable=SC2154
-alias vivado-setup='source "${APPS}"/xilinx/2020.1/Vivado/2020.1/settings64.sh'
-export VI='vim'
-function dotfile() {
-  local f
-  for f in "${HOME}/.$1" "${HOME}/.local/dotfiles/$1"; do
-    if [[ -f "${f}" ]]; then
-      echo "${f}"; return 0
-    fi
-  done
-  echo "Unable to locate ${f}" 1>&2
-  ABORT
-}
-alias vial='"${VI}"    -f "$(dotfile bash_aliases)";   source "$(dotfile bash_aliases)"'
-alias vibash='"${VI}"  -f "$(dotfile bashrc)";         source "$(dotfile bashrc)"'
-alias vienv='"${VI}"   -f "$(dotfile bashenv)";        source "$(dotfile bashenv)"'
-alias vifuncs='"${VI}" -f "$(dotfile bash_functions)"; source "${HOME}"/.bash_functions'
-function vitemplate() {
-  export LOCAL
-  local TEMPLATE
-  while [[ $# != 0 ]]; do
-    TEMPLATE="$("${LOCAL}/bin/new" -P "$1")"
-    shift
-    _do gvim "${TEMPLATE}"
-  done
-}
-alias .alias='source "$(dotfile bash_aliases)"'
-alias .bash='source  "$(dotfile bashrc)"'
-alias .env='source   "$(dotfile bash_env)"'
-alias .funcs='source "$(dotfile bash_functions)"'
-alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
-alias funcs='declare -F|perl -pe "s/declare -f//;"|fmt'
-alias func='declare -f'
-
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-
-# Add an "alert" alias for long running commands.  Use like so:
-#   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+source "${HOME}/.local/dotfiles/aliases"
 
 #-------------------------------------------------------------------------------
 #  #####   ####   ####  #######    #    #     # #####  #     #####               
