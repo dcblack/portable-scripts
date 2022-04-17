@@ -130,8 +130,11 @@ done
 if [[ ${VV} == 1 ]]; then
   less -EFK "${NEW_LOG}"
 fi
+REMOVED="$(wc -l "${NEW_LOG}" | /usr/bin/perl -lane 'print $F[0]')"
+if [[ ${REMOVED} > 0 ]]; then (( REMOVED-- )); fi
+if [[ ${REMOVED} == 0 ]]; then REMOVED="no" ; fi
 # shellcheck disable=SC2312
-echo "Removed $(wc -l "${NEW_LOG}" | perl -lane 'print $F[0]') files. Details may be found in ${NEW_LOG}"
+echo "Removed ${REMOVED} files. Details may be found in ${NEW_LOG}"
 find /tmp/ -cmin +1 -name clean_log.\* -exec rm -f {} \; 2>/dev/null
 
 # vim:nospell
