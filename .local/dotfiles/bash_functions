@@ -54,6 +54,8 @@ source "${LOCAL}/scripts/h"
 source "${LOCAL}/scripts/show-colors"
 # shellcheck disable=SC1091
 source "${LOCAL}/scripts/Tcpip"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/dotfile"
 
 function use-cmake() {
   # shellcheck disable=SC1091
