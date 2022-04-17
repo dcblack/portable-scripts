@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+# Create a sample directory tree with several different file types for testing scripts that manipulate paths
+
+TESTDIR="Testdir"
+
+export CXX
+rm -fr "${TESTDIR}"
+mkdir -p "${TESTDIR}"{,/bin,/src,/include,/docs,/share}
+mkbin -bash "${TESTDIR}"/bin/script.bash
+echo "echo 'bash'" >>"${TESTDIR}"/bin/script.bash
+mkbin -perl "${TESTDIR}"/bin/script.pl
+printf "printf qq{perl\\n};" >>"${TESTDIR}"/bin/script.pl
+perl -le 'print qq{Binary %c%c%c%c\n},$;,chr(27),chr(0),chr(245)' >"${TESTDIR}"/share/data.bin
+echo "# About ${TESTDIR}" >"${TESTDIR}"/ABOUT.md
+echo "Some quick text" >"${TESTDIR}"/docs/sample.txt
+echo "#pragma once"    >"${TESTDIR}"/include/sample.hpp
+cat >"${TESTDIR}"/src/hello.cpp <<'EOT'
+#include <iostream>
+int main() {
+  std::cout << "Hello World!\n";
+  return 0;
+}
+EOT
+${CXX} -o "${TESTDIR}/bin/hello.x" "${TESTDIR}/src/hello.cpp"
+# The end
