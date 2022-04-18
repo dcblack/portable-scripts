@@ -3,6 +3,7 @@
 function Expand_path() {
   export Expand_path_VERSION=1.0
   # DESCR: Expands paths to their full name in specified variable
+  # EXCEPT: . or .. are kept use ./. or ./../.. in list to expand
   # USAGE: Expand_path [-n][-v] VAR
   local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT VAR VAL
   VERBOSE=0
@@ -24,8 +25,9 @@ function Expand_path() {
     $s=q{:};
     $s=q{;} if $ENV{$v} =~ q{;};
     exit 1 if not exists $ENV{$v};
-    for my $d(split(qr{$s},$ENV{$v})){
-      $e=abs_path($d);
+    for my $d (split(qr{$s},$ENV{$v})) {
+      $e=$d;
+      $e=abs_path($d) unless $d eq q{.} or $d eq q{..};
       push(@e,$e);
     }
     printf qq{%s="%s"\n},$v,join($s,@e);

@@ -3,7 +3,6 @@
 function Remove_missing() {
   export Remove_missing_VERSION=1.0
   # DESCR: Keeps only real paths in specified variable
-  # EXCEPT: . or .. are kept use ./. or ./../.. in list to expand
   # USAGE: Remove_missing [-n][-v] VAR
   local VERBOSE NOEXECUTE PERL_SCRIPT EVAL_TEXT VAR VAL
   VERBOSE=0
@@ -27,14 +26,10 @@ function Remove_missing() {
     exit 1 if not exists $ENV{$v};
     for my $p(split(qr{$s},$ENV{$v})){
       next unless -e $p;
-      # Exception
-      unless( $e eq q{.} or $e eq q{..}) {
-        $e=abs_path($p);
-      }
-      $e{$e}=1;
-      push(@e,$e);
+      $p{$p}=1;
+      push(@p,$p);
     }
-    printf qq{%s="%s"\n},$v,join($s,@e);
+    printf qq{%s="%s"\n},$v,join($s,@p);
     '
   EVAL_TEXT="$(/usr/bin/env "${VAR}=${VAL}" /usr/bin/perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
   if [[ ${VERBOSE} == 1 ]]; then
