@@ -318,6 +318,7 @@ SYNOPSIS
       -blu) PRE="${PRE}${CBLU}" ; shift ;;
       -mag) PRE="${PRE}${CMAG}" ; shift ;;
       -wht) PRE="${PRE}${CWHT}" ; shift ;;
+      -bld) PRE="${PRE}${BOLD}" ; shift ;;
       -tag) TAG="${2}";
             if [[ "${#TAG}" -gt 1 ]]; then TAG="${TAG}:" ; fi
             if [[ "${#TAG}" -gt 0 ]]; then TAG="${TAG} " ; fi
@@ -326,9 +327,9 @@ SYNOPSIS
     esac
   done
   if [[ -z "${EOL}" ]]; then
-    Echo "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
+    Echo "${CGRN}${BOLD}${TAG}${NONE}${PRE}$*${NONE}"
   else
-    Echo -n "${CGRN}${BOLD}${TAG}${UBLD}${PRE}$*${NONE}"
+    Echo -n "${CGRN}${BOLD}${TAG}${NONE}${PRE}$*${NONE}"
   fi
 }
 
@@ -389,15 +390,20 @@ function Ruler()
   local PRE
   PRE=""
   # Test for color prefix
-  case "$1" in
-    -pre) PRE="${2}"    ; shift  ; shift ;;
-    -cyn) PRE="${CCYN}" ; shift ;;
-    -red) PRE="${CRED}" ; shift ;;
-    -grn) PRE="${CGRN}" ; shift ;;
-    -ylw) PRE="${CYLW}" ; shift ;;
-    -blu) PRE="${CBLU}" ; shift ;;
-    *) PRE="" ;;
-  esac
+  while [[ "$1" =~ ^-[[:alpha:]]{3,3}$ ]]; do
+    case "$1" in
+      -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
+      -cyn) PRE="${PRE}${CCYN}" ; shift ;;
+      -red) PRE="${PRE}${CRED}" ; shift ;;
+      -grn) PRE="${PRE}${CGRN}" ; shift ;;
+      -mag) PRE="${PRE}${CMAG}" ; shift ;;
+      -ylw) PRE="${PRE}${CYLW}" ; shift ;;
+      -wht) PRE="${PRE}${CWHT}" ; shift ;;
+      -blu) PRE="${PRE}${CBLU}" ; shift ;;
+      -bld) PRE="${PRE}${BOLD}" ; shift ;;
+         *) PRE="" ;;
+    esac
+  done
   Printf "%s" "${PRE}"
   # Grab separator
   if [[ $# -gt 0 && "${#1}" == 1 ]]; then
@@ -421,9 +427,8 @@ function Ruler()
 #-------------------------------------------------------------------------------
 function Report_fatal()
 {
-  Echo -n "${CRED}"
-  Ruler '!'
-  Echo "${CRED}${BOLD}Fatal:${UBLD} $*${NONE}" 1>&2
+  Ruler -bld -red '!'
+  Echo "${CRED}${BOLD}Fatal:${NONE} $*${NONE}" 1>&2
   return 1
 }
 
@@ -448,9 +453,8 @@ function Report_error()
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   (( ++ERRORS ))
   export ERRORS
-  Echo -n "${CRED}"
-  Ruler '!'
-  Echo "${CRED}${BOLD}Error #${ERRORS}:${UBLD} ${NONE}$*${NONE}" 1>&2
+  Ruler -bld -red '!'
+  Echo "${CRED}${BOLD}Error #${ERRORS}:${NONE} ${NONE}$*${NONE}" 1>&2
 }
 
 #-------------------------------------------------------------------------------
@@ -461,9 +465,8 @@ function Report_warning()
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   (( ++WARNINGS ))
   export WARNINGS
-  Echo -n "${CRED}"
-  Ruler '?'
-  Echo "${CRED}${BOLD}Warning:${UBLD} ${NONE}$*${NONE}" 1>&2
+  Ruler -bld -ylw '?'
+  Echo "${CYLW}${BOLD}Warning:${NONE} ${NONE}$*${NONE}" 1>&2
 }
 
 export ERRORS WARNINGS
