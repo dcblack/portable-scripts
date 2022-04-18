@@ -17,9 +17,21 @@ function portable-env() {
   DOTBIN="$(Realpath "${PSCR}/bin")"
   APPSBIN="${PSCR}/apps/bin"
   SYSTEMC_HOME="${PSCR}/apps/systemc"
-  PATH="${APPSBIN}:${PATH}"
-  PATH="${DOTBIN}:${PATH}"
-  PATH="${HOME}/bin:${PATH}"
+  SYSTEMC_SRC="${PSCR}/src/systemc"
+  Prepend_path PATH "${HOME}/.rvm/bin"
+  Prepend_path PATH "/sbin"
+  Prepend_path PATH "/bin"
+  Prepend_path PATH "/usr/sbin"
+  Prepend_path PATH "/usr/bin"
+  Prepend_path PATH "/usr/local/sbin"
+  Prepend_path PATH "/usr/local/bin"
+  Prepend_path PATH "/opt/local/sbin"
+  Prepend_path PATH "/opt/local/bin"
+  Prepend_path PATH "/opt/homebrew/sbin"
+  Prepend_path PATH "/opt/homebrew/bin"
+  Prepend_path PATH "${APPSBIN}"
+  Prepend_path PATH "${DOTBIN}"
+  Prepend_path PATH "${HOME}/bin"
   PERL5LIB="$(Realpath "${PSCR}/lib")"
   TEMPLATEPATH="$(Realpath "${HOME}/templates")"
   TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath "${HOME}/.local/templates")"
@@ -28,6 +40,8 @@ function portable-env() {
   Unique_path PATH
   Unique_path MANPATH
   Unique_path TEMPLATEPATH
+
+  export FAVS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR VISUAL
 
   # Favorites
   FAVS="${HOME}"/Favorites
@@ -49,7 +63,6 @@ function portable-env() {
   EDITOR="vim"
   VISUAL="vim"
 
-  export FAVS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR
 }
 
 portable-env
