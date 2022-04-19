@@ -3,8 +3,8 @@
 #-------------------------------------------------------------------------------
 # Essential building blocks
 #-------------------------------------------------------------------------------
-LOCAL="${HOME}/.local"
 export LOCAL
+LOCAL="${HOME}/.local"
 # shellcheck disable=SC1091
 source "${LOCAL}/scripts/Essential-IO"
 # shellcheck disable=SC1091
