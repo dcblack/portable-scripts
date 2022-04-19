@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+function vitemplate() {
+  export LOCAL
+  local TEMPLATE
+  while [[ $# != 0 ]]; do
+    TEMPLATE="$("${LOCAL}/bin/new" -P "$1")"
+    shift
+    _do gvim "${TEMPLATE}"
+  done
+}

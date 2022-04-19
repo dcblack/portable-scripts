@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+function dotfile() {
+  local p a
+  a=0
+  while [[ "$1" =~ ^- ]]; do
+    case "$1" in
+      -a) a=1 ;;
+       *) ;;
+    esac
+  done
+  for p in "${HOME}/.$1" "${HOME}/.local/dotfiles/$1"; do
+    if [[ -f "${p}" ]]; then
+      echo "${p}"
+      if [[ ${a} == 0 ]]; then return 0; fi
+      a=2
+    fi
+  done
+  if [[ ${a} == 2 ]]; then return 0; fi
+  echo "Unable to locate ${p}" 1>&2
+  return 1
+}
