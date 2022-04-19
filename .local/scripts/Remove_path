@@ -5,7 +5,7 @@ function Remove_path() {
   # USAGE: remove_path [-sep char] VAR PATH
   if [[ "$1" =~ ^[_A-Za-z][-_A-Za-z0-9]*$ ]]; then
     local PLSCRIPT EVALSCRIPT VAR VAL SEP REMOVE
-    SEP=''
+    SEP=':'
     if [[ "$1" == "-sep" ]]; then
       if [[ "$2" =~ ^[[:punct]]$ ]]; then
         SEP="$2"
@@ -19,12 +19,6 @@ function Remove_path() {
     REMOVE="$2"
     eval "VAL=\$${VAR}"
     if [[ -z "${VAL}" ]]; then Report_error "${VAR} is empty!?"; return 1; fi
-    if [[ -z "${SEP}" ]]; then
-      # No separator specified, so inspect for semicolon to make decision
-      # Assertion: no normal path element would use semicolon
-      local s; s=';'
-      if [[ "${VAL}" =~ .*[${s}].* ]]; then SEP=';' ; else SEP=':' ; fi
-    fi
     # shellcheck disable=SC2016
     PLSCRIPT='
     ($s,$v,$p)=@ARGV;

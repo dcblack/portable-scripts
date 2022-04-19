@@ -11,7 +11,7 @@ function Prepend_path() # only if 2nd arg does not exist in first
     Remove_path "$1" "$2"
   else
     local VAR VAL SEP ARG EVAL
-    SEP=''
+    SEP=':'
     if [[ "$1" == "-sep" ]]; then
       SEP="$2"
       shift; shift
@@ -21,13 +21,6 @@ function Prepend_path() # only if 2nd arg does not exist in first
     ARG="$(Realpath "$2")"; shift
     EVAL="VAL=\$${VAR}"
     eval "${EVAL}"
-    if [[ -z "${SEP}" ]]; then
-      if [[ "${VAL}" =~ .*[:].* ]]; then
-        SEP=';'
-      else
-        SEP=':'
-      fi
-    fi
     if [[ -z "${VAL}" ]]; then
       EVAL="${VAR}=\"${ARG}\"; export ${VAR}"
     else
