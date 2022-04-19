@@ -45,13 +45,11 @@ function portable-env() {
 
   # Favorites
   FAVS="${HOME}"/Favorites
-  if [[ ! -d "${FAVS}" ]]; then
-    mkdir -p "${FAVS}"
-    CDPATH="."
-    for dir in "${FAVS}" "${HOME}"; do
-      Append_path CDPATH "${dir}"
-    done
-  fi
+  mkdir -p "${FAVS}"
+  CDPATH="."
+  for dir in "${FAVS}" "${HOME}"; do
+    Append_path CDPATH "${dir}"
+  done
 
   # Affect applications
   LESS="-afrMRXj4x4"
