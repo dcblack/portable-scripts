@@ -219,7 +219,7 @@ function Build()
   export CMAKE_PREFIX_PATH
   CMAKE_PREFIX_PATH=
   for CDIR in "${SUBPROJ_DIR}" "${PROJECT_DIR}" "${PROJECT_DIR}/externs" "${APPS}" "${APPS}/lib"; do
-    if [[ -d "${CDIR}/cmake" ]]; then
+    if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then
       if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
         CMAKE_PREFIX_PATH="${CDIR}"
       else
