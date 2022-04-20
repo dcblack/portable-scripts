@@ -28,6 +28,32 @@ function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
+function _do()
+{
+  local ESC BOLD CCYN NONE
+  ESC=""
+  BOLD="${ESC}[01m"
+  CCYN="${ESC}[96m"
+  NONE="${ESC}[00m"
+  #@ echo and then execute arguments as a command
+  #| _do COMMAND [ARGS]
+  local NX
+  export NOTREALLY
+  if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
+  if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
+  if [[ "${NX}" == "-" ]]; then
+    echo "$*" | tee /dev/tty
+    return 0;
+  else
+    echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"  | tee /dev/tty
+  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
+  "$@"
+}
+
+#------------------------------------------------------------------------------
+# Parse the command-line
+#------------------------------------------------------------------------------
 unset DIRS
 declare -a DIRS
 V='-v'
@@ -89,6 +115,9 @@ if [[ ${#DIR[@]} == 0 ]]; then
   DIRS[1]="."
 fi
 
+#------------------------------------------------------------------------------
+# Do the work
+#------------------------------------------------------------------------------
 echo "Cleaning ${WHAT} in ${DIRS[*]}"
 YMD="$(date +%Y%m%d)"
 NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
@@ -96,31 +125,31 @@ for DIR in "${DIRS[@]}"; do
   ACTUAL_DIR="(Realpath ${DIR})"
   test -s "${V}" && echo "Remove objects and dependencies under ${ACTUAL_DIR}"
   {
-    find "${DIR}" -name '*.[doP]'               ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
-    find "${DIR}" -path "*/compile-${YMD}*.sh"  ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
-    find "${DIR}" -name '*.x.dSYM'              ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+    _do find "${DIR}" -name '*.[doP]'                ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -path "*/compile-${YMD}*.sh"   ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -name '*.x.dSYM'               ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
   } 2>/dev/null >>"${NEW_LOG}"
   if   [[ "${OPTS}" =~ .*M.* ]]; then
     test -s "${V}" && echo "Removing Mac files"
-    find "${DIR}" -type f -name '.DS_Store'     ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if   [[ "${OPTS}" =~ .*P.* ]]; then
     test -s "${V}" && echo "Removing PC files"
-    find "${DIR}" -type f -name 'thumbs.db'     ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name 'thumbs.db'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if   [[ "${OPTS}" =~ .*L.* ]]; then
     test -s "${V}" && echo "Removing log files"
-    find "${DIR}" -type f -name '*.log'         ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name '*.log'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if [[ "${OPTS}" =~ .*X.* ]]; then
     test -s "${V}" && echo "Removing executable files"
-    find "${DIR}" -type f -name '*.x'           ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name '*.x'            ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if [[ "${OPTS}" =~ .*B.* ]]; then
     test -s "${V}" && echo "Removing build directories"
     {
-      find "${DIR}" -type d -name build         ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-      find "${DIR}" -type d -name cmake-build-\*! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name build          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name cmake-build-\* ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
     } 2>/dev/null >>"${NEW_LOG}"
   fi
 done
@@ -133,6 +162,6 @@ if [[ ${REMOVED} -gt 0 ]]; then (( REMOVED-- )); fi
 if [[ ${REMOVED} == 0 ]]; then REMOVED="no" ; fi
 # shellcheck disable=SC2312
 echo "Removed ${REMOVED} files. Details may be found in ${NEW_LOG}"
-find /tmp/ -cmin +1 -name clean_log.\*          ! -path '*/externs/*' -exec rm -f {} \; 2>/dev/null
+find /tmp/ -cmin +1 -name clean_log.\*               ! -path '*/externs/*' -exec rm -f {} \; 2>/dev/null
 
 # vim:nospell
