@@ -86,55 +86,53 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 if [[ ${#DIR[@]} == 0 ]]; then
-  DIRS[1]="$(Realpath .)"
+  DIRS[1]="."
 fi
 
 echo "Cleaning ${WHAT} in ${DIRS[*]}"
 YMD="$(date +%Y%m%d)"
-OLD_LOGS="$(echo /tmp/clean_log.*)"
 NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
 for DIR in "${DIRS[@]}"; do
-  test -s "${V}" && echo "Remove objects and dependencies under ${DIR}"
+  ACTUAL_DIR="(Realpath ${DIR})"
+  test -s "${V}" && echo "Remove objects and dependencies under ${ACTUAL_DIR}"
   {
-    find "${DIR}" -name '*.[doP]' -exec "${CMND}" "${V}" {} \;
-    find "${DIR}" -path "*/compile-${YMD}*.sh" -exec "${CMND}" "${V}" {} \;
-    find "${DIR}" -name '*.x.dSYM' -exec "${CMND}" "${V}" -fr {} \;
+    find "${DIR}" -name '*.[doP]'               ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    find "${DIR}" -path "*/compile-${YMD}*.sh"  ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    find "${DIR}" -name '*.x.dSYM'              ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
   } 2>/dev/null >>"${NEW_LOG}"
   if   [[ "${OPTS}" =~ .*M.* ]]; then
     test -s "${V}" && echo "Removing Mac files"
-    find "${DIR}" -type f -name '.DS_Store' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    find "${DIR}" -type f -name '.DS_Store'     ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if   [[ "${OPTS}" =~ .*P.* ]]; then
     test -s "${V}" && echo "Removing PC files"
-    find "${DIR}" -type f -name 'thumbs.db' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    find "${DIR}" -type f -name 'thumbs.db'     ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if   [[ "${OPTS}" =~ .*L.* ]]; then
     test -s "${V}" && echo "Removing log files"
-    find "${DIR}" -type f -name '*.log' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
-    for LOG in ${OLD_LOGS}; do
-      "${CMND}" "${V}" "${LOG}" 2>/dev/null >> "${NEW_LOG}"
-    done
+    find "${DIR}" -type f -name '*.log'         ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if [[ "${OPTS}" =~ .*X.* ]]; then
     test -s "${V}" && echo "Removing executable files"
-    find "${DIR}" -type f -name '*.x' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    find "${DIR}" -type f -name '*.x'           ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
   fi
   if [[ "${OPTS}" =~ .*B.* ]]; then
     test -s "${V}" && echo "Removing build directories"
     {
-      find "${DIR}" -type d -name build -exec "${CMND}" "${V}" -fr {} \;
-      find "${DIR}" -type d -name cmake-build-\* -exec "${CMND}" "${V}" -fr {} \;
+      find "${DIR}" -type d -name build         ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+      find "${DIR}" -type d -name cmake-build-\*! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
     } 2>/dev/null >>"${NEW_LOG}"
   fi
 done
 if [[ ${VV} == 1 ]]; then
   less -EFK "${NEW_LOG}"
 fi
+# shellcheck disable=SC2312
 REMOVED="$(wc -l "${NEW_LOG}" | /usr/bin/perl -lane 'print $F[0]')"
-if [[ ${REMOVED} > 0 ]]; then (( REMOVED-- )); fi
+if [[ ${REMOVED} -gt 0 ]]; then (( REMOVED-- )); fi
 if [[ ${REMOVED} == 0 ]]; then REMOVED="no" ; fi
 # shellcheck disable=SC2312
 echo "Removed ${REMOVED} files. Details may be found in ${NEW_LOG}"
-find /tmp/ -cmin +1 -name clean_log.\* -exec rm -f {} \; 2>/dev/null
+find /tmp/ -cmin +1 -name clean_log.\*          ! -path '*/externs/*' -exec rm -f {} \; 2>/dev/null
 
 # vim:nospell
