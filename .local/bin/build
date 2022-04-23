@@ -264,7 +264,7 @@ function Build()
     Report_info "Running ${SUBPROJ_DIR}"
     if [[ -n "${TARGETS}" ]]; then
       for EXECUTABLE in ${TARGETS}; do
-        # shellcheck disable=SC2086
+        # shellcheck disable=SC2086,SC2312
         ( _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || return 1 ) 2>&1 | tee run.log
       done
     else
@@ -272,7 +272,7 @@ function Build()
     fi
   elif [[ "${ACTION}" == test ]]; then
     Report_info "Testing ${SUBPROJ_DIR}"
-    # shellcheck disable=SC2086
+    # shellcheck disable=SC2086,SC2312
     ( _do ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}" || return 1 ) 2>&1 | tee test.log
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
