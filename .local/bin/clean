@@ -30,22 +30,21 @@ function Realpath() {
 
 function _do()
 {
-  local ESC BOLD CCYN NONE
+  local ESC BOLD CRED CGRN CBLU CCYN CMAG NONE
   ESC=""
-  BOLD="${ESC}[01m"
-  CCYN="${ESC}[96m"
-  NONE="${ESC}[00m"
+  # shellcheck disable=SC2034
+  BOLD="${ESC}[01m" CRED="${ESC}[91m" CGRN="${ESC}[92m" CBLU="${ESC}[94m" CCYN="${ESC}[96m" CMAG="${ESC}[95m" NONE="${ESC}[00m"
   #@ echo and then execute arguments as a command
-  #| _do COMMAND [ARGS]
+  #| _do [-n] COMMAND [ARGS]
   local NX
   export NOTREALLY
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
-    echo "$*" | tee /dev/tty
+    echo "# $*" | tee /dev/tty
     return 0;
   else
-    echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"  | tee /dev/tty
+    echo "${BOLD}${CCYN}${NX}%${NONE} ${CGRN}$*${NONE}"  | tee /dev/tty
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   "$@"
@@ -56,6 +55,7 @@ function _do()
 #------------------------------------------------------------------------------
 unset DIRS
 declare -a DIRS
+NOTREALLY=""
 V='-v'
 VV=0
 (( i=0 ))
@@ -89,6 +89,7 @@ while [[ $# -gt 0 ]]; do
     WHAT="build including logs"
     OPTS=BL
   elif [[ "$1" =~ ^-{1,2}n(otreally)?$ ]]; then
+    NOTREALLY=1
     CMND="echo '# ${CMND}'"
   elif [[ "$1" =~ ^-{1,2}pc?$ ]]; then
     WHAT+=" + pc"
