@@ -69,4 +69,7 @@ function use-cmake() {
 # shellcheck disable=SC1091
 source "${LOCAL}/bin/wd" -init
 
+export DID_FUNCTIONS
+DID_FUNCTIONS=1
+
 # vim:nospell

@@ -1,6 +1,17 @@
 #!/bin/bash
 
-# Must source bash_functions first
+# Must source ${HOME}/.local/dotfiles/functions first
+export DID_FUNCTIONS
+if [[ ${DID_FUNCTIONS} != 1 ]]; then
+  TRY="${HOME}/.local/dotfiles/functions"
+  # shellcheck source=.local/dotfiles/functions
+  if [[ -r "${TRY}" ]]; then
+    source "${TRY}"
+  else
+    echo "Fatal: Unable to source '${TRY}'" 1>&2
+    Abort
+  fi
+fi
 
 set -o vi
 
@@ -10,7 +21,7 @@ set -o vi
 function portable-env() {
 
   # Environment
-  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME CDPATH PATH MANPATH PERL5LIB
+  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME SYSTEMC_SRC CDPATH PATH MANPATH PERL5LIB
 
   PSCR="$(Realpath "${HOME}/.local")"
   APPS="$(Realpath "${PSCR}/apps")"

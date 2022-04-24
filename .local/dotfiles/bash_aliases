@@ -9,8 +9,8 @@ There's more than aliases here and we invoke some other files under found under
 $HOME/.local/dotfiles in the following order:
 
 1. bash_debug -- if executable
-2. bash_functions -- sets functions for use in scripting
-3. bash_env -- sets environment variables
+2. functions -- sets functions for use in scripting
+3. env -- sets environment variables
 4. -- body of aliases happens after the above
 5. bash_paths -- sets additional environment variables (usually with dependencies)
 
@@ -31,7 +31,7 @@ fi
 
 export SCRIPT_NAME SCRIPT_PATH
 source "${HOME}/.local/scripts/Essential-IO"
-for SCRIPT_NAME in bash_debug bash_functions bash_env; do
+for SCRIPT_NAME in bash_debug functions "env"; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
