@@ -122,6 +122,8 @@ fi
 echo "Cleaning ${WHAT} in ${DIRS[*]}"
 YMD="$(date +%Y%m%d)"
 NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
+# shellcheck disable=SC2312
+echo "$0 $* ;# $(date) $(pwd)" >"${NEW_LOG}"
 for DIR in "${DIRS[@]}"; do
   ACTUAL_DIR="(Realpath ${DIR})"
   test -s "${V}" && echo "Remove objects and dependencies under ${ACTUAL_DIR}"
@@ -129,31 +131,31 @@ for DIR in "${DIRS[@]}"; do
     _do find "${DIR}" -name '*.[doP]'                ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
     _do find "${DIR}" -path "*/compile-${YMD}*.sh"   ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
     _do find "${DIR}" -name '*.x.dSYM'               ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-  } 2>/dev/null >>"${NEW_LOG}"
+  }
   if   [[ "${OPTS}" =~ .*M.* ]]; then
     test -s "${V}" && echo "Removing Mac files"
-    _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*P.* ]]; then
     test -s "${V}" && echo "Removing PC files"
-    _do find "${DIR}" -type f -name 'thumbs.db'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name 'thumbs.db'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*L.* ]]; then
     test -s "${V}" && echo "Removing log files"
-    _do find "${DIR}" -type f -name '*.log'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name '*.log'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
   if [[ "${OPTS}" =~ .*X.* ]]; then
     test -s "${V}" && echo "Removing executable files"
-    _do find "${DIR}" -type f -name '*.x'            ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \; 2>/dev/null >>"${NEW_LOG}"
+    _do find "${DIR}" -type f -name '*.x'            ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
   if [[ "${OPTS}" =~ .*B.* ]]; then
     test -s "${V}" && echo "Removing build directories"
     {
       _do find "${DIR}" -type d -name build          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
       _do find "${DIR}" -type d -name cmake-build-\* ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-    } 2>/dev/null >>"${NEW_LOG}"
+    }
   fi
-done
+done 2>/dev/null | tee -a "${NEW_LOG}" 
 if [[ ${VV} == 1 ]]; then
   less -EFK "${NEW_LOG}"
 fi
