@@ -79,9 +79,14 @@ function Build()
   BUILD_OPTS=()
   TEST_OPTS=()
 
-  local SCRIPTS_DIR
-  SCRIPTS_DIR="$(dirname "$0")"
+  export SCRIPTS_DIR
+  # If not yet defined
+  if [[ -z "${SCRIPTS_DIR}" ]]; then
+    # Try the directory where build is located
+    SCRIPTS_DIR="$(dirname "$0")"
+  fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
+    # Try home installation
     SCRIPTS_DIR="${HOME}/.local/scripts"
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
