@@ -41,10 +41,10 @@ function _do()
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
-    echo "# $*" | tee /dev/tty
+    echo "# $*"
     return 0;
   else
-    echo "${BOLD}${CCYN}${NX}%${NONE} ${CGRN}$*${NONE}"  | tee /dev/tty
+    echo "${BOLD}${CCYN}${NX}%${NONE} ${CGRN}$*${NONE}"
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   "$@"
