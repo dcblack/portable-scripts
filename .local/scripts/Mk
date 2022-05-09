@@ -3,10 +3,13 @@
 Load Read
 Load Confirm
 
+function Die() { echo "FAILED to build! $*" 1>&2; return 1; }
+
 #-------------------------------------------------------------------------------
 function Mk()
 {
   export GITROOT_DIR GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+  GITROOT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
   if [[ "${USER}" == user || -z "${GIT_COMMITTER_NAME}" || -z "${GIT_COMMITTER_EMAIL}" ]];then
     while [[ -z "${GIT_COMMITTER_NAME}" ]]; do
       REPLY=""
@@ -36,6 +39,5 @@ function Mk()
       fi
     done
   fi
-  GITROOT_DIR="$(git rev-parse --show-toplevel)"
   env DEVELOPER="${GIT_COMMITTER_EMAIL}" make -f "${GITROOT_DIR}/GNUmakefile" "$@"
 }
