@@ -21,12 +21,25 @@ set -o vi
 function portable-env() {
 
   # Environment
-  export PSCR APPS TEMPLATEPATH SYSTEMC_HOME SYSTEMC_SRC CDPATH PATH MANPATH PERL5LIB
+  export\
+    APPS\
+    CDPATH\
+    MANPATH\
+    ORIGPATH\
+    PATH\
+    PERL5LIB\
+    PSCR\
+    SCREENDIR\
+    SYSTEMC_HOME\
+    SYSTEMC_SRC\
+    TEMPLATEPATH\
 
+  ORIGPATH="${PATH}"
   PSCR="$(Realpath "${HOME}/.local")"
   APPS="$(Realpath "${PSCR}/apps")"
   DOTBIN="$(Realpath "${PSCR}/bin")"
   APPSBIN="${PSCR}/apps/bin"
+  SCREENDIR="${HOME}/.screen"
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   SYSTEMC_SRC="${PSCR}/src/systemc"
   Prepend_path PATH "${HOME}/.rvm/bin"
@@ -52,7 +65,15 @@ function portable-env() {
   Unique_path MANPATH
   Unique_path TEMPLATEPATH
 
-  export FAVS LESS CXX CC CMAKE_VERSION CMAKE_BUILD EDITOR VISUAL
+  export\
+    CC\
+    CMAKE_BUILD\
+    CMAKE_VERSION\
+    CXX\
+    EDITOR\
+    FAVS\
+    LESS\
+    VISUAL\
 
   # Favorites
   FAVS="${HOME}"/Favorites
