@@ -442,7 +442,7 @@ function Assert()
   FNC="${FUNCNAME[1]}"
   FIL="${BASH_SOURCE[1]}"
   LNO="${BASH_LINENO[1]}"
-  Die "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
+  Report_fatal "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
 #-------------------------------------------------------------------------------
