@@ -426,6 +426,8 @@ sub readargs { #<<<2
     s/^\s+//; # remove leading space
     s/\s+$//; # remove trailing space
     s/^#.*// or s{^//.*}{}; # remove comments
+    s/^'(.+)'$/$1/ or # remove single-quotes if line is quoted
+    s/^"(.+)"$/$1/; # remove double-quotes if line is quoted
     if (m/^-/) {s/\s+/ /}; # condense first space
     next unless m/\S/; # Anything left?
     next if m/=$/;
