@@ -87,7 +87,7 @@ sub help() { #<<<2
 
 ###############################################################################
 sub save_existing($) { #<<<2
-  # Rename existing filenames to prepare for new
+  # Rename existing file names to prepare for new
   for my $target (@_) {
     my $i;
     if (-e $target) {
@@ -106,7 +106,7 @@ sub save_existing($) { #<<<2
 our %warned;
 sub exe($$) {
   my ($fn,$text) = @_;
-  $fn = lc $fn; # case insenstive
+  $fn = lc $fn; # case insensitive
   if ($fn eq 'new') {
     $text =~ s/:/ /g;
     $text = qx{new -out - $text};
@@ -170,8 +170,8 @@ sub replace_placeholder { #<<<2
   #----------------------------------------------------------------------------
   # Quick return if no placeholders
   #----------------------------------------------------------------------------
-  # rcm: this regex is broken, it allows unmatched "<>" but that is ok
-  # rcm: here. It is not ok below.
+  # rcm: this regex is broken, it allows unmatched "<>" but that is OK
+  # rcm: here. It is not OK below.
   goto SKIP unless $line =~ m/${lhe}([<]?[\$]?\w[-:=.[:word:]]*[>]?)${rhe}/;
   #----------------------------------------------------------------------------
   # Find all the placeholders
@@ -179,8 +179,7 @@ sub replace_placeholder { #<<<2
   my @placeholder = ();
   my $i = 0;
   my $t = sprintf("$;%d$;",$i);
-  # rcm: this regex is broken, it allows unmatched "<>" that is not ok
-  # rcm: here. 
+  # rcm: this regex is broken, it allows unmatched "<>" that is not OK here. 
   # rcm while ($line =~ s/${lhe}(([<])?[\$]?\w[-.[:word:]]*([>])?)${rhe}/$t/s) {
   while ($line =~ s/${lhe}(([<])?[\$]?\w[-.[:word:]]*([>])?)${rhe}/$t/s) {
     push @placeholder,$1;
@@ -659,11 +658,11 @@ phred whoa_harness.h -o replacements
 
 =item # fill in values for placeholders in file replacements, each line
 
-=item # contains the name of a placeholder. If it is not preceeded by a file
+=item # contains the name of a placeholder. If it is not preceded by a file
 
 =item # name, then it is considered the global default value. If a 
 
-=item # placeholder is preceeded by a file name, the value specified 
+=item # placeholder is preceded by a file name, the value specified 
 
 =item # will apply only to that file.
 
