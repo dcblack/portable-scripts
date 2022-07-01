@@ -91,7 +91,7 @@ EOT
         if [[ $# != 2 ]]; then Report_error "Requires two arguments: j -mk FAV DIRPATH"; return 1; fi
         if [[ "$1" =~ .*/.* ]]; then Report_error "First argument must be a simple name"; return 1; fi
         if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "First argument must begin with an alphanumeric"; return 1; fi
-        if [[ "$1" =~ [^-_a-zA-Z0-9].* ]]; then Report_error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
+        if [[ "$1" =~ [^-_+a-zA-Z0-9].* ]]; then Report_error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
         if [[ -e "${FAVS}/$1" ]]; then Report_error "$1 already exists"; return 1; fi
         if [[ ! -d "$2" ]]; then Report_error "'$2/.' does not refer to a directory"; return 1; fi
         TMP1="$(Realpath "$2/.")"
