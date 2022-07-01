@@ -21,12 +21,14 @@
 #| additional hierarchy will exist:
 #| 
 #| $HOME/
-#|      |-- .local@ ---------> portable-scripts/.local/
-#|      |-- .vimrc@ ---------> portable-scripts/.local/dotfiles/vimrc
-#|      |-- .vim@ -----------> portable-scripts/.local/dotfiles/vim/
-#|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
-#|      |-- .lessfilter@ ---->portable-scripts/.local/dotfiles/lessfilter
 #|      |-- .agignore
+#|      |-- .astylerc@ ------> portable-scripts/.local/dotfiles/astylerc
+#|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
+#|      |-- .clang-format@ --> portable-scripts/.local/dotfiles/clang-format
+#|      |-- .lessfilter@ ----> portable-scripts/.local/dotfiles/lessfilter
+#|      |-- .local@ ---------> portable-scripts/.local/
+#|      |-- .vim@ -----------> portable-scripts/.local/dotfiles/vim/
+#|      |-- .vimrc@ ---------> portable-scripts/.local/dotfiles/vimrc
 #|      |-- portable-scripts/
 #|
 #|OPTIONS
@@ -159,7 +161,7 @@ function portable-setup() {
   
   # Add symbolic links for a minimal set of selected "dot" files
   local FROM_LINK TO_FILE
-  for DOTFILE in bash_aliases vim vimrc lessfilter; do
+  for DOTFILE in bash_aliases vim vimrc lessfilter clang-format astylerc; do
     FROM_LINK="${HOME}/.${DOTFILE}"
     TO_FILE="${PORTABLE_DIR}/dotfiles/${DOTFILE}"
     if [[ -r "${TO_FILE}" ]]; then
