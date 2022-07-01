@@ -17,15 +17,17 @@ Creates a new executable script with a bare minimum template. The result contain
 
 ## OPTIONS
 
-OPTION                                 | DESCRIPTION
-------                                 | -----------
--/_HASHBANG_                           | Specify an alternate hashbang line
--perl\|-python2\|-python3\|-bash\|-zsh | Select a language (default: bash)
---script\|-s                           | Place in scripts
---bin\-b                               | Place in $HOME/bin
--dir=_DIRECTORY_                       | Place EXECUTABLE under DIRECTORY
---edit[=_editor_\|-e                   | Enter the specified editor after creation
---help\|-h                             | Display this text
+OPTION                | DESCRIPTION
+------                | -----------
+-/_HASHBANG_          | Specify an alternate hashbang line
+-LANGUAGE             | Select a language: bash (default), csh, lua, perl, python2, python3, zsh
+--script\|-s          | Place in scripts
+--bin\-b              | Place in $HOME/bin
+-dir=_DIRECTORY_      | Place EXECUTABLE under DIRECTORY
+--edit[=_editor_\|-e  | Enter the specified editor after creation
+--help\|-h            | Display this text
+--utils|-u            | Add utils.bash
+--verbose|-v          | Verbose
 
 DOCUMENTATION
 }
@@ -36,12 +38,32 @@ function Regex
   perl -e 'if ($ARGV[1]=~m/$ARGV[2]/){exit 0;}else{exit 1;}' - "$1" "$2"
 }
 
+export BOLD CRED CGRN NONE
+
+function Report_error()
+{
+  echo "${BOLD}${CRED}Error:${NONE} $*" 1>&2
+}
+
+function Verbose_info()
+{
+  if [[ "$1" != 1 ]]; then return; fi
+  shift
+  echo "${BOLD}${CGRN}Info:${NONE} $*"
+}
+
 function Mkbin()
 {
-  local HASHBANG DIRECTORY EDIT SCRIPT OPTION
+  local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH
+  local OPTION CMNT KIND IS_NEW ADD_TAIL ADD_UTILS FIRST_LINE V
+  ADD_TAIL=0
+  ADD_UTILS=0
+  KIND="bash"
   HASHBANG="/usr/bin/env bash"
   DIRECTORY=""
   EDIT=""
+  CMNT="#"
+  V=0
   while [[ "$1" =~ ^- ]]; do
     OPTION="$1"
     shift
@@ -50,17 +72,28 @@ function Mkbin()
       exit 1
     elif Regex "${OPTION}" "^/" ; then
       HASHBANG="${OPTION}"
+    elif [[ "${OPTION}" =~ ^-{1,2}lua ]]; then
+      KIND="lua"
+      HASHBANG="/usr/bin/env lua"
     elif [[ "${OPTION}" =~ ^-{1,2}perl[45]? ]]; then
+      KIND="perl"
       HASHBANG="/usr/bin/env perl5"
     elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?2 ]]; then
+      KIND="python"
       HASHBANG="/usr/bin/env python2"
     elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?3? ]]; then
+      KIND="python"
       HASHBANG="/usr/bin/env python3"
     elif [[ "${OPTION}" =~ ^-{1,2}zsh ]]; then
+      KIND="zsh"
       HASHBANG="/usr/bin/env zsh"
-    elif [[ "${OPTION}" =~ ^-{1,2}(ba)sh ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}t?csh ]]; then
+      KIND="csh"
+      HASHBANG="/usr/bin/env csh"
+    elif [[ "${OPTION}" =~ ^-{1,2}(ba)?sh ]]; then
+      KIND="bash"
       HASHBANG="/usr/bin/env bash"
-    elif [[ "${OPTION}" =~ ^-{1,2}e(dit) ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}e(dit)? ]]; then
       if [[ -n "${VISUAL}" ]]; then
         EDIT="${VISUAL}"
       else
@@ -71,12 +104,12 @@ function Mkbin()
         if [[ -d ${HOME}/bin ]]; then
           DIRECTORY="${HOME}/bin"
         else
-          Error "Unable to determine where the bin directory is located!"
+          Report_error "Unable to determine where the bin directory is located!"; return 1
         fi
       elif [[ -d "${DIRECTORY}/bin" ]]; then
         DIRECTORY="${DIRECTORY}/bin"
       else
-        Error "Missing ${DIRECTORY}/bin ?!"
+        Report_error "Missing ${DIRECTORY}/bin ?!"; return 1
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}s(cript)? ]]; then
       if [[ -z "${DIRECTORY}" ]]; then
@@ -85,12 +118,12 @@ function Mkbin()
         elif [[ -d ${HOME}/.local/scripts ]]; then
           DIRECTORY="${HOME}/.local/scripts"
         else
-          Error "Unable to determine where the scripts directory is located!"
+          Report_error "Unable to determine where the scripts directory is located!" ; return 1
         fi
       elif [[ -d "${DIRECTORY}/scripts" ]]; then
         DIRECTORY="${DIRECTORY}/scripts"
       else
-        Error "Missing ${DIRECTORY}/scripts ?!"
+        Report_error "Missing ${DIRECTORY}/scripts ?!"; return 1
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}d(ir)? ]]; then
       if Regex "${OPTION}" "=" ; then
@@ -99,25 +132,192 @@ function Mkbin()
         DIRECTORY="$1"
         shift
       else
-        Error "-dir must specify a directory"
+        Report_error "-dir must specify a directory"; return 1
       fi
+    elif [[ "${OPTION}" =~ ^-{1,2}t(ail)? ]]; then
+      ADD_TAIL=1
+    elif [[ "${OPTION}" =~ ^-{1,2}u(tils)? ]]; then
+      ADD_UTILS=1
+    elif [[ "${OPTION}" =~ ^-{1,2}q(uiet)? ]]; then
+      V=0
+    elif [[ "${OPTION}" =~ ^-{1,2}v(erbose)? ]]; then
+      V=1
+    else
+      Report_error "Unknown option '${OPTION}'"
     fi
   done
 
-  if [[ -z "${DIRECTORY}" ]]; then
+  if [[ $# != 1 ]]; then
+    Report_error "Missing script name!"; return 1
+  elif [[ -z "${DIRECTORY}" ]]; then
     SCRIPT="${1}"
   elif [[ -d "${DIRECTORY}" ]]; then
     SCRIPT="${DIRECTORY}/${1}"
   else
-    Error "Bad directory specification: ${DIRECTORY}"
+    Report_error "Bad directory specification: ${DIRECTORY}"; return 1
   fi
   shift
 
-  # Create file with hashbang line if non-existent
-  test -s "${SCRIPT?}" || printf "#%s\n\n" "${HASHBANG?}" >"${SCRIPT}"
+  if [[ -s "${SCRIPT}" ]]; then
+    SCRIPT_PATH="$(Realpath "${SCRIPT}")"
+    Verbose_info "${V}" "Updating ${KIND} script \"${SCRIPT}\""
+    IS_NEW=0
+    perl -pi -e 'our $hb; BEGIN{$hb=shift @ARGV;} if($.== 1 and not m/^#/){ s{^}{#$hb\n};}' "${HASHBANG}" "${SCRIPT}"
+  else
+    # Create file with hashbang line
+    printf "#%s\n" "${HASHBANG?}" >"${SCRIPT}"
+    printf "%s\n%s %s - {:ONE_LINE_DESCRIPTION_HERE:}\n\n" "${CMNT}" "${CMNT}" "${SCRIPT_NAME}" >>"${SCRIPT}"
+    IS_NEW=1
+    SCRIPT_PATH="$(Realpath "${SCRIPT}")"
+    Verbose_info "${V}" "Creating ${KIND} script \"${SCRIPT_PATH}\""
+  fi
+  SCRIPT_NAME="${SCRIPT/*\/}"
 
   # Add ! to hashbang if needed
   perl -pi -e 'if($.== 1){ s{^#/}{#\041/};}' "${SCRIPT}"
+
+  FIRST_LINE="$(head -n 1 "${SCRIPT}")"
+  Verbose_info "${V}" "${FIRST_LINE}"
+
+  # Add essentials
+  if [[ ${IS_NEW} == 1 ]]; then
+    case "${KIND}" in
+      bash)
+        Verbose_info "${V}" "Added essentials"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> function Realpath ()
+          ---> {
+          --->   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+          ---> }
+          ---> SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+          ---> if [[ ! -d "${SCRIPTDIR}" ]]; then
+          --->   printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
+          --->   crash
+          ---> fi
+          ---> # shellcheck disable=SC2250,SC1091
+          ---> source "$SCRIPTDIR/Essential-IO"
+
+EOT
+        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        ;;
+      perl)
+        Verbose_info "${V}" "Added strict"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> #
+          ---> #$Info: {:SCRIPT:} - {:DESCRIPTION:}. $
+          ---> require v5.6;
+          ---> use strict;
+          ---> use warnings;
+          ---> use Cwd qw(abs_path getcwd);
+          ---> use English;
+          ---> use FindBin qw($RealBin $RealScript);
+          ---> use File::Basename;
+          ---> use FileHandle;
+          ---> use FindBin qw($RealBin $RealScript);
+          ---> use Getopt::Long;
+          ---> use Pod::Usage;
+          ---> STDOUT->autoflush(1);
+          ---> STDERR->autoflush(1);
+
+EOT
+        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        ;;
+      *)
+        ;;
+    esac
+  fi
+
+  # Add utilities if requested
+  if [[ ${ADD_UTILS} == 1 ]]; then
+    case "${KIND}" in
+      bash)
+        Verbose_info "${V}" "Added util.bash"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> SCRIPT="$(Realpath "$0")"
+          ---> SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+          ---> if [[ -x "${SCRIPT}" ]]; then
+          --->   # shellcheck source=utils.bash disable=SC1091
+          --->   source "${SCRIPT}" "$0"
+          ---> else
+          --->   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+          ---> fi
+
+EOT
+        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        ;;
+      perl)
+        Verbose_info "${V}" "Added command-line parsing"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> #------------------------------------------------------------------------------
+          ---> # Parse command-line
+          ---> #------------------------------------------------------------------------------
+          ---> my $POD2MAN_BIN = 'pod2man';
+          ---> our @ORIG = @ARGV;
+          ---> our %opts;
+          ---> GetOptions(\%opts,
+          --->   'help',
+          --->   'man',
+          --->   'nroff',
+          --->   'usage',
+          ---> )  or pod2usage(-verbose => 0);
+          ---> if (exists $opts{'usage'} ) {
+          --->   pod2usage(-exitval => 0, -verbose => 0);
+          ---> }
+          ---> if (exists $opts{'man'} ) {
+          --->   pod2usage(-exitval => 0, -verbose => 2);
+          ---> }
+          ---> if (exists $opts{'nroff'} ) {
+          --->   open SCRIPT,"$POD2MAN_BIN --name='Scratch tools' $RealBin/$RealScript|";
+          --->   print grep($_ ne '',<SCRIPT>);
+          --->   close SCRIPT;
+          --->   exit 0;
+          ---> }
+          ---> if (exists $opts{'help'}) {
+          --->   pod2usage(-verbose => 1);
+          ---> }
+
+          ---> #------------------------------------------------------------------------------
+          ---> # Main
+          ---> #------------------------------------------------------------------------------
+EOT
+        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        ;;
+    *)
+      ;;
+    esac
+  fi
+
+  # Add tail
+  if [[ ${ADD_TAIL} == 1 ]]; then
+    case "${KIND}" in
+      perl)
+        Verbose_info "${V}" "Added tail"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> exit 0;
+          ---> __DATA__
+          ---> =pod
+
+          ---> =head1 NAME
+
+          ---> {:SCRIPT_NAME:} - {:ONE_LINE_SUMMARY:}
+
+          ---> =head1 SYNOPSIS
+
+          ---> {:SCRIPT_NAME:} {:SYNTAX:}
+
+          ---> =head1 DESCRIPTION
+
+          ---> {:DESCRIBE_DETAILS:}
+
+          ---> =cut
+
+EOT
+        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        ;;
+    *)
+      ;;
+    esac
+  fi
 
   # Make readable
   test -r "${SCRIPT}" || chmod a+r "${SCRIPT}"
@@ -131,5 +331,3 @@ function Mkbin()
 }
 
 Mkbin "$@"
-
-
