@@ -88,6 +88,7 @@ sub help() { #<<<2
 ###############################################################################
 sub save_existing($) { #<<<2
   # Rename existing file names to prepare for new
+  return if exists $OPT{-N} and $OPT{-N} == 1;
   for my $target (@_) {
     my $i;
     if (-e $target) {
@@ -318,6 +319,11 @@ sub addargs { #<<<2
     } elsif ($arg =~ m/^-+help$/           or $arg eq '-h') {
       help;
     #--------------------------------------------------------------------------
+    # No backup
+    #--------------------------------------------------------------------------
+    } elsif ($arg eq '--nobackup'    or $arg eq '-nbu') {
+      $OPT{-N} = 1;                   
+    #--------------------------------------------------------------------------
     # Not really
     #--------------------------------------------------------------------------
     } elsif ($arg eq '--notreally'    or $arg eq '-n') {
@@ -446,14 +452,15 @@ sub readargs { #<<<2
 ###############################################################################
 #------------------------------------------------------------------------------
 # Main body #<<<1
-# Process command line arguments #<<<2
+# Process command-line arguments #<<<2
 #------------------------------------------------------------------------------
 our @ORIG = @ARGV;
 $CMND_LN = 0;
 our @files = &addargs(@ARGV);
+our $files = scalar @files;
 $CMND_LN = 1;
 
-if (scalar @files) {
+if ($files > 0) {
   my ($repl_total,$phld_total) = (0,0);
   # $phld_total = total count of placeholders untouched
   # $repl_total = total count of placeholders replaced
@@ -483,13 +490,18 @@ if (scalar @files) {
       close NEW;
       $repl_total += $repl_file;
       $phld_total += $phld_file;
-      # Rename backup <<<3
-      my $bak = $file.'-bak';
-      save_existing $bak;
-      rename $file,$bak or die "ERROR: Unable to rename $file to $bak!?\n";
-      #rcm: wrong filenames in message
-      #rename $new,$file or die "ERROR: Unable to rename $file to $bak!?\n";
-      rename $new,$file or die "ERROR: Unable to rename $new to $file!?\n";
+      if( exists $OPT{-N} and $OPT{-N} == 1 ) {
+        unlink $file or die "ERROR: Unable to remove $file!?\n";
+        rename $new,$file or die "ERROR: Unable to rename $new to $file!?\n";
+      } else {
+        # Rename backup <<<3
+        my $bak = $file.'-bak';
+        save_existing $bak;
+        rename $file,$bak or die "ERROR: Unable to rename $file to $bak!?\n";
+        #rcm: wrong filenames in message
+        #rename $new,$file or die "ERROR: Unable to rename $file to $bak!?\n";
+        rename $new,$file or die "ERROR: Unable to rename $new to $file!?\n";
+      }
     } else {
       # Extract templates <<<3
       unless ($once++) {
@@ -537,7 +549,7 @@ if (scalar @files) {
         if (scalar(@files) == scalar(keys %{$TMPL{$tmpl}})) {
           push @FIX,sprintf("%s=\n",$tmpl);
         }#endif
-        if (not exists $OPT{-i}) {
+        if (not exists $OPT{-i} and $files > 1) {
           for $file (sort keys %{$TMPL{$tmpl}}) {
             push @FIX,sprintf("%s:%s=\n",$file,$tmpl);
           }#endfor
@@ -623,6 +635,10 @@ Specifies a file to read arguments from. Aka B<-f>.
 =item B<--help>
 
 Help (this text). Aka B<-h>.
+
+=item B<--nobackup>
+
+Don't keep backups. Aka -nbu
 
 =item B<--notreally>
 
