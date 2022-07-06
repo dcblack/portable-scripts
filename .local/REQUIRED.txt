@@ -1,0 +1,22 @@
+# portable-scripts/setup uses the files listed here as requirements in
+# the portable scripts installation.
+#
+# Blank-lines and comment-lines are ignored
+
+apps
+apps/bin
+apps/cmake
+apps/include
+apps/lib
+apps/make
+apps/templates
+bin
+dotfiles
+lib
+man
+modules
+scripts
+share
+src
+
+# The end

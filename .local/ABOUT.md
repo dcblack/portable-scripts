@@ -37,6 +37,7 @@ The following describes some of the contents. Most of the directories have a `RE
 setup@ ───────────────── symbolic link to .local/bin/portable-setup
 .local/
 ├── ABOUT.md ─────────── this documentation
+├── REQUIRED.txt ─────── list of required files
 ├── LICENSE ──────────── Apache 2.0 license
 ├── ARCHIVES/ ────────── holds stuff downloaded by scripts
 ├── apps/ ────────────── default location for installation

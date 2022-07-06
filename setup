@@ -26,16 +26,19 @@
 #|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
 #|      |-- .clang-format@ --> portable-scripts/.local/dotfiles/clang-format
 #|      |-- .lessfilter@ ----> portable-scripts/.local/dotfiles/lessfilter
-#|      |-- .local@ ---------> portable-scripts/.local/
+#|      |-- .local@ ---------> portable-scripts/.local/ (**)
 #|      |-- .vim@ -----------> portable-scripts/.local/dotfiles/vim/
 #|      |-- .vimrc@ ---------> portable-scripts/.local/dotfiles/vimrc
 #|      |-- portable-scripts/
+#|
+#| ** if $HOME/.local already exists, then links will be placed under it if possible
 #|
 #|OPTIONS
 #|-------
 #|
 #| -c  only check installation (aka --check)
 #| -h  or --help provides this text (aka --help)
+#| -l  or --local followed by a simple name specifies and alternate to .local
 #| -u  update to latest version via git pull (aka --update)
 #| -v  verbose output (aka --verbose)
 #| -nc no color disables use of ANSI color codes (aka --nocolor)
@@ -98,7 +101,6 @@ fi
 function portable-setup() {
   local PORTABLE_DIR TIMESTAMP VERBOSE CHECK UPDATE
   LOCAL=".local"
-  PORTABLE_DIR="${HOME}/${LOCAL}"
   TIMESTAMP="$(date +%y%m%d-%H%M%S)";
   VERBOSE=0;
   CHECK=0
@@ -112,6 +114,13 @@ function portable-setup() {
       -h|--help)
         Portable_setup_help
         exit
+        ;;
+      --local|-l)
+        if [[ "$2" =~ [._a-zA-Z0-9][-/+._a-zA-Z0-9]*[_a-zA-Z0-9]$ ]]; then
+          LOCAL="$2"
+        else
+          Report_error "Bad name local directory name. Should be a simple name (e.g., ._local)"
+        fi
         ;;
       --nocolor|-nocolor|-nc)
         Color-Setup none
@@ -129,8 +138,9 @@ function portable-setup() {
     esac
     shift
   done
+  PORTABLE_DIR="${HOME}/${LOCAL}"
 
-  local HOSTNAME PORTABLE_PATH TO_PATH FROM_PATH
+  local HOSTNAME TO_PATH FROM_PATH
   HOSTNAME="$(hostname)"
   if [[ ${VERBOSE} == 1 ]]; then Report_info "Hostname ${HOSTNAME}"; fi
 
@@ -139,7 +149,7 @@ function portable-setup() {
     git -C "${PORTABLE_ROOT_DIR}" pull
   fi
 
-  if [[ ! -d "${PORTABLE_DIR}" ]]; then
+  if [[ ! -d "${PORTABLE_DIR}" ]]; then # local directory absent
     if [[ ${CHECK} != 0 ]]; then
       Report_error "Missing '${PORTABLE_DIR}'"
     elif [[ -d "${PORTABLE_ROOT_DIR}/.local" ]]; then
@@ -148,15 +158,41 @@ function portable-setup() {
       Report_error "Unable to find ${PORTABLE_ROOT_DIR}/.local to link as ${PORTABLE_DIR}! Please link manually."
       return
     fi
-  elif [[ ${CHECK} != 0 ]]; then
+  elif [[ -L "${PORTABLE_DIR}" ]]; then # hopefully it's our links
+    local PORTABLE_PATH
     PORTABLE_PATH="$(Realpath "${PORTABLE_DIR}")"
-    if [[ "${PORTABLE_ROOT_DIR}/.local" == "${PORTABLE_PATH}" ]]; then
-      if [[ ${VERBOSE} == 1 ]]; then
-        Report_info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
+    if [[ ${CHECK} != 0 ]]; then
+      if [[ "${PORTABLE_ROOT_DIR}/.local" == "${PORTABLE_PATH}" ]]; then
+        if [[ ${VERBOSE} == 1 ]]; then
+          Report_info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
+        fi
+      else
+        Report_error "'${PORTABLE_DIR}' does NOT reference '${PORTABLE_ROOT_DIR}'"
       fi
-    else
-      Report_error "'${PORTABLE_DIR}' does NOT reference '${PORTABLE_ROOT_DIR}'"
     fi
+  else # Real ${PORTABLE_DIR} directory. Need to check/setup links inside.
+    local REQD
+    while read -r REQD; do
+      if [[ "${REQD}" =~ ^[\ ]*$ ]]; then continue; fi # skip blank-lines
+      if [[ "${REQD}" =~ ^[\ ]*[#] ]]; then continue; fi # skip comments
+      if [[ ! -d "${PORTABLE_DIR}/${REQD}" ]]; then
+        if [[ ${CHECK} != 0 ]]; then # check-only
+          Report_error "Missing '${PORTABLE_DIR}/${REQD}'"
+        else
+          bash -v -c "ln -s '${HOME}/portable-scripts/.local/${REQD}' ${PORTABLE_DIR}/${REQD}"
+        fi
+      else # warn if it does reference corresponding portable root directory
+        local PORTABLE_PATH
+        PORTABLE_PATH="$(Realpath "${PORTABLE_DIR}/${REQD}")"
+        if [[ "${PORTABLE_ROOT_DIR}/.local/${REQD}" == "${PORTABLE_PATH}" ]]; then
+          if [[ ${VERBOSE} == 1 ]]; then
+            Report_info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
+          fi
+        else
+          Report_warning "'${PORTABLE_DIR}/${REQD}' does NOT reference '${PORTABLE_ROOT_DIR}/${REQD}'"
+        fi
+      fi
+    done <"${PORTABLE_ROOT_DIR}/.local/REQUIRED.txt"
   fi
   
   # Add symbolic links for a minimal set of selected "dot" files
