@@ -19,14 +19,14 @@ function Os_main()
   local OS 
   OS="$(uname -s)"
 
-  uname -a
+  _do uname -a
   case "${OS}" in
     Darwin)
-      /usr/bin/sw_vers
+      _do /usr/bin/sw_vers
       ;;
     *)
       if [[ -r /etc/os-release ]]; then
-        cat /etc/os-release
+        _do cat /etc/os-release
       fi
       ;;
   esac
