@@ -14,7 +14,22 @@ fi
 # shellcheck disable=SC2250,SC1091
 source "$SCRIPTDIR/Essential-IO"
 
-uname -a
-if [[ -r /etc/os-release ]]; then
-  cat /etc/os-release
-fi
+function Os_main()
+{
+  local OS 
+  OS="$(uname -s)"
+
+  uname -a
+  case "${OS}" in
+    Darwin)
+      /usr/bin/sw_vers
+      ;;
+    *)
+      if [[ -r /etc/os-release ]]; then
+        cat /etc/os-release
+      fi
+      ;;
+  esac
+}
+
+Os_main
