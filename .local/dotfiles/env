@@ -24,6 +24,7 @@ function portable-env() {
   export\
     APPS\
     CDPATH\
+    DISPLAY\
     MANPATH\
     ORIGPATH\
     PATH\
@@ -37,6 +38,7 @@ function portable-env() {
   ORIGPATH="${PATH}"
   PSCR="$(Realpath "${HOME}/.local")"
   APPS="$(Realpath "${PSCR}/apps")"
+  DISPLAY=localhost:0
   DOTBIN="$(Realpath "${PSCR}/bin")"
   APPSBIN="${PSCR}/apps/bin"
   SCREENDIR="${HOME}/.screen"
