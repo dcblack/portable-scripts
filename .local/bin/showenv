@@ -1,0 +1,308 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if 0;#$running_under_some_shell;
+
+# @(#)$Info: show environmental variables. $
+#
+# @(#)$Copyright: 1996,2001,2008 by David C. Black All rights reserved. $
+# @(#)$Email: <dcblack@hldwizard.com>. $
+
+use strict;
+use warnings;
+
+our $tool = 'showenv';
+our $vers = '@(#)$Id: showenv 1111 2010-05-01 13:06:38Z dcblack $';
+our $auth = 'David C. Black <dcblack@hldwizard.com>';
+
+=pod
+
+=head1 NAME
+
+showenv - show information about environmental variables
+
+=head1 SYNOPSIS
+    
+B<showenv>
+
+I<showenv [-v][-w][-s][-n|-e|-u|-E]> [B<->I<SHELL>] VARIABLE | /NAME_PATTERN | =VALUE_PATTERN
+
+B<showenv -a>
+
+B<showenv -A>
+
+B<showenv -h>
+
+=head1 DESCRIPTION
+
+    Shows environmental variables in a user friendly format. 
+    Default is to show \$PATH.
+
+=head1 OPTIONS
+
+ -1 only single column display allowed
+ -a show names only of all variables in the environment
+ -A show all names and their values
+ -e use envv format
+ -h help (this text)
+ -n show names only
+ -# number list items
+ -q quiet
+ -Q Use quotes (optionally specify what they are)
+ -s sensitive to case
+ -S shorten lists to just the one line
+ -u use envv format to unset variable
+ -v verbose
+ -w warn of any dangerous variable settings
+
+=head1 EXAMPLES
+
+Show all variables with "CAD" in their name:
+
+ show /CAD
+
+Show all variables with "cadence" in their value
+
+ show +cadence
+
+=head1 SEE ALSO
+
+    envv(1)
+
+=head1 AUTHOR
+
+David C. Black <dcblack@hldwizard.com>
+
+=cut
+
+# @(#)$Copyright: 1996,2001,2008 by David C. Black All rights reserved. $
+#-------------------------------------------------------------------------------
+our %opts;
+
+sub vtype {
+  my $var = shift @_;
+  my $verbose = (exists $opts{-v} or $var eq '-v')?1:0;
+  $var = shift @_ if $var eq '-v';
+  my $type = '';
+  if ($verbose) {
+    $type = ' ';
+    $type = '/' if $ENV{$var} =~ m{/};
+    $type = ':' if $ENV{$var} =~ m{:.*:};
+    $type = '#' if $ENV{$var} =~ m{^\d+$};
+    $type = '?' if $ENV{$var} eq '';
+  }
+  return $type;
+}
+
+#------------------------------------------------------------------------------
+# Defaults
+$opts{-cols} = 0;
+our $COLUMNS = 80;
+if (exists $ENV{'COLUMNS'}) {
+  $COLUMNS = $ENV{'COLUMNS'}
+} else {
+  my $RC = `stty size`;
+  $COLUMNS = $1 if $RC =~ m{^\d+\s+(\d+)};
+}#endif
+our $LQ = '';
+our $RQ = '';
+our @VARS;
+
+#------------------------------------------------------------------------------
+# Parse command-line
+while (@ARGV) {
+  my $arg = shift @ARGV;
+    if ($arg eq '-1') {
+      $opts{-cols} = 1;
+    } elsif ($arg eq '-#') {
+      $opts{-number} = 1;
+    } elsif ($arg eq '-a') {
+      $opts{-name_only} = 1;
+      push(@VARS,sort keys %ENV);
+    } elsif ($arg eq '-A') {
+      push(@VARS,sort keys %ENV);
+    } elsif ($arg eq '-d') {
+      $opts{-envv} = 1;
+    } elsif ($arg eq '-e') {
+      $opts{-envv} = 1;
+    } elsif ($arg =~ /^--?h(elp)?$/) {
+      exec "perldoc $0";
+    } elsif ($arg eq '-n') {
+      $opts{-name_only} = 1;
+    } elsif ($arg eq '-q') {
+      $opts{-quiet} = 1;
+    } elsif ($arg eq '-Q') {
+      if (@ARGV and length($ARGV[0])== 1) {
+        $LQ = $RQ = shift @ARGV;
+      } elsif (@ARGV and $ARGV[0] =~ m{^[^-A-Za-z0-9]{2,2}$}) {
+        ($LQ,$RQ) = split('',shift(@ARGV));
+      } else {
+        $LQ = $RQ = '"';
+      }#endif
+    } elsif ($arg eq '-s') {
+    $opts{-s} = 1;
+    } elsif ($arg eq '-S') {
+    $opts{-S} = 1;
+  } elsif ($arg eq '-E') {
+    $opts{-E} = 1;
+  } elsif ($arg eq '-u') {
+    $opts{-u} = 1;
+    } elsif ($arg eq '-v') {
+    $opts{-v} = 1;
+  } elsif ($arg =~ m{^-(bash|ksh|tcsh|csh|tclsh|perl|modules)}) {
+    $opts{"-$1"} = 1;
+  } elsif ($arg eq '-warn' or $arg eq '-w') {
+    $opts{-w} = 1;
+    } else {
+      push @VARS,$arg;
+    }#endif
+}#endwhile
+
+our %special = (
+    'DISPLAY' => 1,
+);
+our @NAMES = () ;
+push(@VARS,'PATH') unless @VARS;
+our $dent = ' ' x 4;
+$dent = ' ' x 2 if exists $opts{-S};
+our %shown = (); # indicates if a variable is already shown (2) or not (3)
+grep($shown{$_}=1,@VARS);
+# Display all variables requested
+while (@VARS) {
+  my $var = shift(@VARS);
+  #-----------------------------------------------------------------------------
+  # Allow a case flip
+  #-----------------------------------------------------------------------------
+  if ($var =~ m{^\w+} and not defined $ENV{$var}) {
+    $var =~ s/-/_/g;
+    $var = uc($var) if exists $ENV{uc($var)};
+    $var = lc($var) if exists $ENV{lc($var)};
+  }#endif
+  next if exists $shown{$var} and $shown{$var} == 2;
+  #-----------------------------------------------------------------------------
+  # Add variables whose name matches pattern to list
+  #-----------------------------------------------------------------------------
+  my $re;
+  if ($var =~ m{^/}) {
+    $re = $';
+  foreach my $myvar (sort keys %ENV) {
+    next if $shown{$myvar};
+    next unless $myvar =~ /$re/
+             or (not exists $opts{-s} and $myvar =~ /$re/i);
+    push (@VARS,$myvar);
+    $shown{$myvar} = 1;
+    }#endif
+  #-----------------------------------------------------------------------------
+  #  Add variables whose value matches pattern to list
+  #-----------------------------------------------------------------------------
+  } elsif ($var =~ m{^\=}) {
+    $re = $';
+    foreach my $myvar (sort keys %ENV) {
+      next if $shown{$myvar};
+      next unless $ENV{$myvar} =~ /$re/
+               or (not exists $opts{-s} and $ENV{$myvar} =~ /$re/i);
+      push (@VARS,$myvar);
+      $shown{$myvar} = 1;
+    }#endfor
+  #-----------------------------------------------------------------------------
+  # Display names only if requested
+  #-----------------------------------------------------------------------------
+  } elsif (exists $opts{-name_only}) {
+      push(@NAMES,$var);
+  #-----------------------------------------------------------------------------
+  # Mark UNDEFINED variables as such
+  #-----------------------------------------------------------------------------
+  } elsif (not defined $ENV{$var}) {
+    printf "# %s UNDEFINED\n",$var unless exists $opts{-envv};
+    $shown{$var} = 2;
+  #-----------------------------------------------------------------------------
+  # Display lists
+  #-----------------------------------------------------------------------------
+  } elsif (&vtype(-v,$var) eq ':' and ((index($ENV{$var},' ')<0) or ($var =~ m{PATH$}))) {
+    my @list = split(/:/,$ENV{$var});
+    if (exists $opts{-u}) {
+      printf "eval `envv unset %s`\n",$var;
+    } elsif (exists $opts{-envv}) {
+      printf "eval `envv set %s \"%s\"`\n",$var,shift(@list);
+      foreach my $val (@list) {
+        printf "eval `envv add %s \"%s\"`\n",$var,$val;
+      }#endfor
+    } else {
+      # Compute maximum column width
+      my $maxlen = 0;
+      foreach my $val (@list) {
+      $val = '' unless defined $val;
+      my $len = length($dent) + length($LQ) + length($val) + length($RQ);
+      $maxlen = $len if $len > $maxlen;
+      }#endfor
+      if ($opts{-cols} == 1 or ($maxlen > (int($COLUMNS/2) - 2))) {
+        # Not able to display columns (either 1 or too wide)
+        printf "%s [%d] = \n$dent$LQ%s$RQ\n",$var,scalar(@list),join("$RQ\n$dent$LQ",@list);
+      } else {
+        # Display columns
+        printf "%s [%d] = ",$var,scalar(@list);
+        print "\n" unless exists $opts{-S};
+        my $half = int(scalar(@list)/2+0.5);
+        my $mid = int($COLUMNS/2) - 1;
+        foreach (my $idx=0;$idx<$half;$idx++) {
+          my $s=sprintf("%-${mid}s",$dent.$LQ.$list[$idx].$RQ);
+          $s =~ s{\s+$}{ } if exists $opts{-S};
+          $s.=' '.$LQ.$list[$idx+$half].$RQ if ($idx+$half)<=$#list;
+          print $s;
+          print " ..." if exists $opts{-S} and $idx+1<$half;
+          print "\n";
+          last if exists $opts{-S};
+        }#endfor
+      }#endif
+    }#endif
+    $shown{$var} = 2;
+  #-----------------------------------------------------------------------------
+  # Display ordinary variables
+  #-----------------------------------------------------------------------------
+  } else { # display non-lists
+  if (exists $opts{-u}) {
+      printf "eval `envv unset %s`\n",$var;
+  } elsif (exists $opts{-envv}) {
+      printf "eval `envv set %s \"%s\"`\n",$var,$ENV{$var};
+  } elsif (exists $opts{-E}) {
+    if (exists $opts{-bash} or exists $opts{-ksh}) {
+        printf "export %s='%s'\n",$var,$ENV{$var};
+    } elsif (exists $opts{-csh} or exists $opts{-tcsh}) {
+        printf "setenv %s '%s'\n",$var,$ENV{$var};
+    } elsif (exists $opts{-tclsh}) {
+        printf "set env(%s) {%s}\n",$var,$ENV{$var};
+    } elsif (exists $opts{-perl}) {
+        printf "\$ENV{%s}=q{%s};\n",$var,$ENV{$var};
+      } else { # assume sh
+        printf "%s='%s'; export %s\n",$var,$ENV{$var},$var;
+      }#endif
+    } else {
+      printf "%s = %s\n",$var,$ENV{$var};
+    }#endif
+    $shown{$var} = 2;
+  }#endif
+}#endwhile
+if (@NAMES) {
+  # Display names (neatly)
+  my $maxlen = 0;
+  map( $maxlen = length($_)>$maxlen ? length($_) : $maxlen , @NAMES);
+  $maxlen++ if exists $opts{-v};
+  my $cols = int($COLUMNS/($maxlen + 1));
+  my $rows = int(scalar(@NAMES)/$cols + 0.5);
+  for my $r (0..($rows-1)) {
+    for my $c (0..($cols-1)) {
+      next unless defined $NAMES[$c*$rows+$r];
+      my $var = $NAMES[$c*$rows+$r];
+      printf "%s%-${maxlen}s ",&vtype($var),$var;
+    }
+    print "\n";
+  }
+}#endif
+if (exists $opts{-w} or exists $opts{-warn}) {
+  my @DANGEROUS = qw(CPPFLAGS LDFLAGS CC CXX MAKEFILES);
+    for my $var (@DANGEROUS) {
+      printf "WARNING: Dangerous to define %s=%s\n",$var,$ENV{$var} if defined $ENV{$var};
+    }#endfor
+}#endif
+exit 0;
+
+__END__
