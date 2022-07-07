@@ -31,7 +31,7 @@ fi
 
 export SCRIPT_NAME SCRIPT_PATH
 source "${HOME}/.local/scripts/Essential-IO"
-for SCRIPT_NAME in bash_debug functions "env"; do
+for SCRIPT_NAME in "bash_debug" "functions" "env"; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
