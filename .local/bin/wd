@@ -48,8 +48,6 @@ fi
 if [[ ${wd_init} == true ]]; then
   # aliases
   alias wd=lwd
-  alias lwds=wds
-  alias swds=wds
 fi
 
 #-------------------------------------------------------------------------------
@@ -62,7 +60,7 @@ Name
 swd - save working directory
 lwd - load working directory (aka wd)
 rwd - remove working directory
-wds - list saved working directories aka (lwds, swds)
+wds - list saved working directories
 
 Synopsis
 --------
@@ -70,8 +68,6 @@ Synopsis
 swd [-init] [SET] [DIR]
 lwd [OPTIONS] [SET]
 wds
-swds
-lwds
 
 | Option | Description
 | :----  | :----------
