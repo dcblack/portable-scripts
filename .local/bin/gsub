@@ -1,0 +1,849 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if 0;#running_under_some_shell;
+
+# @(#)$Info: gsub - Globally substitute words. $
+#
+# @(#)$Copyright: 1994,2000-2006 by David C Black. All rights reserved. $
+# @(#)$Email: <dcblack@hldwizard.com>. $
+
+=pod
+
+=head1 NAME
+
+gsub - Globally substitute words.
+
+=head1 SYNOPSIS
+
+gsub [OPTIONS] OLD_WORD1=NEW_WORD1 {OLD_WORD2=NEW_WORD2}... FILE_LIST
+
+gsub -h
+
+=head1 DESCRIPTION
+
+Have you ever needed to globally replace a word or identifier with
+another? Or perhaps you got two words backwards? Perhaps you used a
+consistent mis-spelling throughout all fifteen of your source files?
+Then gsub is the tool for you!
+
+B<Gsub>'s purpose is to safely replace old words with new words. B<Gsub>
+is safer than sed for things like changing all words 'the' to 'this'
+without the fear that 'them' will become 'thism'. You can even swap
+words (e.g. 'him' <-> 'her') without fear.
+
+B<Gsub> normally (unless you override with -nobackup) keeps your original
+file as a backup in case you change your mind or want to run diff.
+
+Each word pair (old & new) is specified on the command line separated
+normally with an equals sign (=). The word separator may be changed via
+the -ws option.
+
+Options and word pairs may also be specified in a file using the B<-f>
+option.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-ext> I<EXT>
+
+Specify   backup   filename   extension,  EXT  (default '.bak').
+
+=item B<-f> I<FILE>
+
+Specifies a I<FILE> that contains additional command line options and word
+replacements. A filename extension of '.gsub' is suggested. Options may
+one one or several per line. Filenames specifications may use wildcards.
+Shell quoted strings or environmental variables are NOT currently
+supported.
+
+Comment lines beginning with '#' are allowed.
+
+NOTE: This should be the last -option specified. Dash options (leading
+hyphen) may NOT be interspersed with word specifications.
+
+=item B<-h>
+
+Displays manpage.
+
+=item B<-n>
+
+Do nothing, just report statistics as if changes were made.
+
+=item B<-nobackup>
+
+No backup file should be created. For the adventerous.
+
+=item B<-nore>
+
+Ignore PERL regular expression characters.
+
+=item B<-o> I<FILE>
+
+Specifies I<FILE> as the output file to receive a conca- tention of the
+changes. The backup options apply to the specified I<FILE> if it exists.
+
+=item B<-q>
+
+Work quietly.
+
+=item B<-r>
+
+Reverse old/new word pairs (for simple changes only).
+
+=item B<-raw>
+
+Do not use word boundary on either side of words (DANGEROUS!).
+
+=item B<-rawl>
+
+Do not use word boundary on left side of words (DANGEROUS!).
+
+=item B<-rawr>
+
+Do not use word boundary on right side of words (DANGEROUS!).
+
+=item B<-re>
+
+Use PERL regular expression characters (default).
+
+=item B<-v>
+
+Verbose mode.
+
+=item B<-ws> I<SEP>
+
+Specifies an alternate word separator (default '\s*=\s*').
+
+=item I<OLD>B<=>I<NEW>
+
+Causes the word 'OLD' to be replaced with 'NEW'.
+
+=back
+
+=head1 EXAMPLES
+
+gsub his=his/hers hers=hers/his sexist.letter
+
+gsub lc=lineCount my.c
+
+gsub -ws # 'HOST\s*\=\s*sun1#HOST = sun2' */GNU*
+
+=head1 WARNINGS
+
+B<Gsub> ignores comment and string boundaries (i.e. it doesn't know
+about languages). This can be problematic for some types of changes, but
+is not normally a problem.
+
+=head1 NOTES
+
+B<Gsub> uses PERL to accomplish its work. Specifically, each word is
+tested as a regular expression /\bWORD\b/. Power users can make use of
+this fact as shown in the last example above. The PERL variables $&, $1,
+etc... are all available.
+
+=head1 ENVIRONMENT
+
+The B<GSUB> environmental variable can be set to pass in command line
+options that precede all others. A good use would be to set -nore as the
+default.
+
+=head1 AUTHOR
+
+David C. Black <dcblack@hldwizard.com>
+
+=head1 COPYRIGHT:
+
+Copyright (C) 1994,2000-2006 by David C. Black
+All rights reserved.
+
+Redistribution and use in source and binary forms are permitted
+provided that the above copyright notice and this paragraph are
+duplicated in all such forms and that any documentation,
+advertising materials, and other materials related to such
+distribution and use acknowledge that the software was developed
+by David C. Black.
+
+THIS SOFTWARE IS PROVIDED "AS IS" AND WITHOUT ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+=cut
+
+   require 5.0;
+#  use strict;
+   use warnings;
+   use POSIX;
+   sub REPORT_WARNING;
+   sub REPORT_FATAL;
+
+   if ($ARGV[0] eq '-DEBUG' and ! $^P) {
+     shift;
+     exec($^X,'-d',$0,@ARGV);
+   }#endif
+
+   our $tool = 'gsub';
+   our $vers = '$Id: gsub 1180 2011-07-06 19:33:43Z dcblack $';
+   our $auth = 'dcblack';
+
+
+   if (@ARGV>0 and $ARGV[0] eq '-h') {
+     exec "perldoc $0";
+   }#endif
+
+   our $THELOG = "./$tool-$$.log";
+   $THELOG = "/tmp/$tool-$$.log" unless -w '.';
+   open(STDLOG,">$THELOG") or REPORT_WARNING "Unable to write $THELOG!\n";
+   print STDERR "Writing log to $THELOG\n";
+
+   # Flush all I/O
+   select STDLOG; $| = 1;
+   select STDERR; $| = 1;
+   select STDOUT; $| = 1;
+
+   our $heading = sprintf("\n%s %s\n%s",$tool,&RcsVersion,&VersionBanner);
+
+   sub REPORT_WARNING {
+     my ($msg);
+     $msg = shift(@_);
+     printf STDERR "WARNING: ".$msg,@_;
+     printf STDLOG "WARNING: ".$msg,@_;
+   }#endsub REPORT_WARNING
+
+   sub REPORT_FATAL {
+     my ($msg);
+     $msg = shift(@_);
+     printf STDERR "ERROR: ".$msg,@_;
+     printf STDLOG "ERROR: ".$msg,@_;
+     exit 1;
+   }#endsub REPORT_FATAL
+
+   exec "perldoc $0" if @ARGV == 0;
+
+   # Defaults
+   our $sep = '\s*=\s*';
+   our $new = "-$tool-new";
+   our $ext = '.bak';
+   our $bl = '\b';
+   our $br = '\b';
+   our @FILE;
+
+   #======================================================================
+   # Pick off options
+   #
+   #   ####                                         #  #                      
+   #  #    #                                        #  #                      
+   #  #                                             #  #      #               
+   #  #       ####  ### ##  ### ##   ###  ####      #  #         ####   ###   
+   #  #      #    # #  #  # #  #  # #   # #   #  ####  #     ##  #   # #####  
+   #  #    # #    # #  #  # #  #  # #  ## #   # #   #  #      #  #   # #      
+   #   ####   ####  #  #  # #  #  #  ## # #   #  ####  ##### ### #   #  ###   
+   #
+   #----------------------------------------------------------------------
+   our @ORIG = @ARGV;
+   our ($GSUB,$NEWLOG,%OPT,@IGNORE);
+   $GSUB = $ENV{'GSUB'} if exists $ENV{'GSUB'};
+   unshift(@ARGV,split(' ',$GSUB)) if defined $GSUB;
+   while (@ARGV>0 and $ARGV[0] =~ qr/^-/) {
+     my $arg = shift;
+     if ($arg eq '-ws' and @ARGV>0) {
+       $sep = shift;
+     } elsif ($arg eq '-l') {
+       $NEWLOG = shift(@ARGV);
+     } elsif ($arg eq '-i') {
+       $OPT{-i} = 1;
+     } elsif ($arg eq '-r') {
+       $OPT{-r} = 1;
+     } elsif ($arg eq '-v') {
+       $OPT{-v} = 1;
+     } elsif ($arg eq '-q') {
+       $OPT{-q} = 1;
+     } elsif ($arg eq '-I') {
+       push @IGNORE,shift;
+     } elsif ($arg eq '-nobackup' or $arg eq '-nbu') {
+       $OPT{-nobackup} = 1;
+     } elsif ($arg eq '-nostr') { # {:NOT_YET_IMPLEMENTED:}
+       $OPT{-nostr} = 1;
+     } elsif ($arg eq '-warn') {
+       $OPT{-warn} = 1;
+     } elsif ($arg eq '-rawl') {
+       $bl = '';
+     } elsif ($arg eq '-rawr') {
+       $br = '';
+     } elsif ($arg eq '-raw') {
+       $bl = '';
+       $br = '';
+     } elsif ($arg eq '-re') {
+       undef $OPT{-nore} if exists $OPT{-nore};
+     } elsif ($arg eq '-n') {
+       $OPT{-n} = 1;
+     } elsif ($arg eq '-nore') {
+       $OPT{-nore} = 1;
+     } elsif ($arg eq '-o' and @ARGV>0 and $ARGV[0] =~ m{^[^-][^\=]+$}) {
+       $OPT{-out_file} = shift;
+     } elsif ($arg eq '-f' and @ARGV>0 and $ARGV[0] =~ m{^[^-][^\=]+$}) {
+       my $file = shift;
+       open(FILE,"<$file") or REPORT_FATAL "Couldn't read $file\n";
+       chop(@FILE = <FILE>);
+       close(FILE);
+       @FILE = grep(!m:^\s*((//|#).*)?$:,@FILE);
+       unshift(@ARGV,@FILE);
+     } elsif ($arg eq '-ext' and @ARGV>0) {
+       $ext = shift;
+     } elsif ($arg =~ qr/^(-\w+)\s+(\S.*)/) {
+       REPORT_FATAL "Can't handle quotes in <$arg>\n" if $arg =~ qr{\s['"]};
+       unshift(@ARGV,split(/\s+/,$arg));
+     } else {
+       REPORT_FATAL "Unknown option '$arg'.\n";
+     }#endif
+   }#endwhile
+
+   #======================================================================
+   #
+   #  #####                              #####                         
+   #  #    #                             #    #                        
+   #  #    #              ####           #    #       #          ####  
+   #  #####  ###  # ###  #       ###     #####  ###      # ###  #      
+   #  #     #   # ##      ####  #####    #     #   # ##  ##      ####  
+   #  #     #  ## #           # #        #     #  ##  #  #           # 
+   #  #      ## # #       ####   ###     #      ## # ### #       ####  
+   #
+   #----------------------------------------------------------------------
+   my $indx = 0;
+   $sep =~ s/[\-\+\/\[\]\(\)\*\.\?\^\$\\]/\\$&/g if exists $OPT{-nore};
+   my @oldWords = ();
+   PAIR: while (@ARGV>0 and $ARGV[0] =~ qr/$sep/) {
+      $oldnew = shift;
+      @oldnew = split(/$sep/,$oldnew);
+      #------------------------------------------------------------------
+      # Is it simple (ie. OLD=NEW
+      #------------------------------------------------------------------
+      if (scalar(@oldnew) == 2) {
+         next PAIR if $oldnew[0] eq $oldnew[1]; # skip identity
+         if (exists $OPT{-r}) {
+            ($oldWord,$newWord) = reverse @oldnew;
+         } else {
+            ($oldWord,$newWord) = @oldnew;
+         }#endif
+         $oldWord =~ s/[\-\+\/\[\]\(\)\*\.\?\^\$\\]/\\$&/g if exists $OPT{-nore};
+         if ($oldWord eq $newWord) {
+            REPORT_WARNING "Ignoring nil substitution ($oldWord = $newWord)";
+            $ignored++;
+         } else {
+            $indx++;
+            $indx{$oldWord} = &Indx($indx++);
+            $word{$oldWord} = $newWord;
+            $fancy{$oldWord} = 1 if $newWord =~ m/[\$][&1-9]\d*/;
+            push(@oldWords,$oldWord);
+         }#endif
+      #------------------------------------------------------------------
+      # Monitor for s=OLD=NEW=
+      #------------------------------------------------------------------
+      } elsif ($oldnew =~ m/^s$sep(.+)$sep(.*)$sep$/) {
+         ($oldWord,$newWord) = ($1,$2);
+         $oldWord =~ s/[\-\+\/\[\]\(\)\*\.\?\^\$\\]/\\$&/g if exists $OPT{-nore};
+         $indx++;
+         $indx{$oldWord} = &Indx($indx++);
+         $word{$oldWord} = $newWord;
+         $fancy{$oldWord} = 1 if $newWord =~ m/[\$][&1-9]\d*/;
+         push(@oldWords,$oldWord);
+      #------------------------------------------------------------------
+      # Monitor for multiple substitutions
+      #------------------------------------------------------------------
+      } elsif ($oldnew =~ m/\s/) {
+         REPORT_FATAL "Cann't handle quotes in <$oldnew>\n" if $oldnew =~ qr/\s['"]/;
+         unshift(@ARGV,split(/\s+/,$oldnew));
+      #------------------------------------------------------------------
+      # Warn of bad syntax
+      #------------------------------------------------------------------
+      } else {
+         REPORT_FATAL "Bad syntax in word specification '$oldnew'\n";
+      }#endif
+   }#endwhile
+
+   $fancy = 1 if 0 < scalar %fancy;
+
+   #======================================================================
+   # Remove duplicates
+   #----------------------------------------------------------------------
+   my (@temp) = @oldWords;
+   @oldWords = ();
+   foreach $oldWord (reverse @temp) {
+      if (grep($_ eq $oldWord,@oldWords)) {
+         REPORT_WARNING "Duplicate definition of '$oldWord'. Keeping '$word{$oldWord}'\n";
+      } else {
+         unshift(@oldWords,$oldWord);
+      }#endif
+   }#endforeach
+
+   REPORT_FATAL "Nothing to substitute!\n" if $ignored and scalar(@oldWords) < 1;
+   exec "perldoc $0" if scalar(@oldWords) < 1;
+   exec "perldoc $0" unless scalar(@ARGV) > 0;
+
+   #======================================================================
+   #
+   #  #####                              #                  
+   #  #    #                             #                  
+   #  #    #         ###   #             #             ###  
+   #  #####   ###   #   #     ####       #      ####  #   # 
+   #  #    # #####   #### ##  #   #      #     #    #  #### 
+   #  #    # #          #  #  #   #      #     #    #     # 
+   #  #####   ###    ###  ### #   #      #####  ####   ###  
+   #
+   #======================================================================
+   print     $heading unless exists $OPT{-q};
+   print STDLOG $heading unless exists $OPT{-q};
+
+   $user = (getpwuid($<))[0] || getlogin || 'Kilroy';
+   $date = localtime;
+   printf STDLOG "# User: %s\n",$user;
+   printf STDLOG "# Date: %s\n",$date;
+   printf STDLOG "# %% cd %s\n",getcwd;
+   printf STDLOG "# %% setenv GSUB '%s'\n",$GSUB if defined $GSUB;
+   printf STDLOG "# %% $tool %s\n", join(' ',@ORIG);
+   printf STDLOG "#".('-' x 51)."\n";
+
+   #======================================================================
+   # Glob filenames as needed
+   #----------------------------------------------------------------------
+   our @FILES = ();
+   foreach (@ARGV) {
+      if (/[\*\?\[\]]/) {
+         my $files = `echo $_|tr -s ' \t\r\f' '\\012\\012\\012\\012`;
+         push(@FILES,split(/\n/,$files));
+      } else {
+         push(@FILES,$_);
+      }#endif
+   }#endforeach
+
+   #======================================================================
+   #
+   #  #     #                                                                        
+   #  #  #  #               #                             ###      ##                
+   #  #  #  #               #                            #   #  #   #          ####  
+   #  #  #  #  ####  # ###  #          ####  ####       ####        #    ###  #      
+   #  #  #  # #    # ##     #  #      #    # #   #       #     ##   #   #####  ####  
+   #  #  #  # #    # #      ###       #    # #   #       #      #   #   #          # 
+   #   ## ##   ####  #      #  #       ####  #   #       #     ### ###   ###   ####  
+   #
+   #======================================================================
+   # Iterate over the input files and make the changes
+   #----------------------------------------------------------------------
+   print STDOUT "No backup specified (you brute)!\n" if exists $OPT{-nobackup} and !exists $OPT{-q};
+   print STDLOG "No backup specified (you brute)!\n" if exists $OPT{-nobackup} and !exists $OPT{-q};
+   FILE: foreach my $file (@FILES) {
+      next FILE if -d $file; # don't even bother with directories
+      open(OLDFILE,"<$file") or REPORT_FATAL "Couldn't read $file\n";
+      if (exists $OPT{-out_file}) {
+         open(NEWFILE,">>$OPT{-out_file}$new") or REPORT_FATAL "Couldn't write $OPT{-out_file}$new\n";
+         print STDOUT "Working on $file\n" unless exists $OPT{-q};
+         print STDLOG "Working on $file\n" unless exists $OPT{-q};
+      } else {
+         open(NEWFILE,">$file$new") or REPORT_FATAL "Couldn't write $file$new\n";
+         print STDOUT "Modifying $file\n" unless exists $OPT{-q};
+         print STDLOG "Modifying $file\n" unless exists $OPT{-q};
+      }#endif
+
+      #------------------------------------------------------------------
+      # Reset counts
+      #------------------------------------------------------------------
+      %nOld = ();
+      %nNew = ();
+      our $file_size = -s $file;
+      our $read = 0;
+      our $lno = 0;
+      our $max_patience = 256; # limit to patience increases
+      our $patience = 4; # seconds to wait before issuing status
+      our $reported = 0; # counts each time a sanity report issued
+      our $start = time;
+      our $alarm = $start + $patience;
+      sub Sanity {
+         my ($pcnt);
+         if (time >= $alarm) {
+            $pcnt = sprintf("%6.2f",($read/$file_size)*100);
+            $pcnt = ' <0.01' if $pcnt eq '  0.00';
+            $pcnt = '>99.99' if $pcnt eq '100.00';
+            printf "Read %s lines (%s%%) after %s\n",&FmtN($lno),$pcnt,&FmtT(time - $start);
+            $alarm = time + $patience;
+            $reported++;
+            if ($reported > $patience and $patience < $max_patience) {
+               $patience += $patience;
+               printf "Increasing patience to %s\n",&FmtT($patience);
+               $reported = 0;
+            }#endif
+         }#endif
+      }#endsub Sanity
+
+      #------------------------------------------------------------------
+      # Do the real work
+      #------------------------------------------------------------------
+      while (<OLDFILE>) {
+         study;
+         $read += length $_;
+         $lno++;
+         #--------------------------------------------------------------
+         # Replace old words with with markers
+         #--------------------------------------------------------------
+         %found = ();
+         %matches = ();
+         MARKER: foreach $oldWord (@oldWords) {
+            #----------------------------------------------------------
+            # Observe for replacement pre-existing
+            #----------------------------------------------------------
+            $newWord = $word{$oldWord};
+            $nNew{$newWord} += m/$bl$newWord$br/;
+            $matches{$oldWord} = 1 if $newWord =~ m/[\$][&1-9]\d*/;
+            #----------------------------------------------------------
+            # Replace old word with placeholder index
+            #----------------------------------------------------------
+            $changes = 0;
+            @matches = ();
+            if (exists $OPT{-i}) { # case insensitive
+               while ($_ =~ s/$bl$oldWord$br/$indx{$oldWord}/i) {
+                  @matches = ($&,$1,$2,$3,$4,$5,$6,$7,$8,$9) if $fancy;
+                  $changes++;
+               }#endwhile
+            } else { # case matters
+               while ($_ =~ s/$bl$oldWord$br/$indx{$oldWord}/) {
+                  @matches = ($&,$1,$2,$3,$4,$5,$6,$7,$8,$9) if $fancy;
+                  $changes++;
+               }#endwhile
+            }#endif
+            next MARKER unless $changes;
+            $nOld{$oldWord} += $changes;
+            $found{$oldWord} = $changes;
+            $grand{$oldWord} = $changes; # for total picture
+            if ($fancy and exists $matches{$oldWord}) {
+               if ($changes) {
+                  $matches{$oldWord} = join($;,@matches);
+               } else {
+                  delete $matches{$oldWord};
+               }#endif
+            }#endif
+         }#endforeach $oldWord MARKER
+         #--------------------------------------------------------------
+         # Go back and fix the line with actual replacements
+         #--------------------------------------------------------------
+         foreach $oldWord (keys %found) {
+            $newWord = $word{$oldWord};
+            if ($fancy and exists $matches{$oldWord}) {
+               @matches = split($;,$matches{$oldWord});
+               while ($newWord =~ m/[\$]([&1-9]\d*)/) {
+                  my ($before,$mindx,$after) = ($`,$1,$');
+                  $match = $matches[$mindx];
+                  $newWord = $before.$match.$after;
+               }#endwhile
+               delete $matches{$oldWord};
+            }#endif
+            # Replace placeholders with real new words
+            s/$indx{$oldWord}/$newWord/g;
+         }#endforeach $oldWord
+         #--------------------------------------------------------------
+         # Write out the results
+         #--------------------------------------------------------------
+         print NEWFILE $_;
+         &Sanity;
+      }#endwhile <OLDFILE>
+      printf "Read %s lines (%s%%) after %s\n",&FmtN($lno),'100.00',&FmtT(time - $start);
+      close(NEWFILE);
+      close(OLDFILE);
+
+      #==================================================================
+      # Warn of pre-existing new words
+      #------------------------------------------------------------------
+      if (exists $OPT{-warn}) {
+         WARN: foreach $oldWord (@oldWords) {
+            $newWord = $word{$oldWord};
+            next WARN unless $nNew{$newWord};
+            print STDOUT "  Warning: '$newWord' pre-existed\n" unless exists $OPT{-q};
+            print STDLOG "  Warning: '$newWord' pre-existed\n" unless exists $OPT{-q};
+         }#endforeach
+      }#endif
+
+      #==================================================================
+      # Show this file's statistics on changes
+      #------------------------------------------------------------------
+      $nOld = 0;
+      COUNT: foreach $oldWord (sort keys %nOld) {
+         $newWord = $word{$oldWord};
+         $nOld += $nOld{$oldWord};
+         next COUNT if $nOld{$oldWord} == 0 and !exists $OPT{-v};
+         print STDOUT "  Changed '$oldWord' to '$newWord' $nOld{$oldWord} times\n" unless exists $OPT{-q};
+         print STDLOG "  Changed '$oldWord' to '$newWord' $nOld{$oldWord} times\n" unless exists $OPT{-q};
+      }#endforeach $oldWord
+      if (@oldWords > 1 and !exists $OPT{-q}) {
+         print STDOUT "  ----------------\n";
+         print STDLOG "  ----------------\n";
+         print STDOUT "  $nOld total changes\n";
+         print STDLOG "  $nOld total changes\n";
+      }#endif
+      $grand_change += $nOld;
+      $grand_affect++;
+      $grand_files++;
+      if (exists $OPT{-out_file}) {
+         ;# nothing yet
+      } elsif ($nOld == 0 or exists $OPT{-n}) {
+         print STDOUT "  No changes -- file $file left untouched.\n" unless exists $OPT{-q};
+         print STDLOG "  No changes -- file $file left untouched.\n" unless exists $OPT{-q};
+         unlink("$file$new");
+      } else {
+         $mode = (stat $file)[2];
+         if (exists $OPT{-nobackup}) {
+            unlink("$file");
+         } else {
+            unlink("$file$ext") if -f "$file$ext";
+            rename("$file","$file$ext") or REPORT_FATAL "Unable to backup $file\n";
+            print STDOUT "  Original '$file' renamed '$file$ext'\n" unless exists $OPT{-q};
+            print STDLOG "  Original '$file' renamed '$file$ext'\n" unless exists $OPT{-q};
+         }#endif
+         rename("$file$new","$file") or REPORT_FATAL "Unable to rename $file$new\n";
+         chmod $mode, $file;
+      }#endif
+   }#endforeach $file
+
+   #======================================================================
+   # Report global statistics
+   #----------------------------------------------------------------------
+   $patterns = scalar @oldWords;
+   if ($grand_change == 0) {
+       printf STDOUT "None of %d patterns found in any of the files!\n",$patterns;
+       printf STDLOG "None of %d patterns found in any of the files!\n",$patterns;
+   } else {
+       printf STDOUT "%d changes for %d of %d files!\n",$grand_change,$grand_affect,$grand_files;
+       printf STDLOG "%d changes for %d of %d files!\n",$grand_change,$grand_affect,$grand_files;
+       $used = scalar keys %grand;
+       printf STDOUT "%d patterns used of %d supplied.\n",$used,$patterns;
+       printf STDLOG "%d patterns used of %d supplied.\n",$used,$patterns;
+   }#endif
+
+   #======================================================================
+   # Handle -o option if specified
+   #----------------------------------------------------------------------
+   if (exists $OPT{-out_file} and !exists $OPT{-n}) {
+       if (-f $OPT{-out_file}) {
+           if (exists $OPT{-nobackup}) {
+               unlink("$OPT{-out_file}");
+               print STDOUT "Overwriting $OPT{-out_file}\n" unless exists $OPT{-q};
+               print STDLOG "Overwriting $OPT{-out_file}\n" unless exists $OPT{-q};
+           } else {
+               unlink("$OPT{-out_file}$ext") if -f "$OPT{-out_file}$ext";
+               rename("$OPT{-out_file}","$OPT{-out_file}$ext") or REPORT_FATAL "Unable to backup $OPT{-out_file}\n";
+               print STDOUT "Original '$OPT{-out_file}' renamed '$OPT{-out_file}$ext'\n" unless exists $OPT{-q};
+               print STDLOG "Original '$OPT{-out_file}' renamed '$OPT{-out_file}$ext'\n" unless exists $OPT{-q};
+           }#endif
+       }#endif
+       rename("$OPT{-out_file}$new","$OPT{-out_file}") or REPORT_FATAL "Couldn't rename $OPT{-out_file}$new\n";
+       print STDOUT "Created $OPT{-out_file} from @FILES\n" unless exists $OPT{-q};
+       print STDLOG "Created $OPT{-out_file} from @FILES\n" unless exists $OPT{-q};
+   }#endif
+
+   if (defined $NEWLOG and $NEWLOG ne '') {
+       print STDOUT "Renamed $THELOG to $NEWLOG\n" unless exists $OPT{-q};
+       print STDLOG "Renamed $THELOG to $NEWLOG\n" unless exists $OPT{-q};
+       close(STDLOG);
+       rename $THELOG,$NEWLOG;
+   }#endif
+
+   exit 0;
+
+###########################################################################
+sub FmtN {
+    my ($n) = @_;
+    return $n unless $n =~ m{^-?\d+};
+    my (@exp) = (1e12,1e9,1e6,1e3,1);
+    my (@suf) = ( 't','g','m','k','');
+    for $i (0 .. $#exp) {
+        $exp = $exp[$i];
+        $suf = $suf[$i];
+        last if $n >= $exp;
+    }
+    $n = sprintf('%2.2f',$n/$exp);
+    sprintf('%4.4s%s',$n,$suf);
+}#endsub FmtN
+
+###########################################################################
+sub FmtT {
+   my ($elapsed_seconds) = @_;
+   my $sec = $elapsed_seconds % 60;
+   my $min = int($elapsed_seconds / 60) % 60;
+   my $hr = int($elapsed_seconds / 3600);
+   return sprintf("%3d:%02d:%02d",$hr,$min,$sec);
+}#endsub FmtT
+
+###########################################################################
+sub FmtK {
+    my (@argv) = @_;
+    my ($n,@n,$i,$s,$f);
+    for $n (@argv) {
+       next unless $n =~ m{^-?\d+};
+       $s  = $& if $n =~ s/^-//;
+       $f  = $& if $n =~ s/\.\d*//;
+       $f .= $& if $n =~ s/\D.*//;
+       @n = split('',$n);
+       unshift @n,'' if (@n % 3) > 0;
+       unshift @n,'' if (@n % 3) > 0;
+       $n = $s;
+       while (@n > 3) {
+         $n .= join('',splice(@n,0,3)).',';
+       }#endwhile
+       $n .= join('',@n).$f;
+    }#endfor
+    return wantarray ? @argv : join(' ',@argv);
+}#endsub FmtK
+
+###########################################################################
+sub Indx {
+    my ($indx) = @_;
+    my @indx = ( (1), ((($indx>>12)&63)|128), ((($indx>>6)&63)|128), ((($indx>>0)&63)|128) );
+    pack("CCCC",@indx);
+}#endsub Indx
+
+#############################################################################
+sub Mo {
+    my ($mo) = @_;
+    ((Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec)[$mo]);
+}#endsub Mo
+
+#############################################################################
+sub Uniqfile {
+#
+# Synopis: $uniqfile = &Uniqfile($filename);
+#
+# Returns a filename after ensuring it is unique
+# by renaming any conflicts if possible.  In array
+# context returns a second element containing new
+# name of the old file.
+#
+    my ($file) = @_;
+    return wantarray ? ($file,'') : $file unless (-r $file); # already unique
+    my ($sep) = '-#';
+    my ($keep) = 0;
+    if (exists $ENV{'KEEPFILE'}) {
+        $keep = $1 if $ENV{'KEEPFILE'} =~ qr/-max (\d+)/;
+        $sep = $1 if $ENV{'KEEPFILE'} =~ qr/-sep\s+(\S+)/;
+    }#endif
+    my ($dir) = '.';
+    my ($i) = 1;
+    my (@I);
+    $dir = $file if $file =~ m:/:;
+    $dir =~ s:/[^/]*$::;
+    $file =~ s:.*/::;
+    my ($len) = length($file) + length($sep);
+    unless (opendir(DIR,$dir)) {
+        REPORT_FATAL "Couldn't open directory $dir\n";
+    }#endunless
+    @I = readdir(DIR);
+    closedir(DIR);
+    @I = grep(/^$file$sep\d+$/,@I);
+    unless (@I) {
+        rename ("$dir/$file","$dir/$file$sep$i") or REPORT_FATAL("Couldn't rename $dir/$file");
+        return wantarray ? ("$dir/$file","$dir/$file$sep$i") : "$dir/$file";
+    }#endif
+    foreach $i (@I) {
+        $i = substr($i,$len);
+    }#endforeach
+    @I = sort numerically @I;
+    $i = $I[$#I]+1;
+    rename("$dir/$file","$dir/$file$sep$i") or REPORT_FATAL("Couldn't rename $dir/$file");
+    if ($keep > 0 and scalar(@I) >= $keep) {
+        while($keep-- > 1) {
+            pop(@I);
+        }#endwhile
+        foreach $i (@I) {
+            unlink("$dir/$file$sep$i") or REPORT_FATAL("Couldn't remove $dir/$file$sep$i");
+        }#endfor
+    }#endif
+    return wantarray ? ("$dir/$file","$dir/$file$sep$i") : "$dir/$file";
+}#endsub Uniqfile
+
+############################################################################
+sub Box {
+    my ($msg,$border,$center) = @_;
+    $border = '#' unless defined $border;
+    $center = 1 unless defined $center;
+    $msg =~ s/\n$//;
+    my (@msg) = split("\n",$msg);
+    my ($max) = 0;
+    foreach (@msg) {
+        $max = length if length > $max;
+    }#endforeach
+    my ($fl,$fr);
+    foreach $msg (@msg) {
+        if ($center) {
+            $fr = ($max-length($msg))/2;
+            $fl = int($fr);
+            $fr = ($fr > $fl) ? ($fl+1) : ($fl);
+        } else {
+            $fl = 0;
+            $fr = $max - length($msg);
+        }#endif
+        $msg = $border.' '.(' ' x $fl).$msg.(' ' x $fr).' '.$border;
+    }#endforeach
+    $max += 4;
+    push(@msg,$border x $max);
+    unshift(@msg,$border x $max);
+    join("\n",@msg) . "\n";
+}#endsub Box
+
+############################################################################
+sub VersionBanner {
+    my ($vers) = @_;
+    $vers = $main'vers unless $vers;
+    my ($state) = $vers;
+    if ($0 =~ m/\.(old|test|beta|alpha|exp|(\d+\..+))$/i) {
+        $state = " $1 ";
+        $state =~ tr/A-Z/a-z/;
+        $state =~ s/exp|test/Exp/;
+        $state =~ s/beta/Beta/;
+        $state =~ s/alpha/Alpha/;
+        $state =~ s/old/Old/;
+        $state =~ s/\d\.\S+/Specified/;
+    }#endif
+    my ($heading) = '';
+    if (index($state, ' Exp ') >= 0) {
+        $heading = <<'.';
++----------------------------------------+
+|                                        |
+|   +--------------------------------+   |
+|   |                                |   |
+|   |      EXPERIMENTAL VERSION      |   |
+|   |      --------------------      |   |
+|   |   >> EXPECT MANY PROBLEMS <<   |   |
+|   |                                |   |
+|   +--------------------------------+   |
+|                                        |
++----------------------------------------+
+.
+    } elsif (index($state, ' Alpha ') >= 0) {
+        $heading = <<'.';
+ALPHA version - EXPECT several problems
+.
+    } elsif (index($state, ' Beta ') >= 0) {
+        $heading = <<'.';
+BETA version - possible problems 
+.
+    } elsif (index($state, ' Old ') >= 0) {
+        $heading = <<'.';
+Old version - possible problems 
+.
+    } elsif (index($state, ' Specified ') >= 0) {
+        $heading = <<'.';
+Specified version - known characteristics 
+.
+    } else {
+        $heading = "Production Version - Please report any problems.\n";
+    }#endif
+    &Box($heading."$vers\n");
+}#endsub VersionBanner
+
+#############################################################################
+sub RcsVersion {
+    my ($vers) = @_;
+    $vers = $main'vers unless $vers;
+    my (@info) = split(' ',$vers);
+    $info = "$info[2] ($info[6])";
+    ($info);
+}#endsub RcsVersion
+
+###########################################################################
+__END__
