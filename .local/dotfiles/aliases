@@ -14,6 +14,7 @@ alias la='ls -A'
 alias ll='ls -l'
 alias dir='dir --color=auto'
 alias m='less'
+alias W='command -V'
 alias agl='ag -l --nocolor'
 alias cls='clear ; '
 # shellcheck disable=SC2154
@@ -33,6 +34,10 @@ alias func='declare -f'
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
+alias rehash='hash -r'
+alias Apt='sudo apt'
+alias Dpkg='sudo dpkg'
+alias Yum='sudo yum'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
