@@ -10,7 +10,7 @@ function j() {
   # Begin parsing options
   #-----------------------------------------------------------------------------
   export lwd nwd cws nws
-  local J_VERBOSE J_DEBUG TMP1 TMP2
+  local J_VERBOSE J_DEBUG TMP1 TMP2 J_MK
   J_VERBOSE=0
   J_DEBUG=0
   # Setup favorites list if not defined via exported FAVS variable
@@ -88,18 +88,20 @@ EOT
         ;;
       -mk )
         shift
-        if [[ $# != 2 ]]; then Report_error "Requires two arguments: j -mk FAV DIRPATH"; return 1; fi
-        if [[ "$1" =~ .*/.* ]]; then Report_error "First argument must be a simple name"; return 1; fi
-        if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "First argument must begin with an alphanumeric"; return 1; fi
-        if [[ "$1" =~ [^-_+a-zA-Z0-9].* ]]; then Report_error "First argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
-        if [[ -e "${FAVS}/$1" ]]; then Report_error "$1 already exists"; return 1; fi
-        if [[ ! -d "$2" ]]; then Report_error "'$2/.' does not refer to a directory"; return 1; fi
-        TMP1="$(Realpath "$2/.")"
-        if ln -s "${TMP1}" "${FAVS}/$1" ; then
-          TMP1="$(Realpath "${FAVS}/$1")"
-          Report_info "Created favorite $1 -> ${TMP1}" ;
+        if [[ $# -lt 2 ]]; then Report_error "Requires at least two arguments: j -mk FAV DIRPATH"; return 1; fi
+        J_MK="$1"
+        shift
+        if [[ "${J_MK}" =~ .*/.* ]]; then Report_error "-mk argument must be a simple name"; return 1; fi
+        if [[ "${J_MK}" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "-mk argument must begin with an alphanumeric"; return 1; fi
+        if [[ "${J_MK}" =~ [^-_+a-zA-Z0-9].* ]]; then Report_error "-mk argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
+        if [[ -e "${FAVS}/${J_MK}" ]]; then Report_error "$1 already exists"; return 1; fi
+        j "$@"
+        TMP1="$(Realpath .)"
+        if ln -s "${TMP1}" "${FAVS}/${J_MK}" ; then
+          TMP1="$(Realpath "${FAVS}/${J_MK}")"
+          Report_info "Created favorite ${J_MK} -> ${TMP1}" ;
         else
-          Report_error "Unable to create ${FAVS}/$1";
+          Report_error "Unable to create ${FAVS}/${J_MK}";
         fi
         return 0;
         ;;
