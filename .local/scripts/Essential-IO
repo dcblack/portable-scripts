@@ -25,13 +25,13 @@ A collection of useful functions for output in bash/zsh.
 | HelpText [-md] "_FILE_"       | Displays help for specified file
 | Log [-n] "_MESSAGE_"          | Adds message to logfile
 | Logfile [--append] _FILE_     | Establishes a logfile name
-| PassFail [$?] "_MESSAGE_"       | Displays message with pass/fail status
+| PassFail [$?] "_MESSAGE_"     | Displays message with pass/fail status
 | Realpath FILESPEC             | Echo the real pathname for a file specification
 | Read "_PROMPT_"               | Shell independent read returns REPLY
 | Report_debug "_MESSAGE_"      | Echo a debug message
 | Report_error "_MESSAGE_"      | Echo an error message
 | Report_fatal "_MESSAGE_"      | Echo a fatal message and return with fail
-| Report_info "_MESSAGE_"              | Echo an informational message
+| Report_info "_MESSAGE_"       | Echo an informational message
 | Report_warning "_MESSAGE_"    | Echo a warning message
 | Reset-errors                  | Reset error and warning counts to zero
 | Rows                          | Display the number rows in the current terminal
@@ -353,17 +353,31 @@ function Report_debug()
 {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Report_debug MESSAGE
-  if [[ "$1" == "-f" || -n "${DEBUG}" && ! "${DEBUG}" =~ ^0?$ ]]; then
-    if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
-    if [[ "$1" == "-f" ]]; then shift; fi
-    if [[ "$1" =~ % ]]; then
-      local FMT
-      FMT="$1"
-      shift
-      Printf "${CRED}Debug: ${NONE}${FMT}${NONE}" "$@"
-    else
-      Echo "${CRED}Debug: ${NONE}$*${NONE}"
+  local debug
+  export DEBUG
+  debug="${DEBUG}"
+  if [[ $# -gt 2 ]]; then
+    local n_1 flag
+    (( n_1 = $# - 1 ))
+    flag='$'"${n_1}"
+    flag="$(eval "echo ${flag}")"
+    if [[ "${flag}" == '-if' ]]; then
+      debug="$(eval "echo "'$'"$#")"
+      local args
+      args="$1"; shift
+      while [[ $# -gt 2 ]]; do args="${args} $1"; shift; done
     fi
+  fi
+  if [[ "$1" != "-f" && ${debug} -eq 0 ]]; then return; fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
+  if [[ "$1" == "-f" ]]; then shift; fi
+  if [[ "$1" =~ % ]]; then
+    local FMT
+    FMT="$1"
+    shift
+    Printf "${CRED}Debug: ${NONE}${FMT}${NONE}" "$@"
+  else
+    Echo "${CRED}Debug: ${NONE}$*${NONE}"
   fi
 }
 
