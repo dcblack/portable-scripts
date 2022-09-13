@@ -53,6 +53,7 @@ B<showenv -h>
  -u use envv format to unset variable
  -v verbose
  -w warn of any dangerous variable settings
+ -x exact variable name
 
 =head1 EXAMPLES
 
@@ -111,50 +112,52 @@ our @VARS;
 # Parse command-line
 while (@ARGV) {
   my $arg = shift @ARGV;
-    if ($arg eq '-1') {
-      $opts{-cols} = 1;
-    } elsif ($arg eq '-#') {
-      $opts{-number} = 1;
-    } elsif ($arg eq '-a') {
-      $opts{-name_only} = 1;
-      push(@VARS,sort keys %ENV);
-    } elsif ($arg eq '-A') {
-      push(@VARS,sort keys %ENV);
-    } elsif ($arg eq '-d') {
-      $opts{-envv} = 1;
-    } elsif ($arg eq '-e') {
-      $opts{-envv} = 1;
-    } elsif ($arg =~ /^--?h(elp)?$/) {
-      exec "perldoc $0";
-    } elsif ($arg eq '-n') {
-      $opts{-name_only} = 1;
-    } elsif ($arg eq '-q') {
-      $opts{-quiet} = 1;
-    } elsif ($arg eq '-Q') {
-      if (@ARGV and length($ARGV[0])== 1) {
-        $LQ = $RQ = shift @ARGV;
-      } elsif (@ARGV and $ARGV[0] =~ m{^[^-A-Za-z0-9]{2,2}$}) {
-        ($LQ,$RQ) = split('',shift(@ARGV));
-      } else {
-        $LQ = $RQ = '"';
-      }#endif
-    } elsif ($arg eq '-s') {
+  if ($arg eq '-1') {
+    $opts{-cols} = 1;
+  } elsif ($arg eq '-#') {
+    $opts{-number} = 1;
+  } elsif ($arg eq '-a') {
+    $opts{-name_only} = 1;
+    push(@VARS,sort keys %ENV);
+  } elsif ($arg eq '-A') {
+    push(@VARS,sort keys %ENV);
+  } elsif ($arg eq '-d') {
+    $opts{-envv} = 1;
+  } elsif ($arg eq '-e') {
+    $opts{-envv} = 1;
+  } elsif ($arg =~ /^--?h(elp)?$/) {
+    exec "perldoc $0";
+  } elsif ($arg eq '-n') {
+    $opts{-name_only} = 1;
+  } elsif ($arg eq '-q') {
+    $opts{-quiet} = 1;
+  } elsif ($arg eq '-Q') {
+    if (@ARGV and length($ARGV[0])== 1) {
+      $LQ = $RQ = shift @ARGV;
+    } elsif (@ARGV and $ARGV[0] =~ m{^[^-A-Za-z0-9]{2,2}$}) {
+      ($LQ,$RQ) = split('',shift(@ARGV));
+    } else {
+      $LQ = $RQ = '"';
+    }#endif
+  } elsif ($arg eq '-s') {
     $opts{-s} = 1;
-    } elsif ($arg eq '-S') {
+  } elsif ($arg eq '-S') {
     $opts{-S} = 1;
   } elsif ($arg eq '-E') {
     $opts{-E} = 1;
   } elsif ($arg eq '-u') {
     $opts{-u} = 1;
-    } elsif ($arg eq '-v') {
+  } elsif ($arg eq '-v') {
     $opts{-v} = 1;
+  } elsif ($arg eq '-x') {
+    $opts{-x} = 1;
   } elsif ($arg =~ m{^-(bash|ksh|tcsh|csh|tclsh|perl|modules)}) {
     $opts{"-$1"} = 1;
   } elsif ($arg eq '-warn' or $arg eq '-w') {
     $opts{-w} = 1;
-    } else {
-      push @VARS,$arg;
-    }#endif
+  } else {
+    push @VARS,$arg;
+  }#endif
 }#endwhile
 
 our %special = (
@@ -170,9 +173,9 @@ grep($shown{$_}=1,@VARS);
 while (@VARS) {
   my $var = shift(@VARS);
   #-----------------------------------------------------------------------------
-  # Allow a case flip
+  # Allow a case flip unless -x specified
   #-----------------------------------------------------------------------------
-  if ($var =~ m{^\w+} and not defined $ENV{$var}) {
+  if ($var =~ m{^\w+} and not defined $ENV{$var} and not exists $opts{-x}) {
     $var =~ s/-/_/g;
     $var = uc($var) if exists $ENV{uc($var)};
     $var = lc($var) if exists $ENV{lc($var)};
@@ -198,8 +201,8 @@ while (@VARS) {
     $re = $';
     foreach my $myvar (sort keys %ENV) {
       next if $shown{$myvar};
-      next unless $ENV{$myvar} =~ /$re/
-               or (not exists $opts{-s} and $ENV{$myvar} =~ /$re/i);
+      next unless $ENV{$myvar} =~ m{$re}
+               or (not exists $opts{-s} and $ENV{$myvar} =~ m{$re}i);
       push (@VARS,$myvar);
       $shown{$myvar} = 1;
     }#endfor
