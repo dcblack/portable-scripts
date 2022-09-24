@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Install {fmt} library under current project.
+# Install C++ Core Guidelines Support Library under current project.
 # IMPORTANT; Must be run inside project git repository.
 
-LIBNAME="GSL (C++ standard Guideline Support Library)"
+LIBNAME="GSL (C++ Core Guidelines Support Library)"
 GIT_URL="https://github.com/microsoft/GSL.git"
 
 function Die() {
@@ -22,20 +22,20 @@ if [[ "${HERE}" =~ .*/externs ]]; then
 fi
 PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
 REPO_DIR="$(basename "${GIT_URL}" .git)"
-BUILD_DIR="build"
 INSTALL_DIR="${PROJECT_DIR}/externs"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Die "Unable to enter ${INSTALL_DIR}"
 if [[ -d "${REPO_DIR}/.git" ]]; then
   git -C "${REPO_DIR}" pull
+  echo "Successfully updated ${LIBNAME}"
 else
   rm -fr "${REPO_DIR}"
   git clone "${GIT_URL}" || Die "Unable to clone"
 fi
-cd "${REPO_DIR}" || Die "Unable to enter ${REPO_DIR}"
-cmake -B "${BUILD_DIR}" -S . -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" || Die "Unable to configure cmake"
-cmake --build "${BUILD_DIR}" || Die "Failed to compile and link"
-cmake --install build || Die "Failed to install"
-echo "Successfully built ${LIBNAME}"
+TARGET_DIR="$(Realpath "${REPO_DIR}")"
+if [[ ! -L "${INSTALL_DIR}/include/gsl" ]]; then
+  ln -s "${TARGET_DIR}/include/gsl" "${INSTALL_DIR}/include/gsl"
+  echo "Successfully installed ${LIBNAME}"
+fi
 
 # vim:nospell
