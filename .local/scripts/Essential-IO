@@ -353,31 +353,33 @@ function Report_debug()
 {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Report_debug MESSAGE
+  local args=("$@")
+  local n=$#
   local debug
   export DEBUG
   debug="${DEBUG}"
   if [[ $# -gt 2 ]]; then
-    local n_1 flag
-    (( n_1 = $# - 1 ))
-    flag='$'"${n_1}"
-    flag="$(eval "echo ${flag}")"
-    if [[ "${flag}" == '-if' ]]; then
-      debug="$(eval "echo "'$'"$#")"
-      local args
-      args="$1"; shift
-      while [[ $# -gt 2 ]]; do args="${args} $1"; shift; done
+    # shellcheck disable=SC2154
+    if [[ "${args[-2]}" == '-if' ]]; then
+      debug="${args[-1]}"
+      (( n = $# - 2 ))
+      args=("${args[@]:0:${n}}")
     fi
   fi
   if [[ "$1" != "-f" && ${debug} -eq 0 ]]; then return; fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
-  if [[ "$1" == "-f" ]]; then shift; fi
-  if [[ "$1" =~ % ]]; then
+  if [[ "${args[1]}" == "-f" ]]; then
+    (( n-- ))
+    args=("${args[@]:0:${n}}")
+  fi
+  if [[ "${args[1]}" =~ % ]]; then
     local FMT
-    FMT="$1"
-    shift
-    Printf "${CRED}Debug: ${NONE}${FMT}${NONE}" "$@"
+    FMT="${args[1]}"
+    (( n-- ))
+    args=("${args[@]:0:${n}}")
+    Printf "${CRED}Debug: ${NONE}${FMT}${NONE}" "${args[@]}"
   else
-    Echo "${CRED}Debug: ${NONE}$*${NONE}"
+    Echo "${CRED}Debug: ${NONE}${args[*]}${NONE}"
   fi
 }
 
