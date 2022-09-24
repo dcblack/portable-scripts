@@ -171,6 +171,8 @@ function Git_setup()
   git config --global push.default current
 
   # Useful aliases
+  # shellcheck disable=SC2016
+  git config --global alias.added    '!git ls-files -s | perl -lane '\''print(pop@F)'\'
   git config --global alias.changes  'status -s -uno'
   git config --global alias.changed  'ls-files -m'
   git config --global alias.missed   'ls-files -o --exclude-standard'
@@ -182,10 +184,11 @@ function Git_setup()
   git config --global alias.ignored  'ls-files -o'
   git config --global alias.br       'branch'
   git config --global alias.co       'checkout'
+  # shellcheck disable=SC2016
   git config --global alias.diffs    '!git diff $(git ls-files -m)'
   git config --global alias.remotes  'remote -v'
-  git config --global alias.top 'rev-parse --show-toplevel'
-  git config --global alias.url 'remote get-url origin'
+  git config --global alias.top      'rev-parse --show-toplevel'
+  git config --global alias.url      'remote get-url origin'
 
   for COURSE in syscfund tlm-2; do
     if [[ -d "${HOME}/${COURSE}" && ! -d "${HOME}/${COURSE}/.git" ]]; then
