@@ -27,7 +27,7 @@ function j() {
   if [[ $# != 0 ]]; then
     # Parse command-line options
     while [[ "$1" =~ ^-. ]]; do
-      if [[ ${J_DEBUG} == 1 ]]; then Report_debug -f "$1"; fi
+      Report_debug "$1" -if "${J_DEBUG}"
       case "$1" in
       -h | -help | --help) cat 1>&2 <<EOT
 Synopsis
@@ -140,7 +140,7 @@ EOT
       shift
     done
   fi
-  test "${J_DEBUG}" = 1 && Report_debug -f "Debug on"
+  Report_debug "Debug on" -if "${J_DEBUG}"
   test "${J_VERBOSE}" = 1 && Report_info "Verbose on"
   # End parsing options
   #-----------------------------------------------------------------------------
@@ -156,7 +156,7 @@ EOT
     cd
   else
     while [[ $# != 0 ]]; do
-      test "${J_DEBUG}" = 1 && Report_debug -f "Arg '%s'" "$1"
+      Report_debug "Arg '%s'" "$1" -if "${J_DEBUG}"
       if [[ "$1" == '-' ]]; then
         # shellcheck disable=SC2164
         cd -
@@ -164,10 +164,8 @@ EOT
         local PART GLOB
         PART="$1"
         GLOB="$(/usr/bin/perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
-        if [[ ${J_DEBUG} == 1 ]]; then
-          Report_debug -f "DEBUG: PART='%s'" "${PART}"
-          Report_debug -f "DEBUG: GLOB='%s'" "${GLOB}"
-        fi
+        Report_debug "DEBUG: PART='%s'" "${PART}" -if "${J_DEBUG}"
+        Report_debug "DEBUG: GLOB='%s'" "${GLOB}" -if "${J_DEBUG}"
         if [[ -e "${PART}" && -f "${PART}" ]]; then
           PART=$(dirname "${PART}")
         fi
@@ -187,7 +185,7 @@ EOT
       shift
     done
   fi
-  test "${J_DEBUG}" = 1 && Report_debug -f "Saving working directory"
+  Report_debug "Saving working directory" -if "${J_DEBUG}"
   # Save current location as the working directory
   local next_wd
   next_wd="$(Realpath .)"
@@ -204,7 +202,7 @@ EOT
     cwd="${next_wd}"
   fi
   TMP1="$(pwd)"
-  test "${J_DEBUG}" = 1 && Report_debug -f "Landed %s" "${TMP1}"
+  Report_debug "Landed %s" "${TMP1}" -if "${J_DEBUG}"
 
   # Save last working script if it was previously set
   if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
@@ -213,7 +211,7 @@ EOT
   export nws
   TMP1="$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)"
   nws="$(Firstreal "${TMP1}")"
-  test "${J_DEBUG}" = 1 && Report_debug -f "Checking for working script nws=%s" "'${nws}'"
+  Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG}"
   if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
     local LASTOK NEXTOK REPEAT
@@ -223,7 +221,7 @@ EOT
     # 2. Must be executable and not a directory
     # 3. Last script must support ACTION variable
     if [[ -n "${lws}" && "${lws}" == "${nws}" ]]; then
-      test "${J_DEBUG}" = 1 && Report_debug -f "lws set and equal to nws ${nws}"
+      Report_debug "lws set and equal to nws ${nws}" -if "${J_DEBUG}"
       LASTOK=0
       NEXTOK=0
       REPEAT=1
@@ -242,7 +240,7 @@ EOT
       NEXTOK=0
       REPEAT=0
       Report_warning "Skipping non-executable ${nws}"
-      test "${J_DEBUG}" = 1 && Report_debug -f "nws not executable or is a directory ${nws}"
+      Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG}"
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
