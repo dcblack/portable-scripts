@@ -1550,10 +1550,11 @@ NAMES: for my $name (@name) {
   our $yymmdd = sprintf("%02d%02d%02d",$year%100,$date[4]+1,$date[3]);
   our $y4mmdd = sprintf("%04d%02d%02d",$year,$date[4]+1,$date[3]);
   our @mos = qw(January February March April May June July August September October November December);
-  my ($hour,$minute) = ($date[2],$date[1]);
+  my ($hour,$minute,$second) = ($date[2],$date[1],$date[0]);
   my $pm = ($hour > 11)?"PM":"AM";
   our $mh = sprintf("%02d",$hour); # military hour
   our $mn = sprintf("%02d",$minute);
+  our $ss = sprintf("%02d",$second);
   $hour = $hour % 12;
   $hour = 12 if $hour == 0;
   our $hh = sprintf("%02d",$hour);
@@ -1590,6 +1591,8 @@ NAMES: for my $name (@name) {
   $REPL{'MH'}          = $mh;
   $REPL{'HH'}          = $hh;
   $REPL{'MN'}          = $mn;
+  $REPL{'SS'}          = $ss;
+  $REPL{'HHMMSS'}      = $hh.$mn.$ss;
   $REPL{'PM'}          = $pm;
   $REPL{'USER'}        = $user;
   $REPL{'HOST'}        = hostname;
