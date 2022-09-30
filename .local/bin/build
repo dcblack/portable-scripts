@@ -173,7 +173,11 @@ function Build()
     elif [[ "$1" =~ ^-{1,2}test$ ]]; then
       ACTION="test"
     elif [[ "$1" =~ ^-{1,2}type$ ]]; then
-      CMAKE_BUILD_TYPE="$1"
+      if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z]+$ ]]; then
+        CMAKE_BUILD_TYPE="$2"
+      else
+        Report_error "--type must be followed by a build type such as Debug, Release, or RelWithDebugInfo"; return 1;
+      fi
     elif [[ "$1" =~ ^-{1,2}run$ ]]; then
       ACTION="run"
     elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
