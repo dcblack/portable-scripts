@@ -1,28 +1,52 @@
 #!/usr/bin/env bash
 
-SYNTAX="
+SYNTAX='
 NAME
 ----
-  clean - removes junk files from C/C++ compilations
+
+clean - removes junk files from C/C++ compilations
 
 SYNOPSIS
 --------
-  clean [-n][-q|-v|-vv] --[exe|logs|build|mac|pc|all] [DIRLIST]
+
+clean [-n|-k][-q|-v|-vv] --[SELECTION]... [DIRLIST]
+
+DESCRIPTION
+-----------
+
+Remove intermediate files from software execution and various temporaries that clutter up storage.
+The default is to remove files similar to **make**
 
 OPTIONS
 -------
-  --all   Remove almost everything (Mac & PC files are left)
-  --build Remove standard compilation files (e.g., object files, libraries)
-  --exe   Remove only executables
-  --logs  Remove log files (i.e., have '.log' extension)
-  --mac   Remove Mac junk (e.g., .DS_Store)
-  --pc    Remove PC junk (e.g., thumbs.db)
-  -n      Don't execute, but display what would have been done
-  -q      Quiet
-  -v      Verbose
-  -vv     Very verbose (prolific)
 
-"
+| Select  | Description
+| ------  | -----------
+| --all   | Remove almost everything (Mac, PC & Vim files are left)
+| --build | Remove standard compilation files (e.g., object files, libraries)
+| --exe   | Remove only executables
+| --logs  | Remove log files (i.e., have ".log" extension)
+| --mac   | Remove Mac junk (e.g., ".DS_Store")
+| --pc    | Remove PC junk (e.g., "thumbs.db")
+| --temps | Remove Linux temporaries (e.g., *~ *.bak)
+| --vi    | Remove vim & vi swap files (i.e., .*.sw?)
+
+| Option  | Description
+| ------  | -----------
+| -k      | Remove to /tmp/clean_###/ (i.e., keep backup to allow undo)
+| -n      | No execution - just display what would have been done
+| -q      | Quiet
+| -v      | Verbose
+| -vv     | Very verbose (prolific)
+
+EXAMPLES
+--------
+
+clean
+clean -n --all
+clean --vim
+
+'
 
 function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
@@ -37,7 +61,7 @@ function _do()
   #@ echo and then execute arguments as a command
   #| _do [-n] COMMAND [ARGS]
   local NX
-  export NOTREALLY
+  export NOTREALLY TRASH_DIR
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
@@ -65,10 +89,13 @@ WHAT="intermediates"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" =~ ^-{1,2}a(ll)?$ ]]; then
     WHAT="all"
-    OPTS=BLX
+    OPTS=BLTX
+  elif [[ "$1" =~ ^-{1,2}ALL$ ]]; then
+    WHAT="everything"
+    OPTS=BLTVX
   elif [[ "$1" =~ ^-{1,2}av$ ]]; then
     WHAT="all"
-    OPTS=BLX
+    OPTS=BLTX
     VV=1
   elif [[ "$1" =~ ^-{1,2}b(uild)?$ ]]; then
     WHAT+=" + build"
@@ -82,7 +109,9 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^-{1,2}l(ogs)?$  || "$1" =~ ^-L$ ]]; then
     WHAT+=" + logfiles"
     OPTS+=L
-  elif [[ "$1" =~ ^-{1,2}mac?$ ]]; then
+  elif [[ "$1" =~ ^-{1,2}k(eep)?$ ]]; then
+    CMND="trash"
+  elif [[ "$1" =~ ^-{1,2}mac$ ]]; then
     WHAT+=" + mac"
     OPTS+=M
   elif [[ "$1" =~ ^-{1,2}m(ost)?$ ]]; then
@@ -94,6 +123,12 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^-{1,2}pc?$ ]]; then
     WHAT+=" + pc"
     OPTS+=P
+  elif [[ "$1" =~ ^-{1,2}t(emp|emps|empfiles)?$  || "$1" =~ ^-T$ ]]; then
+    WHAT+=" + tempfiles"
+    OPTS+=T
+  elif [[ "$1" =~ ^-{1,2}(vim|V)?$  || "$1" =~ ^-T$ ]]; then
+    WHAT+=" + vim-swapfiles"
+    OPTS+=V
   elif [[ "$1" =~ ^-{1,2}q(uiet)?$ ]]; then
     V=''
   elif [[ "$1" =~ ^-{1,2}v(erbose)?$ ]]; then
@@ -122,6 +157,8 @@ fi
 echo "Cleaning ${WHAT} in ${DIRS[*]}"
 YMD="$(date +%Y%m%d)"
 NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
+TRASH_DIR="${NEW_LOG/_log./_dir}"
+
 # shellcheck disable=SC2312
 echo "$0 $* ;# $(date) $(pwd)" >"${NEW_LOG}"
 for DIR in "${DIRS[@]}"; do
@@ -148,6 +185,17 @@ for DIR in "${DIRS[@]}"; do
     test -s "${V}" && echo "Removing executable files"
     _do find "${DIR}" -type f -name '*.x'            ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
+  if [[ "${OPTS}" =~ .*T.* ]]; then
+    test -s "${V}" && echo "Removing linux temporary files"
+    {
+      _do find "${DIR}" -type d -name '*~'           ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name '*.bak'        ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+    }
+  fi
+  if   [[ "${OPTS}" =~ .*V.* ]]; then
+    test -s "${V}" && echo "Removing vim swap files"
+    _do find "${DIR}" -type f -name '.*.sw?'         ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+  fi
   if [[ "${OPTS}" =~ .*B.* ]]; then
     test -s "${V}" && echo "Removing build directories"
     {
@@ -159,12 +207,13 @@ done 2>/dev/null | tee -a "${NEW_LOG}"
 if [[ ${VV} == 1 ]]; then
   less -EFK "${NEW_LOG}"
 fi
-# shellcheck disable=SC2312
-REMOVED="$(wc -l "${NEW_LOG}" | /usr/bin/perl -lane 'print $F[0]')"
+REMOVED="$(grep -Fcv '92mfind ' "${NEW_LOG}")"
 if [[ ${REMOVED} -gt 0 ]]; then (( REMOVED-- )); fi
 if [[ ${REMOVED} == 0 ]]; then REMOVED="no" ; fi
 # shellcheck disable=SC2312
 echo "Removed ${REMOVED} files. Details may be found in ${NEW_LOG}"
-find /tmp/ -cmin +1 -name clean_log.\*               ! -path '*/externs/*' -exec rm -f {} \; 2>/dev/null
+
+# Silently remove clean files older than 1 day
+find /tmp/ -ctim +1 -name clean_log.\* -exec rm -f {} \; 2>/dev/null
 
 # vim:nospell
