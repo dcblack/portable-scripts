@@ -253,10 +253,18 @@ function Build()
 
   #------------------------------------------------------------------------------
   Report_info "Configuring ${SUBPROJ_DIR}"
-  if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
-    _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}" || return 1
+  if [[ -z "${DEBUG}" ]]; then
+    if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
+      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" || return 1
+    else
+      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" || return 1
+    fi
   else
-    _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" "${DEBUG}"|| return 1
+    if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
+      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}" || return 1
+    else
+      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" "${DEBUG}" || return 1
+    fi
   fi
 
   #------------------------------------------------------------------------------
@@ -273,7 +281,7 @@ function Build()
         ( _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || return 1 ) 2>&1 | tee run.log
       done
     else
-      Report_error "Not sure what to run!"
+      Report_error "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under build."
     fi
   elif [[ "${ACTION}" == test ]]; then
     Report_info "Testing ${SUBPROJ_DIR}"
