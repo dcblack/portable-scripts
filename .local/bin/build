@@ -46,6 +46,7 @@ function Build()
   + -test    When done building, run the tests verbosely unless -q supplied
   + -install When done building, install
   + -targets List explicit targets
+  + -type BT Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
   + -verbose Adds more information to output. Opposite of quiet.
 
   ## CONFIGURATION
@@ -60,12 +61,13 @@ function Build()
 
   "
 
-  # Setup
+  # Setup defaults
   #------------------------------------------------------------------------------
   export SUBPROJ_DIR DEBUG
   local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET
   SRC_DIR="."
   BLD_DIR="build"
+  CMAKE_BUILD_TYPE
   SUBPROJ_DIR="$(pwd)"
   APPS="${HOME}/.local/apps"
   CLEAN=0
@@ -170,6 +172,8 @@ function Build()
       ACTION="list"
     elif [[ "$1" =~ ^-{1,2}test$ ]]; then
       ACTION="test"
+    elif [[ "$1" =~ ^-{1,2}type$ ]]; then
+      CMAKE_BUILD_TYPE="$1"
     elif [[ "$1" =~ ^-{1,2}run$ ]]; then
       ACTION="run"
     elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
@@ -257,13 +261,13 @@ function Build()
     if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
       _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" || return 1
     else
-      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" || return 1
+      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" || return 1
     fi
   else
     if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
       _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}" || return 1
     else
-      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" "${DEBUG}" || return 1
+      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" "${DEBUG}" || return 1
     fi
   fi
 
