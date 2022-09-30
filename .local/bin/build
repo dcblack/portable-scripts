@@ -67,7 +67,7 @@ function Build()
   local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET
   SRC_DIR="."
   BLD_DIR="build"
-  CMAKE_BUILD_TYPE
+  CMAKE_BUILD_TYPE="Debug"
   SUBPROJ_DIR="$(pwd)"
   APPS="${HOME}/.local/apps"
   CLEAN=0
