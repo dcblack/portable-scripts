@@ -175,6 +175,7 @@ function Build()
     elif [[ "$1" =~ ^-{1,2}type$ ]]; then
       if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z]+$ ]]; then
         CMAKE_BUILD_TYPE="$2"
+        shift
       else
         Report_error "--type must be followed by a build type such as Debug, Release, or RelWithDebugInfo"; return 1;
       fi
