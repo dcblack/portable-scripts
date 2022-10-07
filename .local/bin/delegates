@@ -15,13 +15,14 @@ if( $ARGV[0] =~ m/^-{1,2}h(elp)?$/ ) {
 Name
 ----
 
-$0 - extract delegate information from CoCalc courses
+$RealScript - extract delegate information from CoCalc courses
 
 Synopsis
 --------
 
-  $0 [-doall|-ssh|-who=_PATT_] _COURSEFILE(S)_...
-  $0 _EMAIL_
+  $RealScript --help|-h
+  $RealScript [-doall|-ssh|-who=_PATT_] _COURSEFILE(S)_...
+  $RealScript _EMAIL_
 
 Description
 -----------
@@ -38,6 +39,7 @@ Options
 OPTION      | DESCRIPTION
 ------      | -----------
 -doall      | generates a bash script to visit all delegate machines and perform an action
+--help|-h   | display this help text
 -ssh        | generates \$HOME/.ssh/config entries instead of a simple list
 -ssh/config | greps your ~/.ssh/config file for delegates
 -who        | allows filtering by delegate e-mail address.
@@ -48,6 +50,7 @@ EOT
   exit 1;
 }
 
+# Parse command-line
 my %OPT;
 while( $ARGV[0] =~ m/^-/ ) {
   my $opt = shift @ARGV;
@@ -63,9 +66,11 @@ $OPT{-verbose} = $OPT{-v} if exists $OPT{-v};
 $OPT{-list}    = $OPT{-l} if exists $OPT{-l};
 
 my $sshconfig = "$ENV{HOME}/.ssh/config";
-$sshconfig = $OPT{-ssh} if exists $OPT{-ssh} and $OPT{-ssh} ne '1';
-$sshconfig = $OPT{'-ssh/config'} if exists $OPT{'-ssh/config'} and $OPT{'-ssh/config'} ne '1';
+$sshconfig = $OPT{-ssh} if exists $OPT{-ssh} and $OPT{-ssh} ne $;;
+$sshconfig = $OPT{'-ssh/config'} if exists $OPT{'-ssh/config'} and $OPT{'-ssh/config'} ne $;;
 
+# Open debrief markdown file and search for lines matching: FirstName LastName <MailName@Domain>
+# Use this information to match e-mail address in Cocalc course to their real name.
 our %name;
 for my $debrief (glob("debrief[-_]*.md")) {
   printf "Parsing %s\n", $debrief if exists $OPT{-verbose};
