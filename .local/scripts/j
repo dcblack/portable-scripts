@@ -2,7 +2,7 @@
 
 export lwd nwd lws cws nws
 function j() {
-  export j_VERSION=1.4
+  export j_VERSION=1.4 FAVS
   # Synopsis
   #   j - more powerful alternative to cd (aka jump)
   # Syntax
@@ -11,18 +11,18 @@ function j() {
   #-----------------------------------------------------------------------------
   export lwd nwd cws nws
   local J_VERBOSE J_DEBUG TMP1 TMP2 J_MK
+  #local FAV FAV1
   J_VERBOSE=0
   J_DEBUG=0
   # Setup favorites list if not defined via exported FAVS variable
   if [[ -z "${FAVS}" ]]; then
     local fav
-    for fav in Favorites favs .favs; do
+    for fav in favs .favs Favorites; do
       FAVS="$(Realpath "${HOME}/${fav}")"
       if [[ -n "${FAVS}" ]]; then
         break
       fi
     done
-    export FAVS
   fi
   if [[ $# != 0 ]]; then
     # Parse command-line options
