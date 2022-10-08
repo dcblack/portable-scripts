@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+#| NAME
+#|
+#| get-local - get files from the specified corresponding remote directory (default $HOME/.local)
+#|
+#| SYNOPSYS
+#|
+#| get-local --help|-h
+#| get-local [REMOTE_DIR] FILES
+
+function Realpath()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function Get-local()
+{
+  local ExecPath ExecDir LocalDir
+  ExecPath="$(Realpath "$0")"
+  ExecDir="$(dirname "${ExecPath}")"
+  LocalDir="$(basename "${ExecDir}")"
+
+  # Error check
+  if [[ $# -lt 1 ]]; then
+    echo "Error: Requires one or more arguments"
+    set "-h"
+  fi
+
+  # Provide help
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    perl -ne 's/^#[|] ?// && print' "${ExecPath}"
+    return
+  fi
+
+  local MasterDir MasterFile LocalFile
+  if [[ -d "$1" ]]; then
+    MasterDir="$1"
+    shift
+  else
+    MasterDir="${HOME}/.local/${LocalDir}"
+  fi
+  for LocalFile in "$@"; do
+    MasterFile="${MasterDir}/${LocalFile}"
+    if [[ -e "${LocalFile}" ]]; then
+      echo "Warning: Skipping already present file: '${LocalFile}'" 1>&2
+    elif [[ -e "${MasterFile}" ]]; then
+      echo "Obtaining ${MasterFile}"
+      rsync -a "${MasterFile}" ./
+    fi
+  done
+}
+
+Get-local "$@"
