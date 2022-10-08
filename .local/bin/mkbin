@@ -242,12 +242,20 @@ function Mkbin()
     fi
   done
 
+  # Grab name of script
   if [[ $# != 1 ]]; then
     Report_error "Missing script name!"; return 1
-  elif [[ -z "${DIRECTORY}" ]]; then
-    SCRIPT="${1}"
+  fi
+  local BASENAME="$1"
+  if [[ "${BASENAME}" =~ .*/.* ]]; then
+    DIRECTORY="$(dirname "${BASENAME}")"
+    BASENAME="$(basename "${BASENAME}")"
+  fi
+
+  if [[ -z "${DIRECTORY}" ]]; then
+    SCRIPT="${BASENAME}"
   elif [[ -d "${DIRECTORY}" ]]; then
-    SCRIPT="${DIRECTORY}/${1}"
+    SCRIPT="${DIRECTORY}/${BASENAME}"
   else
     Report_error "Bad directory specification: ${DIRECTORY}"; return 1
   fi
