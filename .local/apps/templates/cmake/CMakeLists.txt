@@ -10,7 +10,7 @@ project(      {:NAME:}
   LANGUAGES   C CXX
   )
 
-list( PREPEND CMAKE_MODULE_PATH "$ENV{PROJECT_DIR}/cmake" )
+list( PREPEND CMAKE_MODULE_PATH "$ENV{WORKTREE_DIR}/cmake" )
 include( project_defaults )
 
 # Packages for this project

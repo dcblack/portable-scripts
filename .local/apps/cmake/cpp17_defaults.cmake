@@ -14,9 +14,9 @@ set( CMAKE_CXX_STANDARD_REQUIRED 17 CACHE BOOL   "The CMAKE_CXX_STANDARD selecte
 #------------------------------------------------------------------------------
 # If using local installation of libraries
 #------------------------------------------------------------------------------
-if( EXISTS $ENV{PROJECT_DIR}/externs )
-  include_directories( $ENV{PROJECT_DIR}/externs/include )
-  link_directories( $ENV{PROJECT_DIR}/externs/lib )
+if( EXISTS $ENV{WORKTREE_DIR}/externs )
+  include_directories( $ENV{WORKTREE_DIR}/externs/include )
+  link_directories( $ENV{WORKTREE_DIR}/externs/lib )
 endif()
 
 #------------------------------------------------------------------------------

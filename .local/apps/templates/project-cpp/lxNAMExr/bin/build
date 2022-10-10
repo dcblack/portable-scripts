@@ -48,10 +48,10 @@ function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
 # Setup
 #------------------------------------------------------------------------------
-export PROJECT_DIR SUBPROJ_DIR DEBUG
+export WORKTREE_DIR SUBPROJ_DIR DEBUG
 SRC_DIR="."
 BLD_DIR="build"
-PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
+WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
 SUBPROJ_DIR="$(pwd)"
 APPS="${HOME}/.local/apps"
 CLEAN=0
@@ -64,7 +64,7 @@ declare -a BUILD_OPTS TEST_OPTS
 BUILD_OPTS=()
 TEST_OPTS=()
 
-SCRIPTS="${PROJECT_DIR}/bin"
+SCRIPTS="${WORKTREE_DIR}/bin"
 if [[ ! -f "${SCRIPTS}/Essential-IO" ]]; then
   SCRIPTS="${HOME}/.local/scripts"
 fi
@@ -149,7 +149,7 @@ TARGETS="$(perl -lne '/add_executable[[:space:]]*[(][[:space:]]*([^[:space:]]+)/
 #-------------------------------------------------------------------------------
 export CMAKE_PREFIX_PATH
 CMAKE_PREFIX_PATH=
-for CDIR in "${SUBPROJ_DIR}" "${PROJECT_DIR}" "${PROJECT_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
   if [[ -d "${CDIR}/cmake" ]]; then
     if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
       CMAKE_PREFIX_PATH="${CDIR}"

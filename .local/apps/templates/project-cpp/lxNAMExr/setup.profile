@@ -76,26 +76,26 @@ APPS="${HOME}/.local/apps"
 #-------------------------------------------------------------------------------
 # Point to the top-level of this repository
 if git rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
-  PROJECT_DIR="$(git rev-parse --show-toplevel)"
+  WORKTREE_DIR="$(git rev-parse --show-toplevel)"
 else
   Report_error "This script is intended to be run inside the exercises directory -- aborting"
   return 1
 fi
-export APPS PROJECT_DIR
+export APPS WORKTREE_DIR
 
 if [[ "${ACTION}" != rm ]]; then
-  Prepend_path MANPATH "${PROJECT_DIR}/externs/share/man"
-  Prepend_path PATH "${PROJECT_DIR}/externs/bin"
-  Prepend_path PATH "${PROJECT_DIR}/bin"
+  Prepend_path MANPATH "${WORKTREE_DIR}/externs/share/man"
+  Prepend_path PATH "${WORKTREE_DIR}/externs/bin"
+  Prepend_path PATH "${WORKTREE_DIR}/bin"
 else
-  Remove_path  MANPATH "${PROJECT_DIR}/externs/share/man"
-  Remove_path  PATH "${PROJECT_DIR}/externs/bin"
-  Remove_path  PATH "${PROJECT_DIR}/bin"
+  Remove_path  MANPATH "${WORKTREE_DIR}/externs/share/man"
+  Remove_path  PATH "${WORKTREE_DIR}/externs/bin"
+  Remove_path  PATH "${WORKTREE_DIR}/bin"
 fi
 
 #-------------------------------------------------------------------------------
 # Cmake should refer to project and group directories to find scripts
-CMAKE_PREFIX_PATH="${PROJECT_DIR}/cmake;${APPS}/cmake;${PROJECT_DIR}/externs/lib/cmake"
+CMAKE_PREFIX_PATH="${WORKTREE_DIR}/cmake;${APPS}/cmake;${WORKTREE_DIR}/externs/lib/cmake"
 export CMAKE_PREFIX_PATH
 
 #-------------------------------------------------------------------------------
@@ -103,8 +103,8 @@ export CMAKE_PREFIX_PATH
 if [[ ! -d "${APPS}/cmake" ]]; then
   Report_warning "${APPS} missing!? Did you install portable scripts?"
 fi
-if [[ ! -d "${PROJECT_DIR}/externs/lib/cmake" ]]; then
-  Report_warning "${PROJECT_DIR}/externs/lib/cmake missing!? Did you build GoogleTest?"
+if [[ ! -d "${WORKTREE_DIR}/externs/lib/cmake" ]]; then
+  Report_warning "${WORKTREE_DIR}/externs/lib/cmake missing!? Did you build GoogleTest?"
 fi
 
 #-------------------------------------------------------------------------------

@@ -11,17 +11,17 @@ set( PROJECT_DEFAULTS ON )
 
 #set(CMAKE_CXX_VISIBILITY_PRESET hidden) 
 
-if( DEFINED ENV{PROJECT_DIR} )
-  set( PROJECT_DIRS "$ENV{PROJECT_DIR}/externs;$ENV{APPS}" )
+if( DEFINED ENV{WORKTREE_DIR} )
+  set( PROJECT_DIRS "$ENV{WORKTREE_DIR}/externs;$ENV{APPS}" )
   foreach( _dir ${PROJECT_DIRS} )
      if( EXISTS "${_dir}" )
        list( APPEND CMAKE_PREFIX_PATH "${_dir}" )
      endif()
   endforeach()
   list( REMOVE_DUPLICATES CMAKE_PREFIX_PATH )
-  include_directories( . "$ENV{PROJECT_DIR}" )
+  include_directories( . "$ENV{WORKTREE_DIR}" )
 else()
-  message( WARNING "PROJECT_DIR environment variable was not defined" )
+  message( WARNING "WORKTREE_DIR environment variable was not defined" )
 endif()
 
 #-------------------------------------------------------------------------------
