@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #
+# shellcheck disable=SC2312
+
 cat >/dev/null <<'EOF' ;# Documentation begin_markdown {
 SYNOPSIS
 ========
@@ -92,7 +94,6 @@ export NOINSTALL
 export UNINSTALL
 export VERBOSITY
 export WARNINGS
-export NONE BOLD UNDR CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT CRED
 
 function Realpath ()
 {
@@ -595,6 +596,8 @@ function GetBuildOpts()
 
 function SetupLogdir()
 {
+  local NONE
+  NONE="$(_C none)"
   # Creates log directory and sets initial LOGFILE
   LOGDIR="${HOME}/logs"
   mkdir -p "${LOGDIR}"
@@ -604,13 +607,13 @@ function SetupLogdir()
       ;;
     0)
       if [[ -z "${LOGFILE}" ]]; then
-        echo "${CRED}Warning:${NONE} Did not specify LOGFILE${NONE}"
+        echo "$(_C red)Warning:${NONE} Did not specify LOGFILE${NONE}"
       else
         Logfile
       fi
       ;;
     *)
-      echo "${CRED}Error: Too many parameters specified${NONE}"
+      echo "$(_C red)Error: Too many parameters specified${NONE}"
       ;;
   esac
 }
@@ -672,6 +675,7 @@ function Configure_tool()
       _do cmake -B "${BUILD_DIR}"\
           -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
           -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+          -DBUILD_SOURCE_DOCUMENTATION=on\
           "${APPLE}"
       ;;
     autotools)

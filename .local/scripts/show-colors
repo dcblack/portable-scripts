@@ -1,15 +1,33 @@
 #!/usr/bin/env bash
+#
+# shellcheck disable=SC2312
 
 function show-colors() { # display all the color combinations
-  echo "${BOLD}${BBLK}${CRED}Hello ${CGRN}world:${NONE}"
-  echo "    ${UNDR}${BOLD}RAW PLN BLD${NONE}"
-  echo "  - ${CBLK}blk ${BWHT}${CBLK}blk ${BOLD}BLK${NONE}"
-  echo "  - ${CRED}red ${BWHT}${CRED}red ${BOLD}RED${NONE}"
-  echo "  - ${CGRN}grn ${BBLK}${CGRN}grn ${BOLD}GRN${NONE}"
-  echo "  - ${CYLW}ylw ${BBLK}${CYLW}ylw ${BOLD}YLW${NONE}"
-  echo "  - ${CBLU}blu ${BWHT}${CBLU}blu ${BOLD}BLU${NONE}"
-  echo "  - ${CMAG}mag ${BWHT}${CMAG}mag ${BOLD}MAG${NONE}"
-  echo "  - ${CCYN}cyn ${BBLK}${CCYN}cyn ${BOLD}CYN${NONE}"
-  echo "  - ${CWHT}wht ${BBLK}${CWHT}wht ${BOLD}WHT${NONE}"
+  Load Essential-IO
+  local NONE
+  NONE="$(_C none)"
+  echo "$(_C bg black fg bright bold red)Hello $(_C green)world:${NONE}"
+  _C normal nounderscore
+  echo "    $(_C bold underscore green)RAW PLN BLD BLK+BLD WHT+BLD${NONE}"
+  echo "  * $(_C - ubld)blk $(_C blk)blk $(_C bold)blk $(_C fg blk bg blk)blk $(_C - bold fg blk bg blk)blk $(_C fg blk bg wht)blk $(_C - bold fg blk bg wht)blk${NONE}"
+  echo "  * $(_C - ubld)red $(_C red)red $(_C bold)red $(_C fg red bg blk)red $(_C - bold fg red bg blk)red $(_C fg red bg wht)red $(_C - bold fg red bg wht)red${NONE}"
+  echo "  * $(_C - ubld)grn $(_C grn)grn $(_C bold)grn $(_C fg grn bg blk)grn $(_C - bold fg grn bg blk)grn $(_C fg grn bg wht)grn $(_C - bold fg grn bg wht)grn${NONE}"
+  echo "  * $(_C - ubld)ylw $(_C ylw)ylw $(_C bold)ylw $(_C fg ylw bg blk)ylw $(_C - bold fg ylw bg blk)ylw $(_C fg ylw bg wht)ylw $(_C - bold fg ylw bg wht)ylw${NONE}"
+  echo "  * $(_C - ubld)blu $(_C blu)blu $(_C bold)blu $(_C fg blu bg blk)blu $(_C - bold fg blu bg blk)blu $(_C fg blu bg wht)blu $(_C - bold fg blu bg wht)blu${NONE}"
+  echo "  * $(_C - ubld)mag $(_C mag)mag $(_C bold)mag $(_C fg mag bg blk)mag $(_C - bold fg mag bg blk)mag $(_C fg mag bg wht)mag $(_C - bold fg mag bg wht)mag${NONE}"
+  echo "  * $(_C - ubld)cyn $(_C cyn)cyn $(_C bold)cyn $(_C fg cyn bg blk)cyn $(_C - bold fg cyn bg blk)cyn $(_C fg cyn bg wht)cyn $(_C - bold fg cyn bg wht)cyn${NONE}"
+  echo "  * $(_C - ubld)wht $(_C wht)wht $(_C bold)wht $(_C fg wht bg blk)wht $(_C - bold fg wht bg blk)wht $(_C fg wht bg wht)wht $(_C - bold fg wht bg wht)wht${NONE}"
+
+  _C bright nounderscore
+  echo "    $(_C bold underscore green)RAW PLN BLD BLK+BLD WHT+BLD${NONE}"
+  echo "  * $(_C - ubld)blk $(_C blk)blk $(_C bold)blk $(_C fg blk bg blk)blk $(_C - bold fg blk bg blk)blk $(_C fg blk bg wht)blk $(_C - bold fg blk bg wht)blk${NONE}"
+  echo "  * $(_C - ubld)red $(_C red)red $(_C bold)red $(_C fg red bg blk)red $(_C - bold fg red bg blk)red $(_C fg red bg wht)red $(_C - bold fg red bg wht)red${NONE}"
+  echo "  * $(_C - ubld)grn $(_C grn)grn $(_C bold)grn $(_C fg grn bg blk)grn $(_C - bold fg grn bg blk)grn $(_C fg grn bg wht)grn $(_C - bold fg grn bg wht)grn${NONE}"
+  echo "  * $(_C - ubld)ylw $(_C ylw)ylw $(_C bold)ylw $(_C fg ylw bg blk)ylw $(_C - bold fg ylw bg blk)ylw $(_C fg ylw bg wht)ylw $(_C - bold fg ylw bg wht)ylw${NONE}"
+  echo "  * $(_C - ubld)blu $(_C blu)blu $(_C bold)blu $(_C fg blu bg blk)blu $(_C - bold fg blu bg blk)blu $(_C fg blu bg wht)blu $(_C - bold fg blu bg wht)blu${NONE}"
+  echo "  * $(_C - ubld)mag $(_C mag)mag $(_C bold)mag $(_C fg mag bg blk)mag $(_C - bold fg mag bg blk)mag $(_C fg mag bg wht)mag $(_C - bold fg mag bg wht)mag${NONE}"
+  echo "  * $(_C - ubld)cyn $(_C cyn)cyn $(_C bold)cyn $(_C fg cyn bg blk)cyn $(_C - bold fg cyn bg blk)cyn $(_C fg cyn bg wht)cyn $(_C - bold fg cyn bg wht)cyn${NONE}"
+  echo "  * $(_C - ubld)wht $(_C wht)wht $(_C bold)wht $(_C fg wht bg blk)wht $(_C - bold fg wht bg blk)wht $(_C fg wht bg wht)wht $(_C - bold fg wht bg wht)wht${NONE}"
 }
 
+#vim:nospell

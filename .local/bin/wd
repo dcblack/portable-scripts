@@ -10,6 +10,8 @@
 #   rwd_func
 #   wds_func
 #   aliases
+#
+# shellcheck disable=SC2312
 
 function Realpath ()
 {
@@ -246,6 +248,8 @@ function rwd() # rwd_func
 #-------------------------------------------------------------------------------
 function wds() # wds_func
 {
+  local NONE
+  NONE="$(_C none)"
   Comment "List saved working directories"
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   export wd_favs
@@ -262,14 +266,14 @@ function wds() # wds_func
     then
       t="${r/#${h}/}"
       # shellcheck disable=SC2154
-      printf "${CCYN}%s ${CGRN}->${NONE} %s${NONE}\n" "${n}" "${CMAG}${BOLD}${h}${NONE}${t}"
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${h}${NONE}${t}"
     elif [[ -z "${r}" ]]; then
       # shellcheck disable=SC2154
-      r="${CRED}${BOLD}?? ${NONE}${UNDR}${CRED}$(readlink "${p}") ??${NONE}"
-      printf "${CCYN}%s ${CGRN}->${NONE} %s\n" "${n}" "${r}"
+      r="$(_C bold red)?? ${NONE}$(_C underscore red)$(readlink "${p}") ??${NONE}"
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
     else
       # shellcheck disable=SC2154
-      printf "${CCYN}%s ${CGRN}->${NONE} %s\n" "${n}" "${r}"
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
     fi
   done
   export cwd lwd

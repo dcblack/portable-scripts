@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
+# shellcheck disable=SC2312
 
-export Essential_IO_VERSION=1.4
+export Essential_IO_VERSION=1.5
 
 #-------------------------------------------------------------------------------
 function Essential-IO()
@@ -15,7 +16,7 @@ A collection of useful functions for output in bash/zsh.
 
 | FUNCTION SYNTAX               | DESCRIPTION 
 | :---------------------------- | :---------- 
-| Color-Setup ON_or_OFF         | Enables color variables (e.g., CBLU)
+| _C color                      | Returns the color code (if enabled)
 | Columns                       | Display the number columns in the current terminal
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
 | Confirm "_PROMPT_"            | Return 0 if yes else return 1
@@ -36,11 +37,12 @@ A collection of useful functions for output in bash/zsh.
 | Reset-errors                  | Reset error and warning counts to zero
 | Rows                          | Display the number rows in the current terminal
 | Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
+| Setup-Color ON_or_OFF         | Enables color (e.g., $(_C bold blue))
 | ShowVars VARLIST              | Echo values of variables
 | Summary TARGET ["_MESSAGE_"]  | Echo a report summary of errors and warnings
 | Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
 | Warnings                      | Display number of errors
-| _do _COMMAND_                 | Displays and executes a command
+| _do [-n] _COMMAND_            | Displays and (unless suppressed) executes a command
 
 TEXT
   elif [[ $# == 0 ]]; then
@@ -76,84 +78,134 @@ function Realpath()
 #-------------------------------------------------------------------------------
 function Columns()
 {
-  # shellcheck disable=SC2312
   stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
 }
 
 #-------------------------------------------------------------------------------
 function Rows()
 {
-  # shellcheck disable=SC2312
   stty -a | /usr/bin/perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
 }
 
 #-------------------------------------------------------------------------------
-function Color-Setup()
+function _C()
+{
+  export NOCOLOR
+  if [[ ${NOCOLOR} == 1 ]]; then
+    return
+  fi
+  if [[ $# == 0 ]]; then set none; fi
+  export COLOR_SET COLOR_FG
+  local ESC PRF
+  if [[ -z "${COLOR_SET}" ]]; then # default
+    COLOR_SET=10
+  fi
+  if [[ -z "${COLOR_FG}" ]]; then # default
+    COLOR_FG=1
+  fi
+  ESC=""
+  for arg in "$@"; do
+    test -z "${arg}" && continue
+    if [[ ${COLOR_FG} == 1 ]]; then
+      case ${COLOR_SET} in
+        2)  PRF="3"  ;;
+        10) PRF="9"  ;;
+        *)  return 1 ;;
+      esac
+    else
+      case ${COLOR_SET} in
+        2)  PRF="4"  ;;
+        10) PRF="10" ;;
+        *) return 1  ;;
+      esac
+    fi
+    case "${arg}" in
+      dflt|default)    COLOR_SET=2 ; COLOR_FG=1 ;;
+      fg|foreground)   COLOR_FG=1 ;;
+      bg|background)   COLOR_FG=0 ;;
+      bright)          COLOR_SET=10 ;;
+      norm|normal)     COLOR_SET=2 ;;
+      -|none)          echo -n "${ESC}[0m" ; COLOR_FG=1 ;;
+      bold)            echo -n "${ESC}[1m" ;;
+      ubld|nobold)     echo -n "${ESC}[21m" ;;
+      dark)            echo -n "${ESC}[2m" ;;
+      udrk|nodark)     echo -n "${ESC}[22m" ;;
+      undr|under*)     echo -n "${ESC}[4m" ;;
+      blnk|blink)      echo -n "${ESC}[5m" ;;
+      noun*)           echo -n "${ESC}[24m" ;;
+      nblk|noblink)    echo -n "${ESC}[25m" ;;
+      rev*)            echo -n "${ESC}[8m" ;;
+      invs|invi*)      echo -n "${ESC}[8m" ;;
+      unvs|visi*)      echo -n "${ESC}[27m" ;;
+      blk|black)       echo -n "${ESC}[${PRF}0m" ;;
+      red)             echo -n "${ESC}[${PRF}1m" ;;
+      grn|green)       echo -n "${ESC}[${PRF}2m" ;;
+      ylw|yellow)      echo -n "${ESC}[${PRF}3m" ;;
+      blu|blue)        echo -n "${ESC}[${PRF}4m" ;;
+      mag|magenta)     echo -n "${ESC}[${PRF}5m" ;;
+      cyn|cyan)        echo -n "${ESC}[${PRF}6m" ;;
+      wht|white)       echo -n "${ESC}[${PRF}7m" ;;
+      *)               return 1 ;;
+    esac
+  done
+  echo ""
+}
+
+#-------------------------------------------------------------------------------
+function Setup-Color()
 {
   #@ Setup variables used to create color (or not)
-  #| Color-Setup [off|on|bright]
-  local USE_COLOR ESC
-  USE_COLOR=1 ;# Default ON
+  #| Setup-Color [off|on|bright]
+  # Try to eliminate use of color vars Cxxx and Bxxx
+  export NONE BOLD UBLD UNDR UNUN DARK UDRK INVS UNVS
+  export CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT
+  export BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
+  # These are OK
+  export COLOR_VARS COLOR_SET COLOR_FG
+  local ESC
+  if [[ -z "${COLOR_VARS}" && -n "${CRED+x}" ]]; then
+    COLOR_VARS=1
+  else
+    COLOR_VARS=0
+  fi
   ESC=""
   case "$*" in
-    off|OFF|no|NO|none|NONE) USE_COLOR=0;;
-    bold|bright) USE_COLOR=10;;
-    on|ON|yes|YES) USE_COLOR=2;;
+    off|OFF|no|NO|none|NONE) COLOR_SET=0   ;;
+    on|ON|yes|YES)           COLOR_SET=2   ;;
+    bold|bright)             COLOR_SET=10  ;;
+    vars|use_vars)           COLOR_VARS=1  ;;
+    novars)                  COLOR_VARS=0  ;;
     *) echo "WARNING: Unknown color setting - using default" 1>&2;;
   esac
-  if [[ -n ${NOCOLOR+x} ]]; then
-    USE_COLOR=0;
+  unset NONE BOLD UBLD DARK UDRK INVS UNVS UNDR UNUN
+  unset CBLK CRED  CYLW CBLU CMAG CCYN CWHT
+  unset BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
+  if [[ -z "${COLOR_SET}" ]]; then
+    COLOR_SET=10
   fi
-  if [[ ${USE_COLOR} == 10 ]]; then
-    # shellcheck disable=SC2034
-    BOLD="${ESC}[01m"  UBLD="${ESC}[21m"
-    DARK="${ESC}[02m"  UDRK="${ESC}[22m"
-    UNDR="${ESC}[04m"  UNUN="${ESC}[24m"
-    INVS="${ESC}[07m"  UNVS="${ESC}[27m"
-    CBLK="${ESC}[90m"  CRED="${ESC}[91m"  CGRN="${ESC}[92m"   CYLW="${ESC}[93m" 
-    CBLU="${ESC}[94m"  CMAG="${ESC}[95m"  CCYN="${ESC}[96m"   CWHT="${ESC}[97m" 
-    BBLK="${ESC}[100m" BRED="${ESC}[101m" BGRN="${ESC}[102m" BYLW="${ESC}[103m"
-    BBLU="${ESC}[104m" BMAG="${ESC}[105m" BCYN="${ESC}[106m" BWHT="${ESC}[107m"
-    NONE="${ESC}[00m"
-  elif [[ ${USE_COLOR} -gt 0 ]]; then
-    # shellcheck disable=SC2034
-    ESC=""
-    BOLD="${ESC}[01m" UBLD="${ESC}[21m"
-    DARK="${ESC}[02m" UDRK="${ESC}[22m"
-    UNDR="${ESC}[04m" UNUN="${ESC}[24m"
-    INVS="${ESC}[07m" UNVS="${ESC}[27m"
-    CBLK="${ESC}[30m" CRED="${ESC}[31m" CGRN="${ESC}[32m" CYLW="${ESC}[33m"
-    CBLU="${ESC}[34m" CMAG="${ESC}[35m" CCYN="${ESC}[36m" CWHT="${ESC}[37m"
-    BBLK="${ESC}[40m" BRED="${ESC}[41m" BGRN="${ESC}[42m" BYLW="${ESC}[43m"
-    BBLU="${ESC}[44m" BMAG="${ESC}[45m" BCYN="${ESC}[46m" BWHT="${ESC}[47m"
-    NONE="${ESC}[00m"
-  else
-    # shellcheck disable=SC2034
-    NONE=""
-    BOLD="" UBLD=""
-    DARK="" UDRK=""
-    INVS="" UNVS=""
-    UNDR="" UNUN=""
-    CBLK=""
-    CRED=""
-    CGRN=""
-    CYLW=""
-    CBLU=""
-    CMAG=""
-    CCYN=""
-    CWHT=""
-    BBLK=""
-    BRED=""
-    BGRN=""
-    BYLW=""
-    BBLU=""
-    BMAG=""
-    BCYN=""
-    BWHT=""
+  if [[ ${NOCOLOR} == 1 ]]; then
+    COLOR_SET=0;
   fi
-  export NONE BOLD UBLD UNDR UNUN DARK UDRK INVS UNVS CBLK CRED CGRN CYLW CBLU CMAG CCYN CWHT BBLK BRED BGRN BYLW BBLU BMAG BCYN BWHT
+  if [[ ${COLOR_VARS} == 0 ]]; then
+    return
+  fi
+  if [[ ${COLOR_VARS} == 1 ]]; then
+    local PREV_FG=${COLOR_FG} PREV_SET=${COLOR_SET}
+    BOLD="$(_C bold)"  UBLD="$(_C nobold)"
+    DARK="$(_C dark)"  UDRK="$(_C nodark)"
+    UNDR="$(_C undr)"  UNUN="$(_C noun)"
+    INVS="$(_C invs)"  UNVS="$(_C unvs)"
+    COLOR_FG=1
+    CBLK="$(_C blk)"   CRED="$(_C red)"  CGRN="$(_C grn)"  CYLW="$(_C ylw)" 
+    CBLU="$(_C bold)"  CMAG="$(_C bold)" CCYN="$(_C bold)" CWHT="$(_C bold)" 
+    COLOR_FG=0
+    BBLK="$(_C bold)m" BRED="$(_C bold)" BGRN="$(_C bold)" BYLW="$(_C bold)"
+    BBLU="$(_C blue)m" BMAG="$(_C mag)"  BCYN="$(_C bold)" BWHT="$(_C bold)"
+    NONE="$(_C none)"
+    COLOR_FG=${PREV_FG} COLOR_SET=${PREV_SET}
+  fi
 }
-Color-Setup on
+Setup-Color bright
 
 #-------------------------------------------------------------------------------
 function Logfile()
@@ -271,10 +323,10 @@ function _do()
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
-    Echo "$*"
+    Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
     return 0;
   else
-    Echo "${CCYN}${NX}%${NONE} ${BOLD}$*${NONE}"
+    Echo "$(_C cyn)${NX}%$(_C none bold) $*$(_C none)"
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   "$@"
@@ -299,7 +351,7 @@ SYNOPSIS
     return 0
   fi
   local PRE TAG EOL
-  PRE="${NONE}"
+  PRE="$(_C none)"
   EOL=""
   TAG="Info: "
   if [[ -n "${NOTREALLY}" ]]; then
@@ -309,27 +361,27 @@ SYNOPSIS
     case "$1" in
       -h)   Echo "${SYNTAX}"; return 0 ;;
       -n)   EOL="-n"      ; shift ;;
-      -clr) PRE="${NONE}"       ; shift  ; shift ;;
+      -clr) PRE="$(_C none)"       ; shift  ; shift ;;
       -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
-      -cyn) PRE="${PRE}${CCYN}" ; shift ;;
-      -red) PRE="${PRE}${CRED}" ; shift ;;
-      -grn) PRE="${PRE}${CGRN}" ; shift ;;
-      -ylw) PRE="${PRE}${CYLW}" ; shift ;;
-      -blu) PRE="${PRE}${CBLU}" ; shift ;;
-      -mag) PRE="${PRE}${CMAG}" ; shift ;;
-      -wht) PRE="${PRE}${CWHT}" ; shift ;;
-      -bld) PRE="${PRE}${BOLD}" ; shift ;;
+      -cyn) PRE="${PRE}$(_C cyn)" ; shift ;;
+      -red) PRE="${PRE}$(_C red)" ; shift ;;
+      -grn) PRE="${PRE}$(_C grn)" ; shift ;;
+      -ylw) PRE="${PRE}$(_C ylw)" ; shift ;;
+      -blu) PRE="${PRE}$(_C blu)" ; shift ;;
+      -mag) PRE="${PRE}$(_C mag)" ; shift ;;
+      -wht) PRE="${PRE}$(_C wht)" ; shift ;;
+      -bld) PRE="${PRE}$(_C bold)" ; shift ;;
       -tag) TAG="${2}";
             if [[ "${#TAG}" -gt 1 ]]; then TAG="${TAG}:" ; fi
             if [[ "${#TAG}" -gt 0 ]]; then TAG="${TAG} " ; fi
             shift ; shift ;;
-      *) PRE="${NONE}" ;;
+      *) PRE="$(_C none)" ;;
     esac
   done
   if [[ -z "${EOL}" ]]; then
-    Echo "${CGRN}${BOLD}${TAG}${NONE}${PRE}$*${NONE}"
+    Echo "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
   else
-    Echo -n "${CGRN}${BOLD}${TAG}${NONE}${PRE}$*${NONE}"
+    Echo -n "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
   fi
 }
 
@@ -342,9 +394,17 @@ function PassFail()
     shift
   fi
   if [[ $# == 0 ]]; then
-    if [[ ${STATUS} == 0 ]]; then Report_info "${BOLD}${CGRN}success${NONE}"; else Report_info "${BOLD}${CRED}failure${NONE}"; fi
+    if [[ ${STATUS} == 0 ]]; then
+      Report_info "$(_C bold grn)success$(_C none)";
+    else
+      Report_info "$(_C bold red)failure$(_C none)";
+    fi
   else
-    if [[ ${STATUS} == 0 ]]; then Report_info "$* ${BOLD}${CGRN}success${NONE}"; else Report_info "$* ${BOLD}${CRED}failure${NONE}"; fi
+    if [[ ${STATUS} == 0 ]]; then
+      Report_info "$* $(_C bold grn)success$(_C none)";
+    else
+      Report_info "$* $(_C bold red)failure$(_C none)";
+    fi
   fi
 }
 
@@ -377,9 +437,9 @@ function Report_debug()
     FMT="${args[1]}"
     (( n-- ))
     args=("${args[@]:0:${n}}")
-    Printf "${CRED}Debug: ${NONE}${FMT}${NONE}" "${args[@]}"
+    Printf "$(_C red)Debug: $(_C none)${FMT}$(_C none)" "${args[@]}"
   else
-    Echo "${CRED}Debug: ${NONE}${args[*]}${NONE}"
+    Echo "$(_C red)Debug: $(_C none)${args[*]}$(_C none)"
   fi
 }
 
@@ -409,14 +469,14 @@ function Ruler()
   while [[ "$1" =~ ^-[[:alpha:]]{3,3}$ ]]; do
     case "$1" in
       -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
-      -cyn) PRE="${PRE}${CCYN}" ; shift ;;
-      -red) PRE="${PRE}${CRED}" ; shift ;;
-      -grn) PRE="${PRE}${CGRN}" ; shift ;;
-      -mag) PRE="${PRE}${CMAG}" ; shift ;;
-      -ylw) PRE="${PRE}${CYLW}" ; shift ;;
-      -wht) PRE="${PRE}${CWHT}" ; shift ;;
-      -blu) PRE="${PRE}${CBLU}" ; shift ;;
-      -bld) PRE="${PRE}${BOLD}" ; shift ;;
+      -cyn) PRE="${PRE}$(_C cyn)" ; shift ;;
+      -red) PRE="${PRE}$(_C red)" ; shift ;;
+      -grn) PRE="${PRE}$(_C grn)" ; shift ;;
+      -mag) PRE="${PRE}$(_C mag)" ; shift ;;
+      -ylw) PRE="${PRE}$(_C ylw)" ; shift ;;
+      -wht) PRE="${PRE}$(_C wht)" ; shift ;;
+      -blu) PRE="${PRE}$(_C blu)" ; shift ;;
+      -bld) PRE="${PRE}$(_C bold)" ; shift ;;
          *) PRE="" ;;
     esac
   done
@@ -433,9 +493,9 @@ function Ruler()
   fi
   LIN="$(/usr/bin/perl -le 'my ($w,$s)=@ARGV;printf(qq{%${w}.${w}s},${s}x${w})' "${MAX}" "${SEP}")"
   if [[ $# == 0 ]]; then
-    Printf "%s%s\n" "${LIN}" "${NONE}"
+    Printf "%s%s\n" "${LIN}" "$(_C none)"
   else
-    Printf "%s%s %s %s%s\n" "${SEP}" "${SEP}" "${ARGS}" "${LIN}" "${NONE}"
+    Printf "%s%s %s %s%s\n" "${SEP}" "${SEP}" "${ARGS}" "${LIN}" "$(_C none)"
   fi
 }
 
@@ -444,21 +504,44 @@ function Ruler()
 function Report_fatal()
 {
   Ruler -bld -red '!'
-  Echo "${CRED}${BOLD}Fatal:${NONE} $*${NONE}" 1>&2
+  Echo "$(_C bold red)Fatal:$(_C none red) $*$(_C none)" 1>&2
   return 1
 }
 
 #-------------------------------------------------------------------------------
-function Assert()
+if [[ -n "${ZSH_VERSION}" ]]; then
+  alias Assert='Assertion "$(print -P "%N")" "$(print -P "%x")" "$(print -P "%i")"'
+else
+  alias Assert='Assertion "${FUNCNAME[1]}" "${BASH_SOURCE[1]}" "${BASH_LINENO[1]}"'
+fi
+function Assertion()
 {
   #@ Similar to sc_assert
   if [[ -n "${NDEBUG}" ]]; then return 0; fi
-  test "$@" && return 0
   local FNC FIL LNO
-  FNC="${FUNCNAME[1]}"
-  FIL="${BASH_SOURCE[1]}"
-  LNO="${BASH_LINENO[1]}"
+  FNC="$1"; shift
+  FIL="$1"; shift
+  LNO="$1"; shift
+  test "$@" && return 0
   Report_fatal "Failed assertion '$*' from ${FNC} in ${FIL}:${LNO}"
+}
+
+if [[ -n "${ZSH_VERSION}" ]]; then
+  alias Expect='Expectation "$(print -P "%N")" "$(print -P "%x")" "$(print -P "%i")"'
+else
+  alias Expect='Expectation "${FUNCNAME[1]}" "${BASH_SOURCE[1]}" "${BASH_LINENO[1]}"'
+fi
+#-------------------------------------------------------------------------------
+function Expectation()
+{
+  #@ Similar to sc_assert, but non-fatal
+  if [[ -n "${NDEBUG}" ]]; then return 0; fi
+  local FNC FIL LNO
+  FNC="$1"; shift
+  FIL="$1"; shift
+  LNO="$1"; shift
+  test "$@" && return 0
+  Report_error "Failed expectation '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
 #-------------------------------------------------------------------------------
@@ -470,7 +553,7 @@ function Report_error()
   (( ++ERRORS ))
   export ERRORS
   Ruler -bld -red '!'
-  Echo "${CRED}${BOLD}Error #${ERRORS}:${NONE} ${NONE}$*${NONE}" 1>&2
+  Echo "$(_C bold red)Error #${ERRORS}:$(_C none red) $*$(_C none)" 1>&2
 }
 
 #-------------------------------------------------------------------------------
@@ -482,7 +565,7 @@ function Report_warning()
   (( ++WARNINGS ))
   export WARNINGS
   Ruler -bld -ylw '?'
-  Echo "${CYLW}${BOLD}Warning:${NONE} ${NONE}$*${NONE}" 1>&2
+  Echo "$(_C ylw)$(_C bold)Warning:$(_C none) $(_C none)$*$(_C none)" 1>&2
 }
 
 export ERRORS WARNINGS
@@ -560,23 +643,23 @@ function Summary()
   fi
   local TARGET
   TARGET="${1}"
-  Echo -n "${CMAG}Execution summary for ${TARGET}:"
+  Echo -n "$(_C mag)Execution summary for ${TARGET}:"
   shift
   if [[ "$(Warnings||true)" == 0 ]]; then
-    Echo -n " ${CGRN}No warnings"
+    Echo -n " $(_C grn)No warnings"
   else
-    Echo -n " ${CRED}$(Warnings||true) warnings"
+    Echo -n " $(_C red)$(Warnings||true) warnings"
   fi
   if [[ "$(Errors||true)" == 0 ]]; then
-    Echo -n "  ${CGRN}No errors"
+    Echo -n "  $(_C grn)No errors"
   else
-    Echo -n "  ${CRED}$(Errors||true) errors"
+    Echo -n "  $(_C red)$(Errors||true) errors"
   fi
   local RESULT
-  if [[ "$(Errors||true)" == 0 ]]; then Echo -n " - ${CGRN}passing"; RESULT=0;
-  else                          Echo -n " - ${CRED}failing"; RESULT=1;
+  if [[ "$(Errors||true)" == 0 ]]; then Echo -n " - $(_C grn)passing"; RESULT=0;
+  else                          Echo -n " - $(_C red)failing"; RESULT=1;
   fi
-  Echo -n "${NONE}"
+  Echo -n "$(_C none)"
   if [[ $# -gt 0 ]]; then Echo " $*"; fi
   Echo ""
   return "${RESULT}"
