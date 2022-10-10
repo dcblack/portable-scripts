@@ -24,9 +24,9 @@ function Build()
   This script was written to simplify using _cmake_ and educate along they. It provides a single command to configure, compile, link and run or test projects.  It assume a proper CMakeLists.txt has been setup. Bascially, all this does is:
 
   + clean -a # OPTIONAL
-  + cmake -B build
-  + cmake --build build
-  + ctest --test-dir build # OPTIONAL -OR- run
+  + cmake -B build/debug
+  + cmake --build build/debug
+  + ctest --test-dir build/debug # OPTIONAL -OR- run
   + cmake --install --config Debug
 
   IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
@@ -40,7 +40,7 @@ function Build()
   + -clean   Remove all build files and other output bits
   + -debug   Output information to help debug CMakeLists.txt etc.
   + -quiet   Remove verbosity when -test invoked
-  + -P DIR   Set PROJECT_DIR. PROJECT_DIR should contain .git/
+  + -P DIR   Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
   + -run     When done building, run the executable
   + -S DIR   Name of source directory -- defaults to \".\"
   + -test    When done building, run the tests verbosely unless -q supplied
@@ -66,8 +66,8 @@ function Build()
   export SUBPROJ_DIR DEBUG
   local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET
   SRC_DIR="."
-  BLD_DIR="build"
   CMAKE_BUILD_TYPE="Debug"
+  BLD_DIR="build"
   SUBPROJ_DIR="$(pwd)"
   APPS="${HOME}/.local/apps"
   CLEAN=0
@@ -102,8 +102,8 @@ function Build()
   #------------------------------------------------------------------------------
   # Scan for command-line options
   #------------------------------------------------------------------------------
-  export PROJECT_DIR
-  PROJECT_DIR="" ;#< Do not allow environment in
+  export WORKTREE_DIR
+  WORKTREE_DIR="" ;#< Do not allow environment in
   while [[ $# != 0 ]]; do
     if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
       Echo "${SYNTAX}"; return 0
@@ -132,7 +132,7 @@ function Build()
       elif [[ ! -d "$2" ]]; then
         Report_error "'$2' is not a directory as required by -P"
       else
-        PROJECT_DIR="$2"
+        WORKTREE_DIR="$2"
         if [[ ! -d "$2/.git" ]]; then
           Report_warning "'$2' does not contain .git/ as recommended."
         fi
@@ -194,13 +194,15 @@ function Build()
     fi
     shift
   done
-  if [[ -z "${PROJECT_DIR}" ]]; then
-    PROJECT_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
+  if [[ -z "${WORKTREE_DIR}" ]]; then
+    WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
   fi
 
   if [[ ${QUIET} == 0 ]]; then
     TEST_OPTS=(-V "${TEST_OPTS[@]}")
   fi
+  BLD_DIR="${BLD_DIR}/$(perl -le 'print lc(qq{@ARGV})' "${CMAKE_BUILD_TYPE}")"
+  mkdir -p "${BLD_DIR}"
 
   #-------------------------------------------------------------------------------
   # Validate environment
@@ -232,7 +234,7 @@ function Build()
   #-------------------------------------------------------------------------------
   export CMAKE_PREFIX_PATH
   CMAKE_PREFIX_PATH=
-  for CDIR in "${SUBPROJ_DIR}" "${PROJECT_DIR}" "${PROJECT_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+  for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
     if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then
       if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
         CMAKE_PREFIX_PATH="${CDIR}"
@@ -298,12 +300,16 @@ function Build()
     ( _do ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}" || return 1 ) 2>&1 | tee test.log
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
-      Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test."
+      Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
+      _do -n ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
     else
-      Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -run."
+      Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
+      _do -n ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
     fi
   else
-    Report_info "Executables in ${BLD_DIR}/"
+    Report_info "Executables in ${BLD_DIR}/ -- HINT: To run try:"
+    _do -n "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}"
+    Report_info "Or consider adding one or more tests to CMakeLists.txt"
   fi
 
   #------------------------------------------------------------------------------
