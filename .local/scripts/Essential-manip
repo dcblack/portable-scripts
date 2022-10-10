@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+#-------------------------------------------------------------------------------
+# Essential building blocks
+#-------------------------------------------------------------------------------
+LOCAL="${HOME}/.local"
+export LOCAL
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Append_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Expand_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/FindScript"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Firstreal"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Has_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Load"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Prepend_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Realpath"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Remove_missing"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Remove_path"
+# shellcheck disable=SC1091
+source "${LOCAL}/scripts/Unique_path"
+
+# vim:nospell
