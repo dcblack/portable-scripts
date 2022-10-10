@@ -11,7 +11,19 @@ function Run() {
 
 function Load() {
   export Load_VERSION=1.4
-  #|Usage "$1" "Load [-v][-n] SCRIPTNAME(S)" || return 0
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    echo "
+NAME
+----
+Load - source scripts from \$HOME/.local/scripts directory
+
+SYNOPSIS
+--------
+Load --help|-h
+Load [-v|-q][-n] SCRIPTNAME(S)
+"
+    return
+  fi
   # Dependencies: Firstreal, FindScript, Report_info, Report_warning, Report_error
   local VERBOSITY NOTREALLY DIR SCRIPT STATUS prev_NOAUTORUN
   VERBOSITY=0
