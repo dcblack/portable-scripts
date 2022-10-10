@@ -10,9 +10,10 @@ function j() {
   # Begin parsing options
   #-----------------------------------------------------------------------------
   export lwd nwd cws nws
-  local J_VERBOSE J_DEBUG TMP1 TMP2 J_MK
+  local J_VERBOSE J_NOSCRIPT J_DEBUG TMP1 TMP2 J_MK
   #local FAV FAV1
   J_VERBOSE=0
+  J_NOSCRIPT=0
   J_DEBUG=0
   # Setup favorites list if not defined via exported FAVS variable
   if [[ -z "${FAVS}" ]]; then
@@ -39,10 +40,9 @@ Syntax
 ------
 
   j -help
+  j [OPTIONS] PATH {DIR_OR_FILE}...
   j -list
-  j -mk FAV PATH
   j -rm FAV
-  j {dir_or_file}...
 
 Description
 -----------
@@ -56,6 +56,16 @@ Description
   If the result is a path to a non-directory element, then
   it jumps to the directory containing that element.
 
+  Option  | Description
+  ------  | -----------
+  -help   | Displays this help text
+  -list   | Briefly lists all favorites
+  --debug | Turns on debugging of *this* script
+  -lns    | Lists all favorites exanding their targets
+  -mk FAV | Adds a symbolic links to the favorites directory
+  -rm FAV | Removes a symbolic links from the favorites directory
+  -v      | Verbosely provide information on operation
+
 Examples
 --------
 
@@ -65,8 +75,11 @@ Examples
 EOT
         return 0
         ;;
-      -d | --debug )
+      -d | -debug | --debug )
         J_DEBUG=1
+        ;;
+      -ns | -noscript | --noscript )
+        J_NOSCRIPT=1
         ;;
       -v | --verbose )
         J_VERBOSE=1
@@ -86,7 +99,7 @@ EOT
         fi
         return 0
         ;;
-      -mk )
+      -mk | --mk )
         shift
         if [[ $# -lt 2 ]]; then Report_error "Requires at least two arguments: j -mk FAV DIRPATH"; return 1; fi
         J_MK="$1"
@@ -105,7 +118,7 @@ EOT
         fi
         return 0;
         ;;
-      -rm )
+      -rm | --rm )
         shift
         if [[ $# != 1 ]]; then Report_error "Requires exactly one argument: j -rm FAV"; return 1; fi
         if [[ "$1" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "First argument must begin with an alphanumeric"; return 1; fi
@@ -116,7 +129,7 @@ EOT
         rm "${FAVS}/$1" && echo "Removed favorite $1 -> ${old}" ;
         return 0;
         ;;
-      -L | -lns )
+      -L | -lns | --lns )
         shift
         if [[ -n "${FAVS}" ]]; then
           if [[ $# -gt 0 ]]; then
@@ -163,6 +176,9 @@ EOT
       else
         local PART GLOB
         PART="$1"
+        if [[ "${PART}" =~ ^[A-Z]: ]]; then # Convert windows path to WSL
+          PART="$(perl -le '$_=shift;s{^([A-Z]):}{};$d=lc$1;s{\\}{\/}g;print qq{/mnt/$d$_}' "$1")"
+        fi
         GLOB="$(/usr/bin/perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
         Report_debug "DEBUG: PART='%s'" "${PART}" -if "${J_DEBUG}"
         Report_debug "DEBUG: GLOB='%s'" "${GLOB}" -if "${J_DEBUG}"
@@ -247,8 +263,10 @@ EOT
       test "${J_VERBOSE}" = 1 && Report_info "Removing ${nws}"
       export ACTION
       ACTION='rm'
-      # shellcheck disable=SC1090
-      source "${lws}"
+      if [[ ${J_NOSCRIPT} == 0 ]]; then
+        # shellcheck disable=SC1090
+        source "${lws}"
+      fi
       unset ACTION
     fi
     # Source new working script
@@ -256,8 +274,10 @@ EOT
       test "${J_VERBOSE}" = 1 && Report_info "Adding ${nws}"
       export ACTION
       ACTION='add'
-      # shellcheck disable=SC1090
-      source "${nws}"
+      if [[ ${J_NOSCRIPT} == 0 ]]; then
+        # shellcheck disable=SC1090
+        source "${nws}"
+      fi
       unset ACTION
       cws="${nws}"
     elif [[ ${REPEAT} == 1 ]]; then
@@ -265,8 +285,10 @@ EOT
         test "${J_VERBOSE}" = 1 && Report_info "Repeating ${nws}"
         export ACTION
         ACTION='repeat'
-        # shellcheck disable=SC1090
-        source "${nws}"
+        if [[ ${J_NOSCRIPT} == 0 ]]; then
+          # shellcheck disable=SC1090
+          source "${nws}"
+        fi
         unset ACTION
         cws="${nws}"
       else
