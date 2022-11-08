@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+function Realpath() {
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
 export lwd nwd lws cws nws
 function j() {
   export j_VERSION=1.4 FAVS
@@ -28,7 +32,7 @@ function j() {
   if [[ $# != 0 ]]; then
     # Parse command-line options
     while [[ "$1" =~ ^-. ]]; do
-      Report_debug "$1" -if "${J_DEBUG}"
+      Report_debug "$1" -if "${J_DEBUG:-0}"
       case "$1" in
       -h | -help | --help) cat 1>&2 <<EOT
 Synopsis
@@ -136,7 +140,7 @@ EOT
             TMP1="$(Add_prefix "${FAVS}/" "$@")"
             lns "${TMP1}"
           else
-            lns "${FAVS}"
+            lns "${FAVS}/"
           fi
         else
           echo "No favorites directory specified" 1>&2
@@ -153,7 +157,7 @@ EOT
       shift
     done
   fi
-  Report_debug "Debug on" -if "${J_DEBUG}"
+  Report_debug "Debug on" -if "${J_DEBUG:-0}"
   test "${J_VERBOSE}" = 1 && Report_info "Verbose on"
   # End parsing options
   #-----------------------------------------------------------------------------
@@ -169,7 +173,7 @@ EOT
     cd
   else
     while [[ $# != 0 ]]; do
-      Report_debug "Arg '%s'" "$1" -if "${J_DEBUG}"
+      Report_debug "Arg '%s'" "$1" -if "${J_DEBUG:-0}"
       if [[ "$1" == '-' ]]; then
         # shellcheck disable=SC2164
         cd -
@@ -180,8 +184,8 @@ EOT
           PART="$(perl -le '$_=shift;s{^([A-Z]):}{};$d=lc$1;s{\\}{\/}g;print qq{/mnt/$d$_}' "$1")"
         fi
         GLOB="$(/usr/bin/perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
-        Report_debug "DEBUG: PART='%s'" "${PART}" -if "${J_DEBUG}"
-        Report_debug "DEBUG: GLOB='%s'" "${GLOB}" -if "${J_DEBUG}"
+        Report_debug "DEBUG: PART='%s'" "${PART}" -if "${J_DEBUG:-0}"
+        Report_debug "DEBUG: GLOB='%s'" "${GLOB}" -if "${J_DEBUG:-0}"
         if [[ -e "${PART}" && -f "${PART}" ]]; then
           PART=$(dirname "${PART}")
         fi
@@ -201,7 +205,7 @@ EOT
       shift
     done
   fi
-  Report_debug "Saving working directory" -if "${J_DEBUG}"
+  Report_debug "Saving working directory" -if "${J_DEBUG:-0}"
   # Save current location as the working directory
   local next_wd
   next_wd="$(Realpath .)"
@@ -218,7 +222,7 @@ EOT
     cwd="${next_wd}"
   fi
   TMP1="$(pwd)"
-  Report_debug "Landed %s" "${TMP1}" -if "${J_DEBUG}"
+  Report_debug "Landed %s" "${TMP1}" -if "${J_DEBUG:-0}"
 
   # Save last working script if it was previously set
   if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
@@ -227,7 +231,7 @@ EOT
   export nws
   TMP1="$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)"
   nws="$(Firstreal "${TMP1}")"
-  Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG}"
+  Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG:-0}"
   if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
     local LASTOK NEXTOK REPEAT
@@ -237,7 +241,7 @@ EOT
     # 2. Must be executable and not a directory
     # 3. Last script must support ACTION variable
     if [[ -n "${lws}" && "${lws}" == "${nws}" ]]; then
-      Report_debug "lws set and equal to nws ${nws}" -if "${J_DEBUG}"
+      Report_debug "lws set and equal to nws ${nws}" -if "${J_DEBUG:-0}"
       LASTOK=0
       NEXTOK=0
       REPEAT=1
@@ -256,7 +260,7 @@ EOT
       NEXTOK=0
       REPEAT=0
       Report_warning "Skipping non-executable ${nws}"
-      Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG}"
+      Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG:-0}"
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
