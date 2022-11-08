@@ -18,7 +18,7 @@ use vars qw($exe);
 ## BEGIN DOCUMENTATION #####################################################{{{
 ###############################################################################
 $exe = "$RealBin/$RealScript";
-exec "perldoc $exe" if "@ARGV" eq '--help';
+exec "perldoc $exe" if "@ARGV" =~ m{^-{1,2}h(elp)?};
 =pod
 
 =head1 NAME
