@@ -283,6 +283,7 @@ function portable-env() {
   DOTBIN="${PORTABLE_DIR}/bin"
   APPSBIN="${PORTABLE_DIR}/apps/bin"
   SYSTEMC_HOME="${PORTABLE_DIR}/apps/systemc"
+  SYSTEMC_SOURCE="${PORTABLE_DIR}/src/systemc"
   PATH="${DOTBIN}:${APPSBIN}:${PATH}"
   TEMPLATEPATH="${HOME}/templates"
   for f in ${APPS}/sc-templates; do
@@ -293,7 +294,7 @@ function portable-env() {
   Unique_path PATH
   Unique_path TEMPLATEPATH
 
-  export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME CDPATH PATH
+  export LOCAL APPS TEMPLATEPATH SYSTEMC_HOME SYSTEMC_SOURCE CDPATH PATH
 
 }
 
