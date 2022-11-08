@@ -16,30 +16,13 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 
 | FUNCTION SYNTAX            | DESCRIPTION 
 | :------------------------- | :---------- 
-| Color-Setup ON_or_OFF      | Enables color variables (e.g., CBLU)
-| Logfile [--append] _FILE_  | Establishes a logfile name
-| Log [-n] "_MESSAGE_"       | Adds message to logfile
-| Echo [-n] "_MESSAGE_"      | Displays and logs message
-| _do _COMMAND_              | Displays and executes
-| Pass                       | Sets success status (0)
-| Fail                       | Sets error status (1)
-| PassFail "_MESSAGE_"       | Displays message with pass/fail status
-| Report_info "_MESSAGE_"    | Echo an informational message
-| Comment "_MESSAGE_"        | Does nothing but provide NOP comment
-| Report_debug "_MESSAGE_"   | Echo a debug message
-| Ruler [-CLR] [_MESSAGE_]   | Echo a ruler with option embedded message
-| Report_fatal "_MESSAGE_"   | Echo a fatal message and exit with fail
-| Report_error "_MESSAGE_"   | Echo an error message
-| Report_warning "_MESSAGE_" | Echo a warning message
-| Summary PROG ["_MESSAGE_"] | Echo a summary of errors and warnings
 | GetBuildOpts "$0" "$@"     | Parses standard _build_ command-line inputs
 | ShowBuildOpts              | Display options variables
 | ConfirmBuildOpts || exit   | Asks user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 | Create_and_Cd DIR          | Creates directory and enters it
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
-| Generate [TYPE]            | Invokes cmake or autotools
-| Cleanup_Source             | Removes source
+| Configure_tool [TYPE]      | Invokes cmake or autotools
 
 USAGE
 =====
@@ -156,7 +139,7 @@ function Needs()
 
 #-------------------------------------------------------------------------------
 
-Color-Setup on
+Setup-Color on
 
 function ShowBuildOpts()
 {
