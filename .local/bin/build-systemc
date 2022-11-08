@@ -35,6 +35,7 @@ export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON
 #|  --clang
 #|  --cxx=CPP_COMPILER | CXX=CPP_COMPILER
 #|  --debug # developer use
+#|  --doxy
 #|  --gcc
 #|  --install=DIR | -i DIR
 #|  --src=DIR | -s DIR
