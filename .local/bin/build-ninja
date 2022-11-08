@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
+#
+# shellcheck disable=SC2312
 
 #-------------------------------------------------------------------------------
 # Make things more visible in the output
-
-CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
 
 function Ruler() {
   /usr/bin/perl -le 'printf qq{\n%80.80s\n},"@ARGV"x80' "$*"
@@ -11,12 +11,18 @@ function Ruler() {
 
 # Ensure that error messages are clearly seen
 function Die() {
+  local CRED CGRN CBLU CNONE
+  CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
+
   Ruler '!'
   echo "${CRED}Fatal: $*${NONE}" 1>&2
   exit 1
 }
 
 function Report_info() {
+  local CRED CGRN CBLU CNONE
+  CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
+
   Ruler '-'
   echo "${CGRN}Report_info: ${CBLU}$*${NONE}"
 }
