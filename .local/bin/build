@@ -24,9 +24,9 @@ function Build()
   This script was written to simplify using _cmake_ and educate along they. It provides a single command to configure, compile, link and run or test projects.  It assume a proper CMakeLists.txt has been setup. Bascially, all this does is:
 
   + clean -a # OPTIONAL
-  + cmake -B build/debug
-  + cmake --build build/debug
-  + ctest --test-dir build/debug # OPTIONAL -OR- run
+  + cmake -B build
+  + cmake --build build
+  + ctest --test-dir build # OPTIONAL -OR- run
   + cmake --install --config Debug
 
   IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
@@ -38,7 +38,9 @@ function Build()
   + -B DIR   Name of build directory -- defaults to \"build\"
   + -C DIR   Change to specified directory before doing anything else
   + -clean   Remove all build files and other output bits
-  + -debug   Output information to help debug CMakeLists.txt etc.
+  + -gdb     Run under gdb
+  + -info    Output information to help debug CMakeLists.txt etc.
+  + -lldb    Run under lldb
   + -quiet   Remove verbosity when -test invoked
   + -P DIR   Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
   + -run     When done building, run the executable
@@ -152,7 +154,7 @@ function Build()
       NOTREALLY="-n"
     elif [[ "$1" =~ ^-{1,2}clean$ ]]; then
       CLEAN=1;
-    elif [[ "$1" =~ ^-{1,2}debug$ ]]; then
+    elif [[ "$1" =~ ^-{1,2}info$ ]]; then
       DEBUG="--debug-output";
     elif [[ "$1" =~ ^-{1,2}quiet$ ]]; then
       QUIET=1;
@@ -172,13 +174,10 @@ function Build()
       ACTION="list"
     elif [[ "$1" =~ ^-{1,2}test$ ]]; then
       ACTION="test"
-    elif [[ "$1" =~ ^-{1,2}type$ ]]; then
-      if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z]+$ ]]; then
-        CMAKE_BUILD_TYPE="$2"
-        shift
-      else
-        Report_error "--type must be followed by a build type such as Debug, Release, or RelWithDebugInfo"; return 1;
-      fi
+    elif [[ "$1" =~ ^-{1,2}gdb$ ]]; then
+      ACTION="gdb"
+    elif [[ "$1" =~ ^-{1,2}lldb$ ]]; then
+      ACTION="lldb"
     elif [[ "$1" =~ ^-{1,2}run$ ]]; then
       ACTION="run"
     elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
@@ -284,7 +283,27 @@ function Build()
   _do cmake --build "${BLD_DIR}" "${BUILD_OPTS[@]}" || return 1
 
   #------------------------------------------------------------------------------
-  if [[ "${ACTION}" == run ]]; then
+  if [[ "${ACTION}" == gdb ]]; then
+    Report_info "Debugging ${SUBPROJ_DIR}"
+    if [[ -n "${TARGETS}" ]]; then
+      for EXECUTABLE in ${TARGETS}; do
+        # shellcheck disable=SC2086,SC2312
+        ( _do gdb "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || return 1 )
+      done
+    else
+      Report_error "Not sure what to debug!"
+    fi
+  elif [[ "${ACTION}" == lldb ]]; then
+    Report_info "Debugging ${SUBPROJ_DIR}"
+    if [[ -n "${TARGETS}" ]]; then
+      for EXECUTABLE in ${TARGETS}; do
+        # shellcheck disable=SC2086,SC2312
+        ( _do lldb "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" || return 1 )
+      done
+    else
+      Report_error "Not sure what to debug!"
+    fi
+  elif [[ "${ACTION}" == run ]]; then
     Report_info "Running ${SUBPROJ_DIR}"
     if [[ -n "${TARGETS}" ]]; then
       for EXECUTABLE in ${TARGETS}; do
