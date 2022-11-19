@@ -33,6 +33,7 @@ OPTION                | DESCRIPTION
 --local\-l            | Place in $HOME/.local/bin
 --notreally|-n        | Show what would be done
 --quiet|-q            | Quiet
+--raw|-r              | Raw (without more than hashbang line)
 --script\|-s          | Place in scripts
 --utils|-u            | Add utils.bash
 --verbose|-v          | Verbose
@@ -134,6 +135,8 @@ function Mkbin()
 {
   local CRED NONE
   CRED="$(_C bright red)"
+  CCYN="$(_C bright cyan)"
+  CBLU="$(_C bright blue)"
   NONE="$(_C none)"
   local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH
   local OPTION CMNT KIND IS_NEW ADD_TAIL ADD_UTILS FIRST_LINE V N
@@ -145,6 +148,7 @@ function Mkbin()
   EDIT=""
   CMNT="#"
   N=0
+  R=0
   V=1
   while [[ "$1" =~ ^- ]]; do
     OPTION="$1"
@@ -234,6 +238,10 @@ function Mkbin()
       ADD_UTILS=1
     elif [[ "${OPTION}" =~ ^-{1,2}n(otreally)? ]]; then
       N=1
+    elif [[ "${OPTION}" =~ ^-{1,2}noraw ]]; then
+      R=0
+    elif [[ "${OPTION}" =~ ^-{1,2}r(aw)? ]]; then
+      R=1
     elif [[ "${OPTION}" =~ ^-{1,2}q(uiet)? ]]; then
       V=0
     elif [[ "${OPTION}" =~ ^-{1,2}v(erbose)? ]]; then
@@ -269,7 +277,7 @@ function Mkbin()
       Verbose_info "${N}" "Would update ${CRED}${KIND}${NONE} script \"${SCRIPT}\""
       exit 0;
     fi
-    Verbose_info "${V}" "Updating ${CRED}${KIND}${NONE} script \"${SCRIPT}\""
+    Verbose_info "${V}" "Updating ${CRED}${KIND}${NONE} script \"${CBLU}${SCRIPT}${NONE}\""
     IS_NEW=0
     perl -pi -e 'our $hb; BEGIN{$hb=shift @ARGV;} if($.== 1 and not m/^#/){ s{^}{#$hb\n};}' "${HASHBANG}" "${SCRIPT}"
   else
@@ -292,7 +300,7 @@ function Mkbin()
   Verbose_info "${V}" "${FIRST_LINE}"
 
   # Add essentials
-  if [[ ${IS_NEW} == 1 ]]; then
+  if [[ ${IS_NEW} == 1 && ${R} == 0 ]]; then
     case "${KIND}" in
       bash)
         Verbose_info "${V}" "Added essentials"
@@ -320,7 +328,6 @@ EOT
           ---> use warnings;
           ---> use Cwd qw(abs_path getcwd);
           ---> use English;
-          ---> use FindBin qw($RealBin $RealScript);
           ---> use File::Basename;
           ---> use FileHandle;
           ---> use FindBin qw($RealBin $RealScript);
@@ -398,7 +405,7 @@ EOT
   fi
 
   # Add tail
-  if [[ ${ADD_TAIL} == 1 ]]; then
+  if [[ ${ADD_TAIL} == 1 && ${R} == 0 ]]; then
     case "${KIND}" in
       perl)
         Verbose_info "${V}" "Added tail"
