@@ -461,8 +461,11 @@ function Debug-off()
 function Ruler()
 {
   local ARGS SEP MAX LIN WID
-  SEP="-" # Default
+  SEP="_" # Default
   MAX=80 # TODO: Change to match terminal width
+  MAX="$(stty -a | head -1)"
+  MAX="${MAX/*rows; /}"
+  MAX="${MAX/ columns;*/}"
   local PRE
   PRE=""
   # Test for color prefix
@@ -477,6 +480,7 @@ function Ruler()
       -wht) PRE="${PRE}$(_C wht)" ; shift ;;
       -blu) PRE="${PRE}$(_C blu)" ; shift ;;
       -bld) PRE="${PRE}$(_C bold)" ; shift ;;
+      -[0-9]*) MAX=$(( - $1 )); shift ;;
          *) PRE="" ;;
     esac
   done
