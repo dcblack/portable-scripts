@@ -7,7 +7,7 @@ TOOL_SRC="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS=2.3.4
 
-export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS
+export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS TOOL_PATCHES
 export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON_PROCESSOR
 
 #-------------------------------------------------------------------------------
@@ -38,6 +38,7 @@ export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON
 #|  --doxy
 #|  --gcc
 #|  --install=DIR | -i DIR
+#|  --patch[=NAME | -patch [NAME]
 #|  --src=DIR | -s DIR
 #|  --std=N | -std=N
 #|
