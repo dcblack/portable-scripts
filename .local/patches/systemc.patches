@@ -1,0 +1,1027 @@
+From 4996defac451784e372a283904a8d7b2cc178919 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Wed, 16 Nov 2022 16:19:05 -0600
+Subject: [PATCH 00/14] Combination of all my branches
+
+This is a convenience to see the effect of merging all proposed changes.
+
+David C Black (14):
+  Add get_channel method to sc_port_base and sc_port_b to allow
+    netlisting
+  Add "do { ... } while(false)" to macros to require semi-colon after
+    process related macros.
+  Change SC_CTOR to specify explicit and pass sc_module_name by const
+    reference to address modern compiler syntax warnings
+  Support netlist investigations of analysis ports
+  Rename to get_base_interface for consistency
+  Define SC_HAS_TLM_ANALYSIS_BASE to enable detection of new feature
+  Add override and remove virtual default
+  Syntax error
+  Add kind for tlm_analysis_port
+  Improve efficiency of SC_REPORT_INFO_VERB
+  Fix missing semicolon
+  Fix unsafe sprintf and vsprintf calls.
+  Add SystemC time literals
+  Add define SC_HAS_GET_BASE_INTERFACE
+
+-- 
+2.38.1
+
+From c996fbf43f9cc7a06e25ad32798dc2cf082eae9c Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Thu, 27 Oct 2022 16:41:49 -0500
+Subject: [PATCH 01/14] Add get_channel method to sc_port_base and sc_port_b to
+ allow netlisting
+
+---
+ src/sysc/communication/sc_port.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/sysc/communication/sc_port.h b/src/sysc/communication/sc_port.h
+index b18894ec..9da73c1f 100644
+--- a/src/sysc/communication/sc_port.h
++++ b/src/sysc/communication/sc_port.h
+@@ -96,6 +96,7 @@ public:
+     // get the first interface without checking for nil
+     virtual       sc_interface* get_interface()       = 0;
+     virtual const sc_interface* get_interface() const = 0;
++    virtual sc_interface* get_channel( int index_ ) = 0;
+ 
+     virtual const char* kind() const
+         { return "sc_port_base"; }
+@@ -320,6 +321,9 @@ public:
+ 
+     // get the first interface without checking for nil
+ 
++    virtual sc_interface* get_channel( int index_ )
++        { return get_interface( index_ ); }
++
+     virtual sc_interface* get_interface()
+         { return m_interface; }
+ 
+-- 
+2.38.1
+
+From 406ea9c290d3b0c6298a06ba0ba9a88032f553f9 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 04:08:42 -0500
+Subject: [PATCH 02/14] Add "do { ... } while(false)" to macros to require
+ semi-colon after process related macros.
+
+---
+ src/sysc/kernel/sc_module.h | 60 ++++++++++++++++++-------------------
+ 1 file changed, 30 insertions(+), 30 deletions(-)
+
+diff --git a/src/sysc/kernel/sc_module.h b/src/sysc/kernel/sc_module.h
+index 13dcc7b6..43d53cc1 100644
+--- a/src/sysc/kernel/sc_module.h
++++ b/src/sysc/kernel/sc_module.h
+@@ -413,36 +413,36 @@ extern SC_API sc_module* sc_module_dynalloc(sc_module*);
+ // template<typename X>
+ // class A : public B<X>
+ 
+-#define declare_method_process(handle, name, host_tag, func)        \
+-    {		                                                    \
+-        ::sc_core::sc_process_handle handle =                      \
+-	    sc_core::sc_get_curr_simcontext()->create_method_process( \
+-		name,  false, SC_MAKE_FUNC_PTR( host_tag, func ), \
+-		this, 0 ); \
+-        this->sensitive << handle;                                        \
+-        this->sensitive_pos << handle;                                    \
+-        this->sensitive_neg << handle;                                    \
+-    }
+-
+-#define declare_thread_process(handle, name, host_tag, func)        \
+-    {                                                               \
+-        ::sc_core::sc_process_handle handle =                      \
+-	     sc_core::sc_get_curr_simcontext()->create_thread_process( \
+-                 name,  false,           \
+-                 SC_MAKE_FUNC_PTR( host_tag, func ), this, 0 ); \
+-        this->sensitive << handle;                                        \
+-        this->sensitive_pos << handle;                                    \
+-        this->sensitive_neg << handle;                                    \
+-    }
+-
+-#define declare_cthread_process(handle, name, host_tag, func, edge) \
+-    {                                                               \
+-        ::sc_core::sc_process_handle handle =                     \
+-	     sc_core::sc_get_curr_simcontext()->create_cthread_process( \
+-            name,  false,          \
+-                     SC_MAKE_FUNC_PTR( host_tag, func ), this, 0 ); \
+-        this->sensitive.operator() ( handle, edge );\
+-    }
++#define declare_method_process(handle, name, host_tag, func)          \
++    do {                                                              \
++        ::sc_core::sc_process_handle handle =                         \
++            sc_core::sc_get_curr_simcontext()->create_method_process( \
++                name,  false, SC_MAKE_FUNC_PTR( host_tag, func ),     \
++                this, 0 );                                            \
++        this->sensitive << handle;                                    \
++        this->sensitive_pos << handle;                                \
++        this->sensitive_neg << handle;                                \
++    } while(false)
++
++#define declare_thread_process(handle, name, host_tag, func)          \
++    do {                                                              \
++        ::sc_core::sc_process_handle handle =                         \
++            sc_core::sc_get_curr_simcontext()->create_thread_process( \
++                 name,  false,                                        \
++                 SC_MAKE_FUNC_PTR( host_tag, func ), this, 0 );       \
++        this->sensitive << handle;                                    \
++        this->sensitive_pos << handle;                                \
++        this->sensitive_neg << handle;                                \
++    } while(false)
++
++#define declare_cthread_process(handle, name, host_tag, func, edge)    \
++    do {                                                               \
++        ::sc_core::sc_process_handle handle =                          \
++            sc_core::sc_get_curr_simcontext()->create_cthread_process( \
++                name,  false,                                          \
++                SC_MAKE_FUNC_PTR( host_tag, func ), this, 0 );         \
++        this->sensitive.operator() ( handle, edge );                   \
++    } while(false)
+ 
+ #define SC_CTHREAD(func, edge)                                                \
+     declare_cthread_process( func ## _handle,                                 \
+-- 
+2.38.1
+
+From 82b68674dfdd7e2f15d2bc05b2ded584f71b9500 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 04:11:19 -0500
+Subject: [PATCH 03/14] Change SC_CTOR to specify explicit and pass
+ sc_module_name by const reference to address modern compiler syntax warnings
+
+---
+ src/sysc/kernel/sc_module.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/sysc/kernel/sc_module.h b/src/sysc/kernel/sc_module.h
+index 13dcc7b6..4134ce58 100644
+--- a/src/sysc/kernel/sc_module.h
++++ b/src/sysc/kernel/sc_module.h
+@@ -398,7 +398,7 @@ extern SC_API sc_module* sc_module_dynalloc(sc_module*);
+ 
+ #define SC_CTOR(user_module_name)                                             \
+     typedef user_module_name SC_CURRENT_USER_MODULE;                          \
+-    user_module_name( ::sc_core::sc_module_name )
++    explicit user_module_name( const ::sc_core::sc_module_name& )
+ 
+ // the SC_HAS_PROCESS macro call must be followed by a ;
+ #define SC_HAS_PROCESS(user_module_name)                                      \
+-- 
+2.38.1
+
+From 4eecf97de77814c5e03b0c6a92a53f4b98dcc8c3 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 05:25:12 -0500
+Subject: [PATCH 04/14] Support netlist investigations of analysis ports
+
+---
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h   |  6 ++++--
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h | 12 ++++++++++++
+ 2 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h
+index bc24fee5..ae31f3b9 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h
+@@ -24,13 +24,15 @@
+ 
+ namespace tlm {
+ 
++struct tlm_analysis_if_base {}; // enables netlist investigations
++
+ template < typename T >
+-class tlm_analysis_if : public virtual tlm_write_if<T>
++class tlm_analysis_if : public virtual tlm_write_if<T>, public tlm_analysis_if_base
+ {
+ };
+ 
+ template < typename T >
+-class tlm_delayed_analysis_if : public virtual tlm_delayed_write_if<T>
++class tlm_delayed_analysis_if : public virtual tlm_delayed_write_if<T>, public tlm_analysis_if_base
+ {
+ };
+ 
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+index 99909253..c7577df5 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+@@ -26,10 +26,15 @@
+ 
+ namespace tlm {
+ 
++struct tlm_analysis_port_base { // aids netlist investigation
++  virtual int size() const = 0;
++  virtual sc_core::sc_interface* get_base_interface( int i=0 ) const = 0
++};
+ 
+ template < typename T>
+ class tlm_analysis_port :
+   public sc_core::sc_object ,
++  public tlm_analysis_port_base
+   public virtual tlm_analysis_if< T >
+ {
+  public:
+@@ -72,6 +77,13 @@ class tlm_analysis_port :
+ 
+   }
+ 
++  int size() const { return m_interfaces.size(); }
++
++  sc_core::sc_interface* get_base_interface( int i=0 ) const {
++    if( i >= m_interfaces.size() ) return nullptr;
++    return m_interfaces[i];
++  }
++
+  private:
+   std::deque< tlm_analysis_if<T> * > m_interfaces;
+ 
+-- 
+2.38.1
+
+From 8ca1f124bf9db087770228d7d34d7996f6699740 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 06:30:53 -0500
+Subject: [PATCH 05/14] Rename to get_base_interface for consistency
+
+---
+ src/sysc/communication/sc_port.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/sysc/communication/sc_port.h b/src/sysc/communication/sc_port.h
+index 9da73c1f..a9265a33 100644
+--- a/src/sysc/communication/sc_port.h
++++ b/src/sysc/communication/sc_port.h
+@@ -96,7 +96,7 @@ public:
+     // get the first interface without checking for nil
+     virtual       sc_interface* get_interface()       = 0;
+     virtual const sc_interface* get_interface() const = 0;
+-    virtual sc_interface* get_channel( int index_ ) = 0;
++    virtual sc_interface* get_base_interface( int index_=0 ) = 0;
+ 
+     virtual const char* kind() const
+         { return "sc_port_base"; }
+@@ -321,7 +321,7 @@ public:
+ 
+     // get the first interface without checking for nil
+ 
+-    virtual sc_interface* get_channel( int index_ )
++    virtual sc_interface* get_base_interface( int index_=0 )
+         { return get_interface( index_ ); }
+ 
+     virtual sc_interface* get_interface()
+-- 
+2.38.1
+
+From c243de1da14ef3d981986bfd80a3b2407e7a4864 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 06:46:52 -0500
+Subject: [PATCH 06/14] Define SC_HAS_TLM_ANALYSIS_BASE to enable detection of
+ new feature
+
+---
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h   | 9 +++++++--
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h | 6 +++++-
+ 2 files changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h
+index ae31f3b9..ce42113c 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_if.h
+@@ -24,15 +24,20 @@
+ 
+ namespace tlm {
+ 
++#ifndef SC_HAS_TLM_ANALYSIS_BASE
++#define SC_HAS_TLM_ANALYSIS_BASE
++#endif
+ struct tlm_analysis_if_base {}; // enables netlist investigations
+ 
+ template < typename T >
+-class tlm_analysis_if : public virtual tlm_write_if<T>, public tlm_analysis_if_base
++class tlm_analysis_if : public virtual tlm_write_if<T>
++, public tlm_analysis_if_base
+ {
+ };
+ 
+ template < typename T >
+-class tlm_delayed_analysis_if : public virtual tlm_delayed_write_if<T>, public tlm_analysis_if_base
++class tlm_delayed_analysis_if : public virtual tlm_delayed_write_if<T>
++, public tlm_analysis_if_base
+ {
+ };
+ 
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+index c7577df5..048bc91c 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+@@ -26,6 +26,10 @@
+ 
+ namespace tlm {
+ 
++#ifndef SC_HAS_TLM_ANALYSIS_BASE
++#define SC_HAS_TLM_ANALYSIS_BASE
++#endif
++
+ struct tlm_analysis_port_base { // aids netlist investigation
+   virtual int size() const = 0;
+   virtual sc_core::sc_interface* get_base_interface( int i=0 ) const = 0
+@@ -34,7 +38,7 @@ struct tlm_analysis_port_base { // aids netlist investigation
+ template < typename T>
+ class tlm_analysis_port :
+   public sc_core::sc_object ,
+-  public tlm_analysis_port_base
++  public tlm_analysis_port_base ,
+   public virtual tlm_analysis_if< T >
+ {
+  public:
+-- 
+2.38.1
+
+From e9607d1faf26a8b9e4d6292a13a53b5d3dc1be74 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 07:56:58 -0500
+Subject: [PATCH 07/14] Add override and remove virtual default
+
+---
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+index 048bc91c..b8c8aa63 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+@@ -32,7 +32,7 @@ namespace tlm {
+ 
+ struct tlm_analysis_port_base { // aids netlist investigation
+   virtual int size() const = 0;
+-  virtual sc_core::sc_interface* get_base_interface( int i=0 ) const = 0
++  virtual sc_core::sc_interface* get_base_interface( int i ) const = 0
+ };
+ 
+ template < typename T>
+@@ -81,9 +81,9 @@ class tlm_analysis_port :
+ 
+   }
+ 
+-  int size() const { return m_interfaces.size(); }
++  int size() const override { return m_interfaces.size(); }
+ 
+-  sc_core::sc_interface* get_base_interface( int i=0 ) const {
++  sc_core::sc_interface* get_base_interface( int i=0 ) const override {
+     if( i >= m_interfaces.size() ) return nullptr;
+     return m_interfaces[i];
+   }
+-- 
+2.38.1
+
+From afdb82528acdce6963870c44a8201ed8714c27a8 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 08:01:33 -0500
+Subject: [PATCH 08/14] Syntax error
+
+---
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+index b8c8aa63..9a98aad6 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+@@ -32,7 +32,7 @@ namespace tlm {
+ 
+ struct tlm_analysis_port_base { // aids netlist investigation
+   virtual int size() const = 0;
+-  virtual sc_core::sc_interface* get_base_interface( int i ) const = 0
++  virtual sc_core::sc_interface* get_base_interface( int i ) const = 0;
+ };
+ 
+ template < typename T>
+@@ -83,7 +83,7 @@ class tlm_analysis_port :
+ 
+   int size() const override { return m_interfaces.size(); }
+ 
+-  sc_core::sc_interface* get_base_interface( int i=0 ) const override {
++  sc_core::sc_interface* get_base_interface( int i ) const override {
+     if( i >= m_interfaces.size() ) return nullptr;
+     return m_interfaces[i];
+   }
+-- 
+2.38.1
+
+From 833337c88709681dea9d290d63665237abcffbaa Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Sat, 29 Oct 2022 09:32:55 -0500
+Subject: [PATCH 09/14] Add kind for tlm_analysis_port
+
+---
+ src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+index 9a98aad6..dbac116b 100644
+--- a/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
++++ b/src/tlm_core/tlm_1/tlm_analysis/tlm_analysis_port.h
+@@ -45,6 +45,8 @@ class tlm_analysis_port :
+   tlm_analysis_port() : sc_core::sc_object() {}
+   tlm_analysis_port( const char *nm ) : sc_core::sc_object( nm ) {}
+ 
++  virtual const char* kind() const { return "tlm_analysis_port"; }
++
+   // bind and () work for both interfaces and analysis ports, since
+   // analysis ports implement the analysis interface
+ 
+-- 
+2.38.1
+
+From cd142b645fcca0d22a76a7d2f4856e4d590f3345 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Thu, 3 Nov 2022 06:28:53 -0500
+Subject: [PATCH 10/14] Improve efficiency of SC_REPORT_INFO_VERB
+
+---
+ src/sysc/utils/sc_report.h | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/sysc/utils/sc_report.h b/src/sysc/utils/sc_report.h
+index a7c5da72..3120e544 100644
+--- a/src/sysc/utils/sc_report.h
++++ b/src/sysc/utils/sc_report.h
+@@ -203,10 +203,12 @@ typedef std::exception sc_exception;
+     ::sc_core::sc_report_handler::report(  \
+             ::sc_core::SC_INFO, msg_type, msg, __FILE__, __LINE__ )
+ 
+-#define SC_REPORT_INFO_VERB( msg_type, msg, verbosity )   \
++#define SC_REPORT_INFO_VERB( msg_type, msg, verbosity ) do {\
++  if( verbosity <= ::sc_core::sc_report_handler::get_verbosity_level() ) \
+     ::sc_core::sc_report_handler::report(                 \
+             ::sc_core::SC_INFO, msg_type, msg, verbosity, \
+-                               __FILE__ , __LINE__ )
++                               __FILE__ , __LINE__ ) \
++} while(false)
+ 
+ #define SC_REPORT_WARNING( msg_type, msg ) \
+     ::sc_core::sc_report_handler::report(  \
+-- 
+2.38.1
+
+From 7c98cb51e64fe53a0e5d0f63263d0517d548afab Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Mon, 14 Nov 2022 20:35:07 -0600
+Subject: [PATCH 11/14] Fix missing semicolon
+
+---
+ src/sysc/utils/sc_report.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/sysc/utils/sc_report.h b/src/sysc/utils/sc_report.h
+index 3120e544..6835630d 100644
+--- a/src/sysc/utils/sc_report.h
++++ b/src/sysc/utils/sc_report.h
+@@ -207,7 +207,7 @@ typedef std::exception sc_exception;
+   if( verbosity <= ::sc_core::sc_report_handler::get_verbosity_level() ) \
+     ::sc_core::sc_report_handler::report(                 \
+             ::sc_core::SC_INFO, msg_type, msg, verbosity, \
+-                               __FILE__ , __LINE__ ) \
++                               __FILE__ , __LINE__ ); \
+ } while(false)
+ 
+ #define SC_REPORT_WARNING( msg_type, msg ) \
+-- 
+2.38.1
+
+From ef71c19faf00891944e0235cc09b1a8cb969de6d Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Tue, 15 Nov 2022 05:27:31 -0600
+Subject: [PATCH 12/14] Fix unsafe sprintf and vsprintf calls.
+
+Replaced:
+  sprintf  becomes snprintf
+  vsprintf becomes vsnprintf
+
+which necessitates the addition of the corresponding maximum size argument.
+
+sc_trace had to change one internal signature, the compose_data_line(...), function, which passed a pointer to the buffer.
+---
+ src/sysc/communication/sc_export.cpp |  2 +-
+ src/sysc/communication/sc_fifo.h     |  2 +-
+ src/sysc/datatypes/fx/scfx_rep.cpp   |  2 +-
+ src/sysc/tracing/sc_trace.cpp        |  2 +-
+ src/sysc/tracing/sc_vcd_trace.cpp    | 46 ++++++++++++++--------------
+ src/sysc/tracing/sc_wif_trace.cpp    |  4 +--
+ src/sysc/utils/sc_report_handler.cpp |  4 +--
+ src/sysc/utils/sc_string.cpp         |  2 +-
+ src/systemc.h                        |  4 +--
+ 9 files changed, 34 insertions(+), 34 deletions(-)
+
+diff --git a/src/sysc/communication/sc_export.cpp b/src/sysc/communication/sc_export.cpp
+index 3e0d1a67..ae22bebc 100644
+--- a/src/sysc/communication/sc_export.cpp
++++ b/src/sysc/communication/sc_export.cpp
+@@ -283,7 +283,7 @@ sc_export_registry::simulation_done()
+ //  Andy Goodrich: Copyright update.
+ //
+ // Revision 1.3  2011/02/18 20:07:04  acg
+-//  Philipp A. Hartmann: Patch to revert to sprintf from snprintf to keep
++//  Philipp A. Hartmann: Patch to revert to SPRINTF from snprintf to keep
+ //  some versions of MSVC happy.
+ //
+ // Revision 1.2  2011/02/14 17:50:16  acg
+diff --git a/src/sysc/communication/sc_fifo.h b/src/sysc/communication/sc_fifo.h
+index 2ad3f5cc..038811af 100644
+--- a/src/sysc/communication/sc_fifo.h
++++ b/src/sysc/communication/sc_fifo.h
+@@ -299,7 +299,7 @@ sc_fifo<T>::trace( sc_trace_file* tf ) const
+     char buf[32];
+     std::string nm = name();
+     for( int i = 0; i < m_size; ++ i ) {
+-	std::sprintf( buf, "_%d", i );
++	std::snprintf( buf, sizeof(buf), "_%d", i );
+ 	sc_trace( tf, m_buf[i], nm + buf );
+     }
+ #endif
+diff --git a/src/sysc/datatypes/fx/scfx_rep.cpp b/src/sysc/datatypes/fx/scfx_rep.cpp
+index 839a43c1..8649bb25 100644
+--- a/src/sysc/datatypes/fx/scfx_rep.cpp
++++ b/src/sysc/datatypes/fx/scfx_rep.cpp
+@@ -2804,7 +2804,7 @@ scfx_rep::dump( ::std::ostream& os ) const
+     for( int i = size() - 1; i >= 0; i -- )
+     {
+ 	char buf[BUFSIZ];
+-	std::sprintf( buf, " %d: %10u (%8x)", i, (int) m_mant[i], (int) m_mant[i] );
++	std::snprintf( buf, sizeof(buf), " %d: %10u (%8x)", i, (int) m_mant[i], (int) m_mant[i] );
+ 	os << buf << ::std::endl;
+     }
+ 
+diff --git a/src/sysc/tracing/sc_trace.cpp b/src/sysc/tracing/sc_trace.cpp
+index 20c6acd3..bb5e6672 100644
+--- a/src/sysc/tracing/sc_trace.cpp
++++ b/src/sysc/tracing/sc_trace.cpp
+@@ -71,7 +71,7 @@ void SC_API tprintf(sc_trace_file* tf,  const char* format, ...)
+     static char buffer[4096];
+     va_list ap;
+     va_start(ap, format);
+-    (void) vsprintf(buffer, format, ap);
++    (void) vsnprintf(buffer, sizeof(buffer), format, ap);
+     va_end(ap);
+     if (tf) tf->write_comment(buffer);
+ }
+diff --git a/src/sysc/tracing/sc_vcd_trace.cpp b/src/sysc/tracing/sc_vcd_trace.cpp
+index 12e6e506..893dfc84 100644
+--- a/src/sysc/tracing/sc_vcd_trace.cpp
++++ b/src/sysc/tracing/sc_vcd_trace.cpp
+@@ -117,7 +117,7 @@ public:
+     // Make this virtual as some derived classes may overwrite
+     virtual void print_variable_declaration_line(FILE* f, const char* scoped_name);
+ 
+-    void compose_data_line(char* rawdata, char* compdata);
++    void compose_data_line(char* rawdata, char* compdata, size_t compsize);
+     std::string compose_line(const std::string& data);
+ 
+     virtual ~vcd_trace();
+@@ -139,7 +139,7 @@ vcd_trace::vcd_trace(const std::string& name_, const std::string& vcd_name_)
+ }
+ 
+ void
+-vcd_trace::compose_data_line(char* rawdata, char* compdata)
++vcd_trace::compose_data_line(char* rawdata, char* compdata, size_t compsize)
+ {
+     sc_assert(rawdata != compdata);
+ 
+@@ -157,7 +157,7 @@ vcd_trace::compose_data_line(char* rawdata, char* compdata)
+         else
+         {
+             const char* effective_begin = strip_leading_bits(rawdata);
+-            std::sprintf(compdata, "b%s %s", effective_begin, vcd_name.c_str());
++            std::snprintf(compdata, compsize, "b%s %s", effective_begin, vcd_name.c_str());
+         }
+     }
+ }
+@@ -188,7 +188,7 @@ vcd_trace::print_variable_declaration_line(FILE* f, const char* scoped_name)
+ 
+     if ( bit_width == 1 )
+     {
+-        std::sprintf(buf, "$var %s  % 3d  %s  %s       $end\n",
++        std::snprintf(buf, sizeof(buf), "$var %s  % 3d  %s  %s       $end\n",
+                      vcd_types[vcd_var_type],
+                      bit_width,
+                      vcd_name.c_str(),
+@@ -196,7 +196,7 @@ vcd_trace::print_variable_declaration_line(FILE* f, const char* scoped_name)
+     }
+     else
+     {
+-        std::sprintf(buf, "$var %s  % 3d  %s  %s [%d:0]  $end\n",
++        std::snprintf(buf, sizeof(buf), "$var %s  % 3d  %s  %s [%d:0]  $end\n",
+                      vcd_types[vcd_var_type],
+                      bit_width,
+                      vcd_name.c_str(),
+@@ -518,7 +518,7 @@ vcd_sc_unsigned_trace::write(FILE* f)
+         *rawdata_ptr++ = "01"[object[bitindex].to_bool()];
+     }
+     *rawdata_ptr = '\0';
+-    compose_data_line(&rawdata[0], &compdata[0]);
++    compose_data_line(rawdata.data(), compdata.data(), sizeof(compdata));
+ 
+     std::fputs(&compdata[0], f);
+     old_value = object;
+@@ -579,7 +579,7 @@ vcd_sc_signed_trace::write(FILE* f)
+         *rawdata_ptr++ = "01"[object[bitindex].to_bool()];
+     }
+     *rawdata_ptr = '\0';
+-    compose_data_line(&rawdata[0], &compdata[0]);
++    compose_data_line(rawdata.data(), compdata.data(), sizeof(compdata));
+ 
+     std::fputs(&compdata[0], f);
+     old_value = object;
+@@ -635,7 +635,7 @@ vcd_sc_uint_base_trace::write(FILE* f)
+         *rawdata_ptr++ = "01"[object[bitindex].to_bool()];
+     }
+     *rawdata_ptr = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+ 
+     std::fputs(compdata, f);
+     old_value = object;
+@@ -690,7 +690,7 @@ vcd_sc_int_base_trace::write(FILE* f)
+         *rawdata_ptr++ = "01"[object[bitindex].to_bool()];
+     }
+     *rawdata_ptr = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+ 
+     std::fputs(compdata, f);
+     old_value = object;
+@@ -845,7 +845,7 @@ vcd_sc_fxnum_trace::write( FILE* f )
+         *rawdata_ptr ++ = "01"[object[bitindex]];
+     }
+     *rawdata_ptr = '\0';
+-    compose_data_line( &rawdata[0], &compdata[0] );
++    compose_data_line( rawdata.data(), compdata.data(), compdata.size());
+ 
+     std::fputs( &compdata[0], f );
+     old_value = object;
+@@ -915,7 +915,7 @@ vcd_sc_fxnum_fast_trace::write( FILE* f )
+         *rawdata_ptr ++ = "01"[object[bitindex]];
+     }
+     *rawdata_ptr = '\0';
+-    compose_data_line( &rawdata[0], &compdata[0] );
++    compose_data_line( rawdata.data(), compdata.data(), compdata.size() );
+ 
+     std::fputs( &compdata[0], f );
+     old_value = object;
+@@ -987,7 +987,7 @@ vcd_unsigned_int_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1050,7 +1050,7 @@ vcd_unsigned_short_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1111,7 +1111,7 @@ void vcd_unsigned_char_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1174,7 +1174,7 @@ void vcd_unsigned_long_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1234,7 +1234,7 @@ void vcd_signed_int_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1294,7 +1294,7 @@ void vcd_signed_short_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1353,7 +1353,7 @@ void vcd_signed_char_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1416,7 +1416,7 @@ void vcd_int64_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1481,7 +1481,7 @@ void vcd_uint64_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1572,7 +1572,7 @@ void vcd_signed_long_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -1720,7 +1720,7 @@ void vcd_enum_trace::write(FILE* f)
+         }
+     }
+     rawdata[bitindex] = '\0';
+-    compose_data_line(rawdata, compdata);
++    compose_data_line(rawdata, compdata, sizeof(compdata));
+     std::fputs(compdata, f);
+     old_value = object;
+ }
+@@ -2127,7 +2127,7 @@ vcd_trace_file::obtain_name()
+     char char2 = static_cast<char>(result % used_types_count);
+ 
+     char buf[20];
+-    std::sprintf(buf, "%c%c%c%c%c",
++    std::snprintf(buf, sizeof(buf), "%c%c%c%c%c",
+             char2 + first_type_used,
+             char3 + first_type_used,
+             char4 + first_type_used,
+diff --git a/src/sysc/tracing/sc_wif_trace.cpp b/src/sysc/tracing/sc_wif_trace.cpp
+index 0332f080..27d34c8a 100644
+--- a/src/sysc/tracing/sc_wif_trace.cpp
++++ b/src/sysc/tracing/sc_wif_trace.cpp
+@@ -1563,7 +1563,7 @@ void wif_trace_file::do_initialize()
+     std::fprintf(fp, "init ;\n\n");
+ 
+     //timescale:
+-    std::sprintf(buf,"%d", static_cast<int>(log10(static_cast<double>(trace_unit_fs))));
++    std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(log10(static_cast<double>(trace_unit_fs))));
+     std::fprintf(fp,"header  %s \"%s\" ;\n\n", buf, sc_version());
+ 
+     std::fprintf(fp, "comment \"ASCII WIF file produced on date:  %s\" ;\n"
+@@ -1857,7 +1857,7 @@ std::string
+ wif_trace_file::obtain_name()
+ {
+     char buf[32];
+-    std::sprintf( buf, "O%d", wif_name_index ++ );
++    std::snprintf( buf, sizeof(buf), "O%d", wif_name_index ++ );
+     return buf;
+ }
+ 
+diff --git a/src/sysc/utils/sc_report_handler.cpp b/src/sysc/utils/sc_report_handler.cpp
+index 7aca12f7..e5f84c5e 100644
+--- a/src/sysc/utils/sc_report_handler.cpp
++++ b/src/sysc/utils/sc_report_handler.cpp
+@@ -58,7 +58,7 @@ const std::string sc_report_compose_message(const sc_report& rep)
+     if ( rep.get_id() >= 0 ) // backward compatibility with 2.0+
+     {
+ 	char idstr[64];
+-	std::sprintf(idstr, "(%c%d) ",
++	std::snprintf(idstr, sizeof(idstr),  "(%c%d) ",
+ 		"IWEF"[rep.get_severity()], rep.get_id());
+ 	str += idstr;
+     }
+@@ -75,7 +75,7 @@ const std::string sc_report_compose_message(const sc_report& rep)
+ 	str += "\nIn file: ";
+ 	str += rep.get_file_name();
+ 	str += ":";
+-	std::sprintf(line_number_str, "%d", rep.get_line_number());
++	std::snprintf(line_number_str, sizeof(line_number_str), "%d", rep.get_line_number());
+ 	str += line_number_str;
+ 	sc_simcontext* simc = sc_get_curr_simcontext();
+ 
+diff --git a/src/sysc/utils/sc_string.cpp b/src/sysc/utils/sc_string.cpp
+index 219c6c51..b5963eee 100644
+--- a/src/sysc/utils/sc_string.cpp
++++ b/src/sysc/utils/sc_string.cpp
+@@ -319,7 +319,7 @@ sc_string_old sc_string_old::substr(int first,int last) const
+ sc_string_old sc_string_old::make_str(long n) // convert integer to string
+ {
+   char buf[32];
+-  ::std::sprintf(buf,"%ld",n);
++  ::std::snprintf(buf, sizeof(buf), "%ld", n );
+   return sc_string_old(buf);
+ }
+ 
+diff --git a/src/systemc.h b/src/systemc.h
+index 21476e8b..f0d897cb 100644
+--- a/src/systemc.h
++++ b/src/systemc.h
+@@ -113,11 +113,11 @@
+     using std::fscanf;
+     using std::printf;
+     using std::scanf;
+-    using std::sprintf;
++    using std::snprintf;
+     using std::sscanf;
+     using std::vfprintf;
+     using std::vprintf;
+-    using std::vsprintf;
++    using std::vsnprintf;
+     using std::fgetc;
+     using std::fgets;
+     using std::fputc;
+-- 
+2.38.1
+
+From 16649d85b877095ae4cb6be9a8577ec1713e8560 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Tue, 15 Nov 2022 10:07:50 -0600
+Subject: [PATCH 13/14] Add SystemC time literals
+
+---
+ src/CMakeLists.txt                   |  1 +
+ src/sysc/kernel/sc_time.h            |  2 +
+ src/sysc/kernel/sc_time_literals.hpp | 96 ++++++++++++++++++++++++++++
+ 3 files changed, 99 insertions(+)
+ create mode 100644 src/sysc/kernel/sc_time_literals.hpp
+
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index c586c6dc..df297c52 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -266,6 +266,7 @@ add_library (systemc sysc/communication/sc_clock.cpp
+                      sysc/kernel/sc_status.h
+                      sysc/kernel/sc_thread_process.h
+                      sysc/kernel/sc_time.h
++                     sysc/kernel/sc_time_literals.hpp
+                      sysc/kernel/sc_ver.h
+                      sysc/kernel/sc_wait.h
+                      sysc/kernel/sc_wait_cthread.h
+diff --git a/src/sysc/kernel/sc_time.h b/src/sysc/kernel/sc_time.h
+index c4e331ff..5c68c12f 100644
+--- a/src/sysc/kernel/sc_time.h
++++ b/src/sysc/kernel/sc_time.h
+@@ -470,6 +470,8 @@ SC_API extern sc_time sc_get_default_time_unit();
+ 
+ } // namespace sc_core
+ 
++#include "sysc/kernel/sc_time_literals.hpp"
++
+ #endif
+ 
+ // $Log: sc_time.h,v $
+diff --git a/src/sysc/kernel/sc_time_literals.hpp b/src/sysc/kernel/sc_time_literals.hpp
+new file mode 100644
+index 00000000..94e53177
+--- /dev/null
++++ b/src/sysc/kernel/sc_time_literals.hpp
+@@ -0,0 +1,96 @@
++/*****************************************************************************
++
++  Licensed to Accellera Systems Initiative Inc. (Accellera) under one or
++  more contributor license agreements.  See the NOTICE file distributed
++  with this work for additional information regarding copyright ownership.
++  Accellera licenses this file to you under the Apache License, Version 2.0
++  (the "License"); you may not use this file except in compliance with the
++  License.  You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++  Unless required by applicable law or agreed to in writing, software
++  distributed under the License is distributed on an "AS IS" BASIS,
++  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++  implied.  See the License for the specific language governing
++  permissions and limitations under the License.
++
++ *****************************************************************************/
++
++/*****************************************************************************
++ *
++ *   sc_time_literals.hpp -- User defined literals for SystemC time.
++ *
++ *   Original Author: David C Black, 2022-11-16
++ *
++ *   *****************************************************************************/
++
++#ifndef SC_TIME_LITERALS_HPP
++#define SC_TIME_LITERALS_HPP
++
++// Description
++// -----------
++//
++// This header makes time specification more natural and convenient:
++//
++//    15.3_ns, 0.1_us, 0_sec, 1_min
++//
++// This only works with C++11 or later.
++//
++// Usage
++// -----
++//
++// In line with the Modern C++ standard's std::literals namespace, this feature must be
++// explicitly enabled by specifying the nested namespace:
++//
++//    using namespace sc_core::literals;
++//
++// Rationale
++// ---------
++//
++// This addition to SystemC makes the "language of SystemC" feel more natural and succinct
++// than the clunky specification of `sc_time( double, units )`. It also remains
++// optional, while allowing those wanting a more modern coding style to do so.
++//
++// Consider the follow contrasts between old and new:
++//
++//    wait( 10.1, SC_NS ); /* vs */ wait( 10.1_ns );
++//
++//    With the old, it is necessary to use awkward SHOUTING about the time units.
++//
++// Q: Why didn't we just use the <chrono> definitions?
++// A: Because they have a very different underlying system of time and the notion of time used in
++//    SystemC currently has a number of internal representation issues that would make it awkward
++//    to add without a much more substantial set of changes. This addition is relatively trivial,
++//    provides a significant improvement for little effort. If a future effort revamped SystemC to
++//    define a systemc_clock compatible with <chrono>, this minor addition would seemlessly continue
++//    to work.
++
++#if __cplusplus >= 201103L
++
++namespace sc_core::literals {
++
++    inline sc_core::sc_time operator "" _day (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_SEC }*3600*24; }
++    inline sc_core::sc_time operator "" _day (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_SEC }*3600*24; }
++    inline sc_core::sc_time operator "" _hr  (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_SEC }*3600;    }
++    inline sc_core::sc_time operator "" _hr  (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_SEC }*3600;    }
++    inline sc_core::sc_time operator "" _min (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_SEC }*60;      }
++    inline sc_core::sc_time operator "" _min (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_SEC }*60;      }
++    inline sc_core::sc_time operator "" _sec (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_SEC };         }
++    inline sc_core::sc_time operator "" _sec (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_SEC };         }
++    inline sc_core::sc_time operator "" _ms  (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_MS  };         }
++    inline sc_core::sc_time operator "" _ms  (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_MS  };         }
++    inline sc_core::sc_time operator "" _us  (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_US  };         }
++    inline sc_core::sc_time operator "" _us  (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_US  };         }
++    inline sc_core::sc_time operator "" _ns  (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_NS  };         }
++    inline sc_core::sc_time operator "" _ns  (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_NS  };         }
++    inline sc_core::sc_time operator "" _ps  (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_PS  };         }
++    inline sc_core::sc_time operator "" _ps  (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_PS  };         }
++    inline sc_core::sc_time operator "" _fs  (long double val)        { return sc_core::sc_time{ double(val), sc_core::SC_FS  };         }
++    inline sc_core::sc_time operator "" _fs  (unsigned long long val) { return sc_core::sc_time{ double(val), sc_core::SC_FS  };         }
++
++}
++
++#endif
++
++#endif/*SC_TIME_LITERALS_HPP*/
+-- 
+2.38.1
+
+From 4996defac451784e372a283904a8d7b2cc178919 Mon Sep 17 00:00:00 2001
+From: David C Black <david.black@doulos.com>
+Date: Wed, 16 Nov 2022 16:17:43 -0600
+Subject: [PATCH 14/14] Add define SC_HAS_GET_BASE_INTERFACE
+
+---
+ src/sysc/communication/sc_port.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/sysc/communication/sc_port.h b/src/sysc/communication/sc_port.h
+index a9265a33..54a8d5ee 100644
+--- a/src/sysc/communication/sc_port.h
++++ b/src/sysc/communication/sc_port.h
+@@ -96,6 +96,9 @@ public:
+     // get the first interface without checking for nil
+     virtual       sc_interface* get_interface()       = 0;
+     virtual const sc_interface* get_interface() const = 0;
++	#ifndef SC_HAS_GET_BASE_INTERFACE
++	#define SC_HAS_GET_BASE_INTERFACE
++	#endif
+     virtual sc_interface* get_base_interface( int index_=0 ) = 0;
+ 
+     virtual const char* kind() const
+-- 
+2.38.1
+
