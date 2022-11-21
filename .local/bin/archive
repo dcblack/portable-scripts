@@ -1,0 +1,75 @@
+#!make -f
+#
+# Lines starting with #| are documentation for help target
+# All targets are documented with comments formatted as #| * TAGNAME - DESCRIPTION
+
+#|------------------------------------------------------------------------------
+#|
+#| Name
+#| ----
+#| archive - create VERSION.txt and tarball for git repo
+#|
+#| Synopsis
+#| --------
+#| archive ACTION
+#|
+#| Description
+#| -----------
+#| Simply maintain the VERSION.txt file and creates tarball on request.
+#|
+#| Actions
+#| -------
+
+SHELL=bash
+THIS_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
+PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
+
+.PHONY: ${PHONIES}
+
+GIT_WORK_PATH := $(shell git rev-parse --show-toplevel)
+VERSION_PATH  := ${GIT_WORK_PATH}/VERSION.txt
+GIT_WORK_NAME := $(notdir ${GIT_WORK_PATH})
+GIT_WORK_BRCH := $(shell git rev-parse --abbrev-ref HEAD)
+GIT_WORK_HEAD := $(shell git rev-parse HEAD)
+GIT_WORK_VERS := $(shell git describe --long)
+GIT_REPO_NAME := $(shell git remote -v | perl -lne 'if(m{/([^/]+)[.]git [(]fetch[)]}){print $$1; exit}')
+BASE_TAR_NAME := netlist
+GIT_WORK_MODS := $(strip $(shell git status --porcelain | grep -v VERSION.txt | wc -l))
+GIT_WORK_BASE := $(shell git describe --long | sed -e 's/-.*//')
+ifeq "${GIT_WORK_MODS}" "0"
+  TARBALL_NAME := ${BASE_TAR_NAME}-${GIT_WORK_VERS}
+else
+  TARBALL_NAME := ${BASE_TAR_NAME}-${GIT_WORK_VERS}+${GIT_WORK_MODS}
+endif
+TARBALL_DIRN := $(patsubst %/,%,$(dir ${GIT_WORK_PATH}))
+
+ifeq "${GIT_WORK_PATH}" ""
+$(error "Not inside GIT repository")
+endif
+
+#| * help - display documentation
+help:
+	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
+
+#| * created - Create gzip tarball of current workspace
+create: version
+	#tar -cvz -C .. -f netlist.tgz --exclude 'build*' --exclude '*(tgz|log)' netlist
+	tar -cz --exclude-from=${GIT_WORK_PATH}/.gitignore -C ${TARBALL_DIRN} -f ${TARBALL_DIRN}/${TARBALL_NAME}.tgz ${GIT_WORK_NAME} \
+        && mv ${TARBALL_DIRN}/${TARBALL_NAME}.tgz ${GIT_WORK_PATH}/
+	@echo "INFO: Created ${GIT_WORK_PATH}/${TARBALL_NAME}.tgz"
+
+untar:
+	@echo "NYI"
+
+#| * version - Update VERSION.txt to reflect current status
+version:
+	@echo "# Version information" >${VERSION_PATH}
+	@env TZ=UTC date '+%c UTC (%s)' >>${VERSION_PATH}
+	@echo "Base version: ${GIT_WORK_BASE}" >>${VERSION_PATH}
+	@echo "Uncommitted/untracked files: ${GIT_WORK_MODS}" >>${VERSION_PATH}
+	@echo "${GIT_WORK_NAME} ${GIT_WORK_VERS} ${GIT_WORK_BRCH} ${GIT_WORK_HEAD}" >>${VERSION_PATH}
+	@cat ${VERSION_PATH} ;# Display result
+
+# vim:syntax=make:nospell
+#|
+#|------------------------------------------------------------------------------
