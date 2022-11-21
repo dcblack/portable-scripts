@@ -50,6 +50,7 @@ EOF
 declare -a ARGV
 export APPS
 export ARGV
+export BUILD_SOURCE_DOCUMENTATION
 export CC
 export CLEAN
 export CLEANUP
@@ -149,6 +150,7 @@ function ShowBuildOpts()
   done
   ShowVars \
     APPS \
+    BUILD_SOURCE_DOCUMENTATION \
     CLEAN \
     CLEANUP \
     CMAKE_CXX_STANDARD \
@@ -385,6 +387,9 @@ function GetBuildOpts()
       SRC="${HOME}/.local/src"
       shift
       ;;
+    --doxy)
+      BUILD_SOURCE_DOCUMENTATION=on
+      ;;
     --gcc)
       CC=gcc
       CXX=g++
@@ -541,6 +546,9 @@ function GetBuildOpts()
   if [[ -z "${BUILD_DIR}" ]]; then
     BUILD_DIR="build-${GENERATOR}-$(basename "${CC}")"
   fi
+  if [[ -z "${BUILD_SOURCE_DOCUMENTATION}" ]]; then
+    BUILD_SOURCE_DOCUMENTATION="off"
+  fi
 
   #-------------------------------------------------------------------------------
   # Test some assumptions
@@ -658,7 +666,7 @@ function Configure_tool()
       _do cmake -B "${BUILD_DIR}"\
           -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
           -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
-          -DBUILD_SOURCE_DOCUMENTATION=on\
+          -DBUILD_SOURCE_DOCUMENTATION=${BUILD_SOURCE_DOCUMENTATION}\
           "${APPLE}"
       ;;
     autotools)
