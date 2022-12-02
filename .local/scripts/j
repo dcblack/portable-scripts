@@ -4,6 +4,7 @@ function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
+# l=last c=current n=next wd=working_directory ws=working_script
 export lwd nwd lws cws nws
 function j() {
   export j_VERSION=1.4 FAVS
@@ -13,7 +14,7 @@ function j() {
   #   j DIR(S)
   # Begin parsing options
   #-----------------------------------------------------------------------------
-  export lwd nwd cws nws
+  export lwd nwd lws cws nws
   local J_VERBOSE J_NOSCRIPT J_DEBUG TMP1 TMP2 J_MK
   #local FAV FAV1
   J_VERBOSE=0
@@ -225,10 +226,9 @@ EOT
   Report_debug "Landed %s" "${TMP1}" -if "${J_DEBUG:-0}"
 
   # Save last working script if it was previously set
-  if [[ -n "${nws}" ]]; then export lws; lws="${nws}"; fi
+  if [[ -n "${nws}" ]]; then lws="${nws}"; fi
 
   # Deal with new working script if it exists
-  export nws
   TMP1="$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)"
   nws="$(Firstreal "${TMP1}")"
   Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG:-0}"
