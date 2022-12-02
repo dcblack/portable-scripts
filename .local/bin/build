@@ -41,6 +41,7 @@ function Build()
   + -gdb     Run under gdb
   + -info    Output information to help debug CMakeLists.txt etc.
   + -lldb    Run under lldb
+  + -noisy   Some extra info is displayed
   + -quiet   Remove verbosity when -test invoked
   + -P DIR   Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
   + -run     When done building, run the executable
@@ -66,7 +67,7 @@ function Build()
   # Setup defaults
   #------------------------------------------------------------------------------
   export SUBPROJ_DIR DEBUG
-  local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET
+  local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY
   SRC_DIR="."
   CMAKE_BUILD_TYPE="Debug"
   BLD_DIR="build"
@@ -75,6 +76,7 @@ function Build()
   CLEAN=0
   DEBUG=""
   QUIET=0
+  NOISY=0
   INSTALL=0
   PREFIX=
   ACTION=
@@ -156,6 +158,8 @@ function Build()
       CLEAN=1;
     elif [[ "$1" =~ ^-{1,2}info$ ]]; then
       DEBUG="--debug-output";
+    elif [[ "$1" =~ ^-{1,2}noisy$ ]]; then
+      NOISY=1;
     elif [[ "$1" =~ ^-{1,2}quiet$ ]]; then
       QUIET=1;
     elif [[ "$1" =~ ^-{1,2}verbose$ ]]; then
@@ -250,7 +254,9 @@ function Build()
   #! cd "${SUBPROJ_DIR}" || Die "Unable to enter ${SUBPROJ_DIR}" # Should not be needed
 
   if [[ -n "${DEBUG}" ]]; then
-    Report_debug -f "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}"
+    Report_debug -f "export CMAKE_PREFIX_PATH='${CMAKE_PREFIX_PATH}'"
+  elif [[ ${NOISY} == 1 ]]; then
+    _do -n "export CMAKE_PREFIX_PATH='${CMAKE_PREFIX_PATH}'"
   fi
 
   #------------------------------------------------------------------------------
@@ -320,10 +326,10 @@ function Build()
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
-      _do -n ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
+      _do -n env ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
     else
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
-      _do -n ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
+      _do -n env ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
     fi
   else
     Report_info "Executables in ${BLD_DIR}/ -- HINT: To run try:"
