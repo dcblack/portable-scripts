@@ -24,6 +24,7 @@ OPTIONS
 | ------  | -----------
 | --all   | Remove almost everything (Mac, PC & Vim files are left)
 | --build | Remove standard compilation files (e.g., object files, libraries)
+| --clion | Remove clion .idea directories
 | --exe   | Remove only executables
 | --logs  | Remove log files (i.e., have ".log" extension)
 | --mac   | Remove Mac junk (e.g., ".DS_Store")
@@ -85,6 +86,7 @@ VV=0
 (( i=0 ))
 OPTS=
 CMND="rm"
+# any of the letters BCLMPTVX
 WHAT="intermediates"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" =~ ^-{1,2}a(ll)?$ ]]; then
@@ -92,7 +94,7 @@ while [[ $# -gt 0 ]]; do
     OPTS=BLTX
   elif [[ "$1" =~ ^-{1,2}ALL$ ]]; then
     WHAT="everything"
-    OPTS=BLTVX
+    OPTS=BCLTVXCMP
   elif [[ "$1" =~ ^-{1,2}av$ ]]; then
     WHAT="all"
     OPTS=BLTX
@@ -100,6 +102,9 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^-{1,2}b(uild)?$ ]]; then
     WHAT+=" + build"
     OPTS+=B
+  elif [[ "$1" =~ ^-{1,2}c(lion)?$ ]]; then
+    WHAT+=" + clion"
+    OPTS+=C
   elif [[ "$1" =~ ^-{1,2}exe$ || "$1" =~ ^-x$ ]]; then
     WHAT+=" + executables"
     OPTS+=X
@@ -172,6 +177,10 @@ for DIR in "${DIRS[@]}"; do
   if   [[ "${OPTS}" =~ .*M.* ]]; then
     test -s "${V}" && echo "Removing Mac files"
     _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+  fi
+  if   [[ "${OPTS}" =~ .*C.* ]]; then
+    test -s "${V}" && echo "Removing CLion files"
+    _do find "${DIR}" -type d -name '.idea'          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
   fi
   if   [[ "${OPTS}" =~ .*P.* ]]; then
     test -s "${V}" && echo "Removing PC files"
