@@ -26,6 +26,7 @@ OPTIONS
 | --ALL   | Remove everything defined by other options (perhaps overkill)
 | --build | Remove standard compilation files (e.g., object files, libraries)
 | --clion | Remove clion .idea directories
+| --cmake | Remove cmake files (e.g., when you accidentally use cmake in the source directory)
 | --exe   | Remove only executables
 | --git   | Remove non-tracked files
 | --logs  | Remove log files (i.e., have ".log" extension)
@@ -89,7 +90,7 @@ VV=0
 (( i=0 ))
 OPTS=
 CMND="rm"
-# any of the letters BCGLMPTVX
+# any of the letters BcCGLMPTVX
 WHAT="intermediates"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" =~ ^-{1,2}(a|all)$ ]]; then
@@ -105,6 +106,9 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^-{1,2}(b|build)$ ]]; then
     WHAT+=" + build"
     OPTS+=B
+  elif [[ "$1" =~ ^-{1,2}(cmake)$ ]]; then
+    WHAT+=" + cmake"
+    OPTS+=c
   elif [[ "$1" =~ ^-{1,2}(c|clion)$ ]]; then
     WHAT+=" + clion"
     OPTS+=C
@@ -149,9 +153,9 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^- ]]; then
     echo "FATAL: Unknown option '$1'." 1>&2
     exit 1
-  elif [[ -d "$1" ]]; then
+  elif [[ -d "$1/." ]]; then
     (( ++i ))
-    DIRS[${i}]="$1"
+    DIRS[${i}]="$(Realpath "$1")"
   else
     echo "ERROR: Bad directory '$1'." 1>&2
     exit 1
@@ -161,6 +165,7 @@ done
 if [[ ${#DIRS[@]} == 0 ]]; then
   DIRS[1]="."
 fi
+# Assertion: All specified directories are real
 
 #------------------------------------------------------------------------------
 # Do the work
@@ -173,8 +178,14 @@ TRASH_DIR="${NEW_LOG/_log./_dir}"
 # shellcheck disable=SC2312
 echo "$0 $* ;# $(date) $(pwd)" >"${NEW_LOG}"
 for DIR in "${DIRS[@]}"; do
-  ACTUAL_DIR="(Realpath ${DIR})"
-  test -s "${V}" && echo "Remove objects and dependencies under ${ACTUAL_DIR}"
+  if   [[ "${OPTS}" =~ .*c.* ]]; then
+    test -s "${V}" && echo "Removing cmake files"
+    _do find "${DIR}" -type d -name 'CMakeFiles'          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+    _do find "${DIR}" -type f -name 'CMakeCache.txt'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name 'cmake_install.cmake' ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name 'CTestTestfile.cmake' ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+  fi
+  test -s "${V}" && echo "Remove objects and dependencies under ${DIR}"
   {
     _do find "${DIR}" -name '*.[doP]'                ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
     _do find "${DIR}" -path "*/compile-${YMD}*.sh"   ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
@@ -185,8 +196,9 @@ for DIR in "${DIRS[@]}"; do
     _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*G.* ]]; then
+    # shellcheck disable=SC2207
     MISSED=( $(git -C "${DIR}" ls-files -o --exclude-standard) )
-    _do "${CMND}" "${V}" -fr ${MISSED[@]}
+    _do "${CMND}" "${V}" -fr "${MISSED[@]}"
   fi
   if   [[ "${OPTS}" =~ .*C.* ]]; then
     test -s "${V}" && echo "Removing CLion files"
@@ -227,7 +239,7 @@ done 2>/dev/null | tee -a "${NEW_LOG}"
 if [[ ${VV} == 1 ]]; then
   less -EFK "${NEW_LOG}"
 fi
-REMOVED="$(egrep -v '92m(find|rm) ' "${NEW_LOG}" | grep -cv '^#')"
+REMOVED="$(grep -Ev '92m(find|rm) ' "${NEW_LOG}" | grep -cv '^#')"
 if [[ ${REMOVED} -gt 0 ]]; then (( REMOVED-- )); fi
 if [[ ${REMOVED} == 0 ]]; then REMOVED="no" ; fi
 # shellcheck disable=SC2312
