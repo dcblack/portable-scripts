@@ -20,20 +20,21 @@ The default is to remove files similar to **make**
 OPTIONS
 -------
 
-| Select  | Description
-| ------  | -----------
-| --all   | Remove almost everything (Mac, PC & Vim files are left)
-| --ALL   | Remove everything defined by other options (perhaps overkill)
-| --build | Remove standard compilation files (e.g., object files, libraries)
-| --clion | Remove clion .idea directories
-| --cmake | Remove cmake files (e.g., when you accidentally use cmake in the source directory)
-| --exe   | Remove only executables
-| --git   | Remove non-tracked files
-| --logs  | Remove log files (i.e., have ".log" extension)
-| --mac   | Remove Mac junk (e.g., ".DS_Store")
-| --pc    | Remove PC junk (e.g., "thumbs.db")
-| --temps | Remove Linux temporaries (e.g., *~ *.bak)
-| --vi    | Remove vim & vi swap files (i.e., .*.sw?)
+| Select   | Description
+| ------   | -----------
+| --all    | Remove almost everything (Mac, PC & Vim files are left)
+| --ALL    | Remove everything defined by other options (perhaps overkill)
+| --build  | Remove standard compilation files (e.g., object files, libraries)
+| --clion  | Remove CLion .idea directories
+| --cmake  | Remove cmake files (e.g., when you accidentally use cmake in the source directory)
+| --exe    | Remove only executables
+| --git    | Remove non-tracked files
+| --logs   | Remove log files (i.e., have ".log" extension)
+| --mac    | Remove Mac junk (e.g., ".DS_Store")
+| --pc     | Remove PC junk (e.g., "thumbs.db")
+| --temps  | Remove Linux temporaries (e.g., *~ *.bak)
+| --vi     | Remove vim & vi swap files (i.e., .*.sw?)
+| --vscode | Remove Visual Studio .vscode directories
 
 | Option  | Description
 | ------  | -----------
@@ -90,7 +91,7 @@ VV=0
 (( i=0 ))
 OPTS=
 CMND="rm"
-# any of the letters BcCGLMPTVX
+# any of the letters BcCGLMPTvVX
 WHAT="intermediates"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" =~ ^-{1,2}(a|all)$ ]]; then
@@ -138,12 +139,15 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^-{1,2}pc?$ ]]; then
     WHAT+=" + pc"
     OPTS+=P
-  elif [[ "$1" =~ ^-{1,2}(temp|temps|tempfiles)$  || "$1" =~ ^-T$ ]]; then
+  elif [[ "$1" =~ ^-{1,2}(temp|temps|tempfiles|T)$ ]]; then
     WHAT+=" + tempfiles"
     OPTS+=T
-  elif [[ "$1" =~ ^-{1,2}(V|vim)$  || "$1" =~ ^-T$ ]]; then
+  elif [[ "$1" =~ ^-{1,2}(V|vim)$ ]]; then
     WHAT+=" + vim-swapfiles"
     OPTS+=V
+  elif [[ "$1" =~ ^-{1,2}(vsc|vscode)$ ]]; then
+    WHAT+=" + VSCode"
+    OPTS+=v
   elif [[ "$1" =~ ^-{1,2}(q|quiet)$ ]]; then
     V=''
   elif [[ "$1" =~ ^-{1,2}(v|verbose)$ ]]; then
@@ -204,6 +208,10 @@ for DIR in "${DIRS[@]}"; do
     test -s "${V}" && echo "Removing CLion files"
     _do find "${DIR}" -type d -name '.idea'          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
     _do find "${DIR}" -type f -name 'clion.*'        ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+  fi
+  if   [[ "${OPTS}" =~ .*v.* ]]; then
+    test -s "${V}" && echo "Removing VSCode files"
+    _do find "${DIR}" -type d -name '.vscode'        ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
   fi
   if   [[ "${OPTS}" =~ .*P.* ]]; then
     test -s "${V}" && echo "Removing PC files"
