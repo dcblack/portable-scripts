@@ -26,16 +26,41 @@ function Excluded()
 
 function Update-local()
 {
-  local ExecPath ExecDir LocalDir Excludes
+  export SCRIPTS_DIR
+  # If not yet defined
+  if [[ -z "${SCRIPTS_DIR}" ]]; then
+    # Try the directory where build is located
+    SCRIPTS_DIR="$(dirname "$0")"
+  fi
+  if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
+    # Try home installation
+    SCRIPTS_DIR="${HOME}/.local/scripts"
+  fi
+  if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
+    Die "Unable to find Essential-IO in ${SCRIPTS_DIR}"
+  fi
+  # shellcheck disable=SC1091
+  source "${SCRIPTS_DIR}/Essential-IO"
+
+  local ExecPath ExecDir LocalDir Excludes V Q N
   ExecPath="$(Realpath "$0")"
   ExecDir="$(dirname "${ExecPath}")"
   LocalDir="$(basename "${ExecDir}")"
   Excludes=( ABOUT.md README.md README )
+  V=""
+  Q=""
+  N=""
 
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     perl -ne 's/^#[|] ?// && print' "${ExecPath}"
     return
   fi
+  while [[ "$1" =~ ^- ]]; do
+    if   [[ "$1" == "-v" ]]; then V="-v";
+    elif [[ "$1" == "-q" ]]; then Q="-q";
+    elif [[ "$1" == "-n" ]]; then N="-n"; fi
+    shift;
+  done
 
   if [[ $# == 0 ]]; then
     set "${HOME}/.local/${LocalDir}"
@@ -50,14 +75,14 @@ function Update-local()
     return 1
   fi
 
-  local MasterDir MasterFile LocalFile UpdateList
+  local MasterDir MasterFile LocalFile
   for MasterDir in "$@"; do
     for LocalFile in *; do
       if Excluded "${LocalFile}" "${Excludes[@]}"; then continue; fi
       MasterFile="${MasterDir}/${LocalFile}"
       if [[ -e "${MasterFile}" ]]; then
-        echo "Updating ${LocalFile}"
-        rsync -auq "${MasterFile}" ./
+        Report_info "Updating ${LocalFile}"
+        _do "${N}" "${Q}" rsync -auq "${V}" "${MasterFile}" ./
       fi
     done
   done
