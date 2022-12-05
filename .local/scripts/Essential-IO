@@ -318,15 +318,21 @@ function _do()
 {
   #@ Echo and then execute arguments as a command
   #| _do COMMAND [ARGS]
-  local NX
+  local NX Q
+  Q=0
   export NOTREALLY
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
+  if [[ "$1" == "-q" ]]; then Q=1; shift; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
-  if [[ "${NX}" == "-" ]]; then
-    Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
-    return 0;
-  else
-    Echo "$(_C cyn)${NX}%$(_C none bold) $*$(_C none)"
+  if [[ "$1" == "-q" ]]; then Q=1; shift; fi
+  if [[ $# -gt 0 && -z "$1" ]]; then shift; fi
+  if [[ ${Q} == 0 ]]; then
+    if [[ "${NX}" == "-" ]]; then
+      Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
+      return 0;
+    else
+      Echo "$(_C cyn)${NX}%$(_C none bold blue) $*$(_C none)"
+    fi
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   "$@"
