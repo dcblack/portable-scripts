@@ -1,4 +1,4 @@
-#!/usr/bin/env perl5
+#!/usr/bin/env perl
 #
 #$Info: w2l - Convert Windows paths to Linux for use under WSL
 
