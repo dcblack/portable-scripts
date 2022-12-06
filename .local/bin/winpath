@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+#$Info: Winpath - Convert paths from Windows format to Linux/Mac and visa versa. $
+
+# shellcheck disable=SC2016
+PERLSCRIPT='
+use strict;
+use warnings;
+
+my $arg = "@ARGV";
+if( $arg =~ s{^([A-Z]):}{/mnt/$1/} ) {
+  $arg =~ s{\\}{/}g;
+  $arg =~ s{//+}{/}g;
+  print "$arg\n";
+} elsif( $arg =~ s{^/mnt/([A-Za-z])/}{$1:\\\\} ) {
+  $arg =~ s{/}{\\}g;
+  print "$arg\n";
+} else {
+  print "FATAL_Unknown_conversion\n";
+}
+';
+
+perl -e "${PERLSCRIPT}" "$*"
