@@ -7,6 +7,7 @@ LIBNAME="GSL (C++ Core Guidelines Support Library)"
 GIT_URL="https://github.com/microsoft/GSL.git"
 
 function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 

@@ -32,6 +32,7 @@ Source this as follows inside your bash script:
 ```sh
 function Realpath()
 {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 SCRIPT="$(Realpath "$0")"
@@ -81,8 +82,9 @@ export UNINSTALL
 export VERBOSITY
 export WARNINGS
 
-function Realpath ()
+function Realpath()
 {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"

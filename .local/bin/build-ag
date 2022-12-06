@@ -8,6 +8,7 @@ TOOL_SRC="the_silver_searcher"
 TOOL_URL="https://github.com/ggreer/the_silver_searcher.git"
 
 function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 

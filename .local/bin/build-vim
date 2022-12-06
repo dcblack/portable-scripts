@@ -8,6 +8,7 @@ TOOL_URL="https://github.com/vim/vim.git"
 GENERATOR="cmake"
 
 function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
