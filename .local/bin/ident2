@@ -56,7 +56,7 @@ and f.c is compiled into f.o, then the command
 will output
 
  f.c =>
-   $ id: f.c,v 1.5 2001/09/03 03:22:46 dcblack Exp $
+   $ Id: f.c,v 1.5 2001/09/03 03:22:46 dcblack Exp $
  f.o =>
    $ Id: f.o,v 1.5 2001/09/03 03:22:46 dcblack Exp $
 
@@ -95,7 +95,7 @@ Help (this text).
 
 =item B<--id>
 
-Focusses on finding a single B<Id> or B<Header> per file. Ignores all other keywords.
+Focuses on finding a single B<Id> or B<Header> per file. Ignores all other keywords.
 
 =item B<--patt> I<PATT>
 
