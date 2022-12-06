@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+#$Info: cpp-pragmatize - calls cpp-guard --pragmatic. $
+
+cpp-guard --pragmatic "$@"

@@ -1,0 +1,118 @@
+#!/usr/bin/env perl5
+require v5.6;
+use strict;
+use warnings;
+#
+sub Syntax {
+  print STDERR q{
+NAME
+----
+cpp-destruct - Converts C++ `struct` into `class`.$
+
+SYNOPSIS
+--------
+destruct [-nbu] FILENAME(S)
+
+ Option | Description
+ ------ | -----------
+ -nbu   | Don't keep backup files
+};
+}
+
+if( $ARGV[0] =~ m{^-{1,2}h(elp)?$} ) {
+  &Syntax();
+  exit 0;
+}
+
+use strict;
+use warnings;
+
+my $nobackup = 0;
+my $total_structs = 0;
+my $total_changes = 0;
+my $total_renamed = 0;
+for my $file (@ARGV) {
+
+  if ( $file eq '-nbu' ) {
+    $nobackup = 1;
+    next;
+  }
+
+  if ( not -r $file ) {
+    printf STDERR "Unable to read file '%s' -- ignoring\n", $file;
+    next;
+  }
+  open(my $FH,'<',$file)
+    or die "Unable to open '$file' for reading!?\n";
+  my @text = <$FH>;
+  close $FH;
+  my $state = 'LOOK_FOR_START';
+  my $changes = 0;
+  for my $line (@text) {
+    $line =~ s{\r\n}{\n}; # Just in case Windows text
+    if ($state eq 'LOOK_FOR_START') {
+      if ($line =~ m{^struct\s+(\w+)}) {
+        printf "Found struct %s\n",$1;
+        ++$total_structs;
+        $changes += $line =~ s{struct}{class};
+        $changes += $line =~ s{private}{Private}g; # protect
+        $changes += $line =~ s{public}{Public}g;   # protect
+        $changes += $line =~ s{:\s*}{: public };
+        $changes += $line =~ s{,\s*}{, public }g;
+        $line =~ s{public Private}{}g;
+        $line =~ s{public Public}{public}g;
+        $changes += $line =~ s{  +}{ }g if $changes;
+        $state = 'STRUCT_FOUND';
+        if ($line =~ m{[\{]}) {
+          $line .= "public:\n";
+          $state = 'LOOK_FOR_END';
+        }
+      }
+    } elsif ($state eq 'STRUCT_FOUND') {
+        $changes += $line =~ s{private}{Private}g; # protect
+        $changes += $line =~ s{public}{Public}g;   # protect
+        $changes += $line =~ s{:\s*}{: public };
+        $changes += $line =~ s{,\s*}{, public }g;
+        $line =~ s{public Private}{}g;
+        $line =~ s{public Public}{public}g;
+        $changes += $line =~ s{  +}{ }g if $changes;
+        if ($line =~ m{[\{]}) {
+          $line .= "public:\n";
+          $state = 'LOOK_FOR_END';
+        }
+    } elsif ($state eq 'LOOK_FOR_END') {
+      if ($line =~ m{[\}];}) {
+        $state = 'LOOK_FOR_START';
+      }
+    } else {
+      die "Unknown state!!!?\n";
+    }
+  }#endfor
+  $total_changes += $changes;
+
+  if ($changes != 0) {
+    ++$total_renamed;
+    printf "Updated %s\n",$file;
+
+    # Save results
+    my $temp = $file."-tmp";
+    open(my $TH,'>',$temp)
+      or die "Unable to open '$temp' for writing!?\n";
+    print $TH @text;
+    close $TH;
+
+    if ( $nobackup != 0 ) {
+      unlink $file;
+      rename $temp,$file;
+    } else {
+      # Rename files
+      my $orig = $file.'-orig';
+      rename $file,$orig;
+      rename $temp,$file;
+    }#endif
+  }
+}#endfor
+
+printf "Found %d structs\n",$total_structs;
+printf "Changed %d files\n",$total_renamed;
+printf "Made %d modifications\n",$total_changes;

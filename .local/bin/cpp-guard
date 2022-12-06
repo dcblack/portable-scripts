@@ -1,0 +1,217 @@
+#!/usr/bin/perl
+#
+# $Info: Update C/C++ header guards. $
+require v5.6;
+use strict;
+use warnings;
+use Cwd qw(abs_path getcwd);
+use English;
+use File::Basename;
+use FileHandle;
+use FindBin qw($RealBin $RealScript);
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+my $VERSION=1.0;
+my $HELPTEXT="
+NAME
+----
+$RealBin -- Update C/C++ header guards
+
+SYNOPSIS
+--------
+
+cpp-guard [OPTIONS] FILELIST
+cpp-guard --help
+cpp-guard --version
+
+DESCRIPTION
+-----------
+
+Add/update header guard on C/C+ files to FILENAME_EXTN where EXTN =~ .hpp .h
+Removes #pragma once
+
+OPTION     | DESCRIPTION
+:--------- | :----------
+-backup    | Keep backups of the original file(s)
+-remove    | Remove existing guard if present 
+-nobackup  | Do not keep backups of the original file(s)
+-noremove  | Do not remove existing guard
+-pragmatic | Use #pragma once
+-ifndef    | Use #ifndef (default)
+-version   | Display program versoin and exit
+-help      | Display this text
+";
+
+my $nobackup  = 0;
+my $noremove  = 0;
+my $force1st  = 1;
+my $pragmatic = ($RealBin =~ m{pragma})?1:0;
+
+#------------------------------------------------------------------------------
+# Main
+#------------------------------------------------------------------------------
+my $total_headers = 0;
+my $total_changes = 0;
+my $total_updated = 0;
+my $total_scanned = 0;
+my $detected_crlf = 0;
+
+for my $file (@ARGV) {
+
+  if ( $file =~ m{^-{1,2}h(elp)?$} ) {
+    printf "%s\n", $HELPTEXT;
+    exit 0;
+  }
+  if ( $file =~ m{^-{1,2}(version|V)$} ) {
+    printf "%s version %s\n", $RealBin, $VERSION;
+    exit 0;
+  }
+  if ( $file =~ m{^-{1,2}(back(up)?|bu)$} ) {
+    $nobackup = 0;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}(noback(up)?|nbu)$} ) {
+    $nobackup = 1;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}(remove|rm)$} ) {
+    $noremove = 0;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}no(remove|rm)$} ) {
+    $noremove = 1;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}(first|1st)$} ) {
+    $force1st = 1;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}not-(first|1st)$} ) {
+    $force1st = 0;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}pragma(tic|tize)?$} ) {
+    $pragmatic = 1;
+    next;
+  }
+  if ( $file =~ m{^-{1,2}(guard|if(n)?def)$} ) {
+    $pragmatic = 0;
+    next;
+  }
+  if ( $file =~ m{^-} ) {
+    printf STDERR "Fatal: Unknown option %s\n",$file;
+    exit 1;
+  }
+
+  if ( not -r $file ) {
+    printf STDERR "Warning: Unable to read file '%s' -- ignoring\n", $file;
+    next;
+  }
+
+  ++$total_scanned;
+
+  if ( $file !~ m{.+[.]h(pp)?$} ) {
+    printf STDERR "Filename '%s' does not match proper extension -- ignoring\n", $file;
+    next;
+  }
+
+  my $guard = $file;
+  $guard =~ s/[-. ]/_/g;
+  $guard =~ tr/a-z/A-Z/;
+  my $base = $guard;
+  $base =~ s/_(H|HPP)$//;
+
+  open(my $FH,'<',$file)
+    or die "Unable to open '$file' for reading!?\n";
+  my @text = <$FH>;
+  close $FH;
+
+  my $changes = 0;
+  my $beg = -1;
+  my $end = -1;
+
+  if ( $noremove == 0 ) {
+    # Remove existing guard (if any)
+    my $lno = 0;
+    my $incomment = 0;
+    my $state = 'LOOK_FOR_START';
+    for my $line (@text) {
+      ++$lno;
+      $detected_crlf = 1 if $line =~ s{\r\n}{\n}; # Just in case Windows text
+      my $bare = $line;
+      chomp $bare; chomp $bare;
+      $bare =~ s{^\s+}{};
+      $bare =~ s{\s+$}{};
+      if ( $incomment == 0 ) {
+        if ( $bare =~ s{/[*].*}{} ) {
+          $incomment = 1 if not ( $bare =~ s{//.*}{} );
+        }
+        $bare =~ s{\s*//.*}{};
+      } else {
+      }#endif
+    }#endfor
+  }#endif remove
+
+  if ( $pragmatic == 0 ) {
+    if ( $beg == -1 ) {
+      unshift @text, "#pragma once\n";
+    } else {
+      $text[$beg++] = "#pragma once";
+    }
+  } else {
+    if ( $beg == -1 ) {
+      unshift @text, "#define $guard\n";
+      unshift @text, "#ifndef $guard\n";
+    } else {
+      $text[$beg++] = "#ifndef $guard";
+      $text[$beg]   = "#define $guard";
+    }
+    if ( $end == -1 ) {
+      push @text, "#endif/*$guard*/\n";
+    } else {
+      $text[$end]   = "#endif/*$guard*/";
+    }
+  }
+
+  my $text = join('',@text);
+
+  $total_changes += $changes;
+
+  if ($changes != 0) {
+    ++$total_updated;
+    printf "Updated %s\n",$file;
+
+    # Save results
+    my $temp = $file."-tmp";
+    open(my $TH,'>',$temp)
+      or die "Unable to open '$temp' for writing!?\n";
+    print $TH $text;
+    close $TH;
+
+    if ( $nobackup != 0 ) {
+      unlink $file;
+      rename $temp,$file;
+    } else {
+      # Rename files
+      my $orig = $file.'-orig';
+      rename $file,$orig;
+      rename $temp,$file;
+    }#endif
+  }
+}#endfor
+
+printf "Updated %d headers\n",$total_headers;
+printf "Updated %d files\n",$total_updated;
+printf "Made %d modifications\n",$total_changes;
+printf "Backups kept\n" unless $nobackup;
+
+__DATA__
+#ifndef {:FILENAME:}_{:EXTN:}
+#define {:FILENAME:}_{:EXTN:}
+
+BODY
+
+#endif/*{:FILENAME:}_{:EXTN:}*/
+
+# vim:nospell
