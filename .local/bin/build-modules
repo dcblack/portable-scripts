@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#
+# Script to build/install Silver searcher, the fastest file searching tool on the planet!
+TOOL_NAME="Modules"
+# shellcheck disable=SC2089
+TOOL_INFO="Use 'module --help' for more information."
+TOOL_SRC="modules"
+TOOL_URL="https://github.com/cea-hpc/modules.git"
+
+function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+if [[ -x "${SCRIPT}" ]]; then
+  # shellcheck source=utils.bash
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+SetupLogdir "$0"
+
+GetBuildOpts "$0" "$@"
+ConfirmBuildOpts || exit
+
+Create_and_Cd "${SRC}"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
+
+Report_info "Configuring ${TOOL_NAME}"
+Generate autotools
+make
+
+Report_info "Installing ${TOOL_NAME}"
+_do make install | Log
+
+Summary "${TOOL_NAME}" "Installed. ${TOOL_INFO}"
+
+Cleanup_Source "${TOOL_SRC}"
