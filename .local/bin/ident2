@@ -1,0 +1,506 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if $running_under_some_shell; use vars qw($running_under_some_shell);
+  # -*- perl -*- #vim600:sw=2:tw=0:columns=100:lines=32
+
+# @(#)$Info: ident2 - improved version of rcs ident $
+#
+# @(#)$Copyright: 2001-2022 All rights reserved. $
+# @(#)$Email: <dcblack@mac.com>. $
+require 5.0;
+use strict;
+use English;
+use FindBin qw($RealBin $RealScript);
+use vars qw($exe);
+$exe = "$RealBin/$RealScript";
+
+=pod
+
+=head1 NAME
+
+B<ident2> - improved version of rcs ident
+
+=head1 SYNOPSIS
+
+B<ident2> [B<-c> I<CHARS>] [B<-q>] [B<--id>] [B<--sum[only]>] [I<FILE>...]
+
+B<ident2> [B<-c> I<CHARS>] [B<-q>] [B<--id>] [B<--sum>] B<--diff> [B<--patt> I<PATT>] I<FILE1> I<FILE2>
+
+B<ident2> [ B<-h> | B<-V> ]
+
+=head1 DESCRIPTION
+
+B<ident2>  searches   for   all   instances   of   the   pattern
+B<$>I<Keyword>: I<text> B<$>  in  the  named  files  or, if no files are
+named, the standard input. I<Keyword> must begin with an uppercase
+letter.
+
+These patterns are normally inserted  automatically  by  the
+RCS  command  co(1), but can also be inserted manually.  The
+option -q suppresses the warning given if there are no  pat-
+terns  in  a  file.   The  option  -V prints ident2's version
+number.
+
+ident2 works on text files as well as object files and dumps.
+For example, if the C program in f.c contains
+
+ #include <stdio.h>
+ static char const rcsid[] =
+ "$ Id: f.c,v 1.5 2001/09/03 03:22:46 dcblack Exp $";
+ int main() { return printf("%s\n", rcsid) == EOF; }
+
+and f.c is compiled into f.o, then the command
+
+ % ident2  f.c  f.o
+
+will output
+
+ f.c =>
+   $ id: f.c,v 1.5 2001/09/03 03:22:46 dcblack Exp $
+ f.o =>
+   $ Id: f.o,v 1.5 2001/09/03 03:22:46 dcblack Exp $
+
+If a C program defines a string like rcsid above but does not use it,
+lint(1) may complain, and some C compilers will optimize away the
+string. The most reliable solution is to have the program use the rcsid
+string, as shown in the example above.
+
+B<ident2> finds all instances of the B<$>I<Keyword>: I<text> B<$> pattern,
+even if I<Keyword> is not actually an RCS-supported keyword. This gives you
+information about nonstandard keywords like B<$>XConsortiumB<$>.
+
+This "B<improved>" version of B<ident> allows for the B<$> to be replaced
+with other delimiters (e.g. B<%> by default). Thus C<%Info: my info.%> 
+will also be extracted. This allows changes to a file imported
+from elsewhere to preserve the previous keyword values, but still be
+identifiable.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-c> I<DELIM>
+
+Use characters specified in I<DELIM> as the keyword delimiters.
+IMPORTANT: I<DELIM> replaces the default "C<$%>" completely. This option
+is potentially dangerous.
+
+=item B<--diff> I<FILE1 FILE2>
+
+Compare the keyword signatures of I<FILE1> and I<FILE2>.
+
+=item B<-h>
+
+Help (this text).
+
+=item B<--id>
+
+Focusses on finding a single B<Id> or B<Header> per file. Ignores all other keywords.
+
+=item B<--patt> I<PATT>
+
+Only extract lines matching I<PATT>ern.
+
+=item B<-q>
+
+Quiet mode.
+
+=item B<--sum>
+
+Obtains a checksum based on only the keyword values. Use for quick verification.
+
+=item B<--sumonly>
+
+Same as B<--sum> with suppression of standard output.
+
+=item B<-V>
+
+Print version information.
+
+=back
+
+=head1 KEYWORDS
+
+Here is the list of keywords currently maintained by  F<co(1)>.
+All  times  are  given  in  Coordinated Universal Time (UTC,
+sometimes called GMT) by default,  but  if  the  files  were
+checked  out with co's B<-z>I<zone> option, times are given with a
+numeric time zone indication appended.
+
+=over
+
+=item B<$>AuthorB<$>
+
+The login name of the user who checked in the revision.
+
+=item B<$>DateB<$>
+
+The date and time the revision was checked in.
+
+=item B<$>HeaderB<$>
+
+A standard header containing the full pathname  of  the
+RCS  file,  the revision number, the date and time, the
+author, the state, and the locker (if locked).
+
+=item B<$>IdB<$>
+
+Same as B<$>HeaderB<$>,  except  that  the  RCS  filename  is
+without a path.
+
+=item B<$>LockerB<$>
+
+The login name of the  user  who  locked  the  revision
+(empty if not locked).
+
+=item B<$>LogB<$>
+
+The log message supplied during checkin.   For  ident2's
+purposes, this is equivalent to B<$>RCSfileB<$>.
+
+=item B<$>NameB<$>
+
+The symbolic name used to check out  the  revision,  if any.
+
+=item B<$>RCSfileB<$>
+
+The name of the RCS file without a path.
+
+=item B<$>RevisionB<$>
+
+The revision number assigned to the revision.
+
+=item B<$>SourceB<$>
+
+The full pathname of the RCS file.
+
+=item B<$>StateB<$>
+
+The state assigned to the revision with the  -s  option
+of rcs(1) or ci(1).
+
+=back
+
+NOTE: You may invent additional keywords that are NOT modified
+or used by revision control systems and yet ARE extractable via
+B<ident2> (or by B<ident> for that matter). For example, I often
+embed B<$>Info: YOUR TEXT B<$> to contain important notes or 
+B<$>Copyright: YOUR TEXT B<$>. Alternately, you may consider using
+percent sign to set these off (e.g. B<%>Info: MY TEXTB<%>).
+
+=head1 DEPENDENCIES
+
+Uses B<diff> and B<sum> to implement those functionalities.
+
+=head1 SEE ALSO
+
+ident(1), ci(1), co(1), rcs(1), rcsdiff(1), rcsintro(1),  
+rcsmerge(1), rlog(1), rcsfile(5), cvs(1), diff(1), sum(1)
+
+=head1 EXAMPLES
+
+B<ident2> --sum myfile.v
+
+B<ident2 --diff -patt RTL netlist.v vcs.log
+
+=head1 AUTHOR
+
+David C. Black <dcblack@mac.com>
+
+=head1 COPYRIGHT
+
+Copyright (C) 2001-2022 by David C Black
+
+=head1 LICENSE
+
+This software, B<ident2>, is a copyrighted work. The accompanying text
+in the data section of this perl script describes the conditions under
+which the software may be copied, modified and distributed. No fee may
+be charged for this software or any derivative work (whether in exchange
+for copying, distribution, use, or otherwise).
+
+=cut
+
+use vars qw($auth $tool $Tool $TOOL $revn $USER $DATE);
+use pscr qw(&Version);
+$auth = 'David C Black <dcblack@mac.com>';
+($tool,$revn,$TOOL,$Tool) = &Version('$Id: ident2 179 2007-11-14 01:41:39Z dcblack$');
+$USER = getlogin || (getpwuid($<))[0] || "Intruder!";
+$DATE = localtime;
+
+use IO::Handle;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+use vars qw($using_stdout $warn_count $error_count);
+
+sub REPORT_WARNING {
+  my ($msg) = @_;
+  if ($using_stdout) {
+    printf STDERR "WARNING: %s\n",$msg;
+  } else {
+    printf STDOUT "WARNING: %s\n",$msg;
+  }#endif
+  $warn_count++;
+}#endsub REPORT_WARNING
+
+sub REPORT_ERROR {
+  my ($msg) = @_;
+  if (scalar(@_) == 2) {
+    my $fh = shift(@_);
+    printf $fh "ERROR: %s\n",$msg;
+  } else {
+    if ($using_stdout) {
+      printf STDERR "ERROR: %s\n",$msg;
+    } else {
+      printf STDOUT "ERROR: %s\n",$msg;
+    }#endif
+  }#endif
+  $error_count++;
+}#endsub REPORT_ERROR
+
+sub REPORT_FATAL {
+  my ($msg) = @_;
+  printf STDERR "FATAL: %s\n",$msg;
+  exit 1;
+}#endsub REPORT_FATAL
+
+use vars qw($delim);
+$delim = '$%';
+
+#------------------------------------------------------------------------------
+# Process command line arguments
+#------------------------------------------------------------------------------
+use vars qw(@HOLD @ORIG $arg $OPT_q $OPT_id $OPT_header $OPT_diff $OPT_sum $OPT_only 
+            $OPT_patt $OPT_v);
+
+ARGV: {
+  my @HOLD;
+  @ORIG = @ARGV;
+  while (@ARGV) {
+    $arg = shift(@ARGV);
+    if ($arg eq '-h' or $arg eq '--help') {
+      exec "perldoc $0";
+    } elsif ($arg eq '-c') {
+      $delim = shift(@ARGV);
+      REPORT_WARNING "Delimiter missing \$" unless $delim =~ m/[\$]/;
+    } elsif ($arg =~ m/^--?(check)?sumonly$/) {
+      $OPT_sum = 1;
+      $OPT_only = 1;
+    } elsif ($arg =~ m/^--?(check)?sum$/) {
+      $OPT_sum = 1;
+    } elsif ($arg =~ m/^--?diff$/) {
+      $OPT_diff = 1;
+    } elsif ($arg =~ m/^--?patt(ern)?$/) {
+      $OPT_patt = shift(@ARGV);
+    } elsif ($arg =~ m/^--?[Ii]d$/) {
+      $OPT_id = 1;
+    } elsif ($arg =~ m/^--?[Hh]eader$/) {
+      $OPT_header = 1;
+    } elsif ($arg eq '-v') {
+      $OPT_v = 1;
+    } elsif ($arg eq '-V') {
+      printf "%s\n",$revn;
+      exit 0;
+    } elsif ($arg eq '-q') {
+      $OPT_q = $arg;
+    } else {
+      push @HOLD,$arg;
+    }#endif
+  }#endwhile
+  @ARGV = @HOLD;
+}#end ARGV
+
+REPORT_FATAL "Must specify exactly two files for -diff option" if $OPT_diff and @ARGV != 2;
+if ($OPT_diff and $ARGV[0] eq $ARGV[1]) {
+  REPORT_WARNING "Files are identical!";
+  exit 0;
+}#endif
+
+my ($file,$ident,$core,@ident,%ident);
+foreach $file (@ARGV) {
+  if (open(FILE,"<$file")) {
+    binmode(FILE);
+    @ident = ();
+    my $found = 0;
+    printf STDERR "INFO: Processing %s\n",$file if $OPT_v;
+    # Scan file for all RCS keywords
+    LINE: while (<FILE>) {
+      next LINE if $OPT_patt ne '' and not m/$OPT_patt/;
+      FRAG: while (s/[$delim]([A-Z]\w+: [^$delim]+ )[$delim]//) {
+        ($ident,$core) = ($&,$1);
+        next FRAG if $OPT_id and $ident !~ m/^.(Header|Id):/
+                  or $OPT_header and $ident !~ m/^.(Header):/;
+        $found++;
+        push @{$ident{$file}},$core;
+        push @ident,sprintf("  %s\n",$ident);
+      }#endwhile
+    }#endwhile <FILE>
+    close FILE;
+    printf STDERR "INFO: Found %d fragments\n",$found if $OPT_v;
+    next if $OPT_diff or $OPT_only;
+    # Output results
+
+    #---------------------------------------------------------------------
+    # Default behavior
+    #---------------------------------------------------------------------
+    if (scalar @ident != 0) {
+       if ($OPT_id) {
+          ($ident) = sort(@ident); # use $ before %
+          $ident =~ s{Header: +/\S+/}{Id: }; # transform Header -> Id
+          $ident =~ s/^\s+//;
+          printf "%s => %s",$file, $ident;
+       } else {
+          printf "%s =>\n%s", $file,join('',@ident);
+       }#endif
+    } elsif (not $OPT_q) {
+       printf "No keywords found in %s\n",$file;
+    }#endif
+  } else {
+     REPORT_WARNING "Unable to read $file!";
+  }#endif
+}#endforeach $file in @ARGV
+
+goto DIFF if $OPT_diff;
+exit 0 unless $OPT_sum;
+exit 0 if scalar keys %ident == 0;
+
+#---------------------------------------------------------------------
+# Process sum
+#---------------------------------------------------------------------
+my @temp  = @ARGV;
+my $temp_dir = "/tmp/$USER.$$";
+my $sum;
+mkdir $temp_dir,0755;
+my $fw = 0;
+for my $i (0..$#ARGV) {
+   $fw = length $ARGV[$i] if $fw < length $ARGV[$i]
+}#endfor
+for my $i (0..$#ARGV) {
+   $temp[$i] =~ s:.*/::; # strip path information
+   $temp[$i] = "$temp_dir/$temp[$i]";
+   open(TEMP,">$temp[$i]") or REPORT_FATAL "Unable to write $temp[$i]!?";
+   printf TEMP "%s\n",join("\n",sort @{$ident{$ARGV[$i]}});
+   close TEMP;
+   $sum = `sum $temp[$i]`;
+   $sum =~ s/^\s+//;
+   $sum =~ s/\s+$//;
+   $sum =~ s/\s+/_/;
+   printf "sum %-${fw}.${fw}s %s\n",$ARGV[$i],$sum;
+   unlink $temp[$i];
+}#endif
+rmdir $temp_dir or REPORT_WARNING "Unable to remove $temp_dir";
+
+
+exit 0;
+
+#---------------------------------------------------------------------
+# Process diff
+#---------------------------------------------------------------------
+DIFF:
+if (scalar keys %ident == 0) {
+   printf "No keywords found in either %s nor %s",$ARGV[0],$ARGV[1] unless $OPT_q;
+   exit 0;
+}#endif
+
+{
+  my @sum;
+  my @temp  = @ARGV;
+  my $temp_dir = "/tmp/$USER.$$";
+  mkdir $temp_dir,0755;
+  my $fw = length $ARGV[0]; $fw = length $ARGV[1] if $fw < length $ARGV[1];
+  for my $i (0..1) {
+     $temp[$i] =~ s:.*/::; # strip path information
+     $temp[$i] = "$temp_dir/$temp[$i]";
+     open(TEMP,">$temp[$i]") or REPORT_FATAL "Unable to write $temp[$i]!?";
+     if (defined $ident{$ARGV[$i]}) {
+       printf TEMP "%s\n",join("\n",sort @{$ident{$ARGV[$i]}});
+     } else {
+       printf TEMP "*** EMPTY FILE ***\n";
+     }#endif
+     close TEMP;
+     $sum[$i] = `sum $temp[$i]`;
+     next unless $OPT_sum;
+     printf STDOUT "sum %-${fw}.${fw}s %s",$ARGV[$i],$sum[$i];
+  }#endif
+  my $status = 0;
+  if ($sum[0] eq $sum[1]){
+    printf STDOUT "Version keywords match!\n";
+  } else {
+    printf STDOUT "Version keywords differ:\n";
+    $status = system "diff @temp";
+  }#endif
+  unlink $temp[0] or REPORT_WARNING "Unable to remove $temp[0]";
+  unlink $temp[1] or REPORT_WARNING "Unable to remove $temp[1]";
+  rmdir $temp_dir or REPORT_WARNING "Unable to remove $temp_dir";
+
+  exit $status;
+}
+
+#############################################################################
+__END__
+                                ident2 Software
+
+                           Limited Copyright License
+
+BACKGROUND
+
+The accompanying ident2 software (the software) is a copyrighted work.
+This document describes conditions under which the software may be
+copied, modified and distributed.
+
+All rights, including copyright, in the software are retained by the
+owner(s) as identified in each software file.
+
+Subject to the conditions described below, you may modify source files
+included with the software and distribute the modified versions. The
+software accompanying this notice may include such derivative works.
+
+CONDITIONS FOR AUTHORIZED COPYING, MODIFICATION AND DISTRIBUTION
+
+If you agree to all of the following conditions, you may copy, modify
+and distribute the software subject to these conditions.
+
+You do not need to agree to these conditions. However, if you do not
+agree to all of the following conditions, you are not authorized to
+do anything with regard to the copyrighted work that is within the
+exclusive domain of a copyright owner, such as copying, modification,
+and distribution.
+
+(1) No fee (monetary or otherwise) may be charged for the software or
+any derivative work (whether in exchange for copying, distribution, use,
+or otherwise).
+
+(2) The software includes copyright notices, references to this
+document, and warnings concerning the intended use of the software. All
+such notices are to be included in all copies of the software. Any code
+copied or moved to a file not having such notices must be accompanied by
+such notices. Notices that are displayed to a user during execution of
+the software are to remain intact.
+
+(3) This document may not be modified. A copy of this document must be
+included with each copy of the software, including derivative works.
+
+(4) Failure to abide by these conditions terminates any rights that you
+may otherwise have had under this license.
+
+(5) NO WARRANTY: The software has NO warranty from anyone; for example,
+there is NO warranty that the software is error free and there is NO
+warranty with respect to infringement of patents, copyrights or any
+other intellectual property rights. The software is provided "AS IS." NO
+support is provided for the software.
+
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE SPECIFICALLY DISCLAIMED.
+
+(6) LIMITATIONS OF REMEDIES AND LIABILITY: In no event shall Synopsys
+be liable for direct, indirect, special, incidental or consequential
+damages (including lost profits), whether based on contract, tort or any
+other legal theory.
+
+(7) DERIVATIVE WORKS: In this document, the phrase "derivative work"
+is intended to include only those works that include sufficient
+copyrightable material from the software such that the derivative work
+would be a copyright infringement if made without authorization of the
+owner of the copyright in the software.
+
