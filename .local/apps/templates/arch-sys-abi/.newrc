@@ -1,0 +1,6 @@
+#!new # vim:syntax=sh
+--require templates$
+#! A basic template of a template.
+#: A basic template of a template.
+
+# $Id: .newrc,v 1.2 2006/12/13 17:05:01 dcblack Exp $
