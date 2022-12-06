@@ -82,6 +82,7 @@ function Build()
   ACTION=
   OPTS_SEP=0
   declare -a BUILD_OPTS TEST_OPTS
+  BUILD_LOG=build.log
   BUILD_OPTS=()
   TEST_OPTS=()
 
@@ -100,7 +101,7 @@ function Build()
   fi
   # shellcheck disable=SC1091
   source "${SCRIPTS_DIR}/Essential-IO"
-  Logfile build.log
+  Logfile "${BUILD_LOG}"
   Log "% $0 $*"
 
   #------------------------------------------------------------------------------
