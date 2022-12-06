@@ -20,8 +20,8 @@ function Unique_path() {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   # shellcheck disable=SC2016
   PERL_SCRIPT='
-    $v=shift @ARGV;
-    $s=q{:};
+    our $v=shift @ARGV;
+    our $s=q{:};
     $s=q{;} if $ENV{$v} =~ q{;};
     exit 1 if not exists $ENV{$v};
     for my $d(split(qr{$s},$ENV{$v})){
