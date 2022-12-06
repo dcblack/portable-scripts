@@ -335,7 +335,11 @@ function _do()
     fi
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
-  "$@"
+  if [[ -z "${LOGFILE}" ]]; then
+    "$@"
+  else
+    "$@" 2>&1 | tee -a "${LOGFILE}"
+  fi
 }
 
 #-------------------------------------------------------------------------------
