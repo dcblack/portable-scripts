@@ -180,10 +180,11 @@ YMD="$(date +%Y%m%d)"
 NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
 TRASH_DIR="${NEW_LOG/_log./_dir}"
 
+echo "# $0 $*" >"${NEW_LOG}"
 # shellcheck disable=SC2312
-echo "$0 $* ;# $(date) $(pwd)" >"${NEW_LOG}"
+echo "# $(date) $(pwd)" >>"${NEW_LOG}"
 for DIR in "${DIRS[@]}"; do
-  Ruler
+  echo -n '# '; Ruler
   Report_info "Cleaning ${DIR}"
   if   [[ "${OPTS}" =~ .*c.* ]]; then
     test -s "${V}" && echo "Removing cmake files"
@@ -250,7 +251,7 @@ done 2>/dev/null | tee -a "${NEW_LOG}"
 if [[ ${VV} == 1 ]]; then
   less -EFK "${NEW_LOG}"
 fi
-REMOVED="$(grep -Ev '92m(find|rm) ' "${NEW_LOG}" | grep -cv '^#')"
+REMOVED="$(grep -Fv '%' "${NEW_LOG}" | grep -cv '^#')"
 if [[ ${REMOVED} -gt 0 ]]; then (( REMOVED-- )); fi
 if [[ ${REMOVED} == 0 ]]; then REMOVED="no" ; fi
 # shellcheck disable=SC2312
