@@ -177,7 +177,7 @@ function Git_setup()
   git config --global alias.changes  'status -s -uno'
   git config --global alias.changed  'ls-files -m'
   git config --global alias.missed   'ls-files -o --exclude-standard'
-  git config --global alias.tags     'tag -l'
+  git config --global alias.tags     "!git for-each-ref --count=30 --sort='-*authordate' --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' refs/tags/* | perl -pe 's-refs/tags/--;s{... }{  };'"
   git config --global alias.unstage  'reset HEAD'
   git config --global alias.untrack  'rm --cached'
   git config --global alias.hash     'hash-object'
