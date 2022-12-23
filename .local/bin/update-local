@@ -7,7 +7,7 @@
 #| SYNOPSYS
 #|
 #| update-local --help|-h
-#| update-local [DIRECTORIES]
+#| update-local [-C TO_DIR] [FROM_DIRECTORIES]
 
 function Realpath()
 { 
@@ -48,9 +48,9 @@ function Update-local()
   ExecDir="$(dirname "${ExecPath}")"
   LocalDir="$(basename "${ExecDir}")"
   Excludes=( ABOUT.md README.md README )
-  V=""
-  Q=""
-  N=""
+  V=
+  Q=
+  N=
 
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     perl -ne 's/^#[|] ?// && print' "${ExecPath}"
@@ -59,31 +59,40 @@ function Update-local()
   while [[ "$1" =~ ^- ]]; do
     if   [[ "$1" == "-v" ]]; then V="-v";
     elif [[ "$1" == "-q" ]]; then Q="-q";
-    elif [[ "$1" == "-n" ]]; then N="-n"; fi
+    elif [[ "$1" == "-n" ]]; then N="-n";
+    elif [[ "$1" == "-C" ]]; then 
+      if [[ $# -lt 2 ]]; then Report_error "Missing argument for directory"; fi
+      cd "$2" || Report_fatal "Unable to cd into $2"
+      shift
+    fi
     shift;
   done
 
   if [[ $# == 0 ]]; then
     set "${HOME}/.local/${LocalDir}"
   fi
+  local MasterDir MasterFile LocalFile
   local errors=0
   for MasterDir in "$@"; do
     if [[ -d "${MasterDir}" ]]; then continue; fi
-    echo "Error: '${MasterDir}' must be a directory" 1>&2
+    Report_error "'${MasterDir}' must be a directory"
     (( ++errors ))
   done
   if [[ ${errors} -gt 0 ]]; then
     return 1
   fi
 
-  local MasterDir MasterFile LocalFile
   for MasterDir in "$@"; do
     for LocalFile in *; do
       if Excluded "${LocalFile}" "${Excludes[@]}"; then continue; fi
       MasterFile="${MasterDir}/${LocalFile}"
       if [[ -e "${MasterFile}" ]]; then
-        Report_info "Updating ${LocalFile}"
-        _do "${N}" "${Q}" rsync -auq "${V}" "${MasterFile}" ./
+        Report_info "Updating ${LocalFile}" 
+        if [[ "${N}" == "" && "${Q}" == "" ]]; then
+          _do rsync -auq "${V}" "${MasterFile}" ./
+        else
+          _do "${N}" "${Q}" rsync -auq "${V}" "${MasterFile}" ./
+        fi
       fi
     done
   done
