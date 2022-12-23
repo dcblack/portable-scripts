@@ -26,6 +26,23 @@ fi
 # shellcheck disable=SC2250,SC1091
 source "$SCRIPTDIR/Essential-IO"
 
+# Documentation - minimal
+if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+  shift
+  echo "
+  NAME
+  ----
+
+  $0 - sets up GSL, the C++ Core Guideline Support Library per <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines>
+
+  ## SYNOPSIS
+
+    $0 -h|--help
+    $0 [--clean]
+"
+  exit
+fi
+
 TOOL_PATH="$(Realpath "$0")"
 Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
 HERE="$(Realpath ".")"
@@ -38,6 +55,10 @@ INSTALL_DIR="${WORKTREE_DIR}/externs"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
 Report_info "Building under ${INSTALL_DIR}"
+if [[ "$1" =~ ^-{1,2}clean$ ]]; then
+  shift
+  rm -fr "${REPO_DIR}"
+fi
 if [[ -d "${REPO_DIR}/.git" ]]; then
   _do git -C "${REPO_DIR}" pull
   Report_info "Successfully updated ${LIBNAME}"
