@@ -7,62 +7,95 @@ function Die() { echo "FAILED to build! $*" 1>&2; return 1; }
 function Build()
 {
   local SYNTAX
-  SYNTAX="
-  NAME
-  ----
+  # shellcheck disable=SC2016
+  SYNTAX='
+NAME
+----
 
-  $0 - use cmake to build and optionally run, test, or install
+build - use cmake to build and optionally run, test, or install
 
-  ## SYNOPSIS
+## SYNOPSIS
 
-    $0 -h|--help
-    $0 [-n] [-C DIR] [-debug][-verbose][-quiet][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
+```sh
+build -h|--help
+build [-n] [-C DIR] [-debug][-verbose][-quiet][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
+build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
+```
 
+## DESCRIPTION
 
-  ## DESCRIPTION
+This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects.  It assumes a proper CMakeLists.txt has been set up. Basically, all this does is:
 
-  This script was written to simplify using _cmake_ and educate along they. It provides a single command to configure, compile, link and run or test projects.  It assume a proper CMakeLists.txt has been setup. Bascially, all this does is:
++ clean -a # OPTIONAL
++ cmake -B build
++ cmake --build build
++ ctest --test-dir build # OPTIONAL -OR- run
++ cmake --install --config Debug
 
-  + clean -a # OPTIONAL
-  + cmake -B build
-  + cmake --build build
-  + ctest --test-dir build # OPTIONAL -OR- run
-  + cmake --install --config Debug
+IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
 
-  IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
+## OPTIONS
 
-  ## OPTIONS
+| OPTION   | DESCRIPTION
+| ------   | -----------
+| -help    | Display this text
+| -n       | Don not actually do anything except show commands that would have been done
+| -B DIR   | Name of build directory -- defaults to \"build\"
+| -C DIR   | Change to specified directory before doing anything else
+| -clean   | Remove all build files and other output bits
+| -gdb     | Run under gdb
+| -info    | Output information to help debug CMakeLists.txt etc.
+| -list-extensions | See EXTENSIONS description following.
+| -lldb    | Run under lldb
+| -noisy   | Some extra info is displayed
+| -quiet   | Remove verbosity when -test invoked
+| -P DIR   | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
+| -run     | When done building, run the executable
+| -S DIR   | Name of source directory -- defaults to \".\"
+| -test    | When done building, run the tests verbosely unless -q supplied
+| -install | When done building, install
+| -targets | List explicit targets
+| -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
+| -verbose | Adds more information to output. Opposite of quiet.
 
-  + -help    Display this text
-  + -n       Don't actually do anything except show commands that would have been done
-  + -B DIR   Name of build directory -- defaults to \"build\"
-  + -C DIR   Change to specified directory before doing anything else
-  + -clean   Remove all build files and other output bits
-  + -gdb     Run under gdb
-  + -info    Output information to help debug CMakeLists.txt etc.
-  + -lldb    Run under lldb
-  + -noisy   Some extra info is displayed
-  + -quiet   Remove verbosity when -test invoked
-  + -P DIR   Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
-  + -run     When done building, run the executable
-  + -S DIR   Name of source directory -- defaults to \".\"
-  + -test    When done building, run the tests verbosely unless -q supplied
-  + -install When done building, install
-  + -targets List explicit targets
-  + -type BT Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
-  + -verbose Adds more information to output. Opposite of quiet.
+## CONFIGURATION
 
-  ## CONFIGURATION
+Several variables are setup inside the script for the default locations.
 
-    Several variables are setup inside the script for the default locations.
+## EXTENSIONS
 
-  ## EXAMPLES
+If the first command-line argument is a plain word (.e.g., systemc) and there exists build-LIBRARY or build-TOOL, then build will invoke that script as an alternative. All such scripts should have the general intent of build, but with a specific target of building a library or tool that is generally available on the Internet for download and installation.
 
-  % build
-  % build -clean -test
-  % build -run
+For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
-  "
+## EXAMPLES
+
+% build
+% build -clean -test
+% build -run
+% build -list-extensions
+% build systemc
+% build fmt
+
+'
+
+  # Handle extensions
+  #------------------------------------------------------------------------------
+  if [[ "$*" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
+    if command -v "build-$1" 1>/dev/null; then
+      UTILITY="build-$1"
+      shift
+      exec "${UTILITY}" "$@"
+    else
+      Report_fatal "No build script found to build specified library or tool named ${UTILITY}"
+    fi
+  fi
+  if [[ "$*" =~ ^-{1,2}list-extensions$ || "$*" == "-lx" ]]; then
+    local bindir
+    bindir="$(dirname "$0")"
+    perl -le '$_="@ARGV";s{[^[:space:]]+/build-}{}g;print "Extensions:";print "  $_"' "${bindir}/build-"*
+    exit 0
+  fi
 
   # Setup defaults
   #------------------------------------------------------------------------------
