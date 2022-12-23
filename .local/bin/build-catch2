@@ -46,11 +46,9 @@ else
   _do git clone "${GIT_URL}" || Report_fatal "Unable to clone"
   Report_info "Successfully installed ${LIBNAME}"
 fi
-exit 0
 cd "${REPO_DIR}" || Report_fatal "Unable to enter ${REPO_DIR}"
-_do cmake -B "${BUILD_DIR}" -S . -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" || Report_fatal "Unable to configure cmake"
-_do cmake --build "${BUILD_DIR}" || Report_fatal "Failed to compile and link"
-_do cmake --install build || Report_fatal "Failed to install"
+_do cmake -B "${BUILD_DIR}" -H. -DBUILD_TESTING=Off -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" || Report_fatal "Unable to configure cmake"
+_do cmake --build "${BUILD_DIR}" --target install|| Report_fatal "Failed to compile, link or install"
 Report_info "Successfully built ${LIBNAME}"
 
 # vim:nospell
