@@ -4,11 +4,9 @@
 
 function Die() { echo "FAILED to build! $*" 1>&2; return 1; }
 
-function Build()
+function Build-help()
 {
-  local SYNTAX
-  # shellcheck disable=SC2016
-  SYNTAX='
+  Echo <<'END-HELP';
 NAME
 ----
 
@@ -68,17 +66,30 @@ If the first command-line argument is a plain word (.e.g., systemc) and there ex
 
 For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
+## DEFAULT OPTIONS
+
+If a the file ${HOME}/.buildrc exists, its contents will be used for initial command-line options. It will be as if invoked with:
+
+```sh
+build "$(cat "${HOME}/.buildrc"}" "$@"
+```
+
 ## EXAMPLES
 
+```sh
 % build
 % build -clean -test
 % build -run
 % build -list-extensions
 % build systemc
 % build fmt
+```
 
-'
+END-HELP
+}
 
+function Build()
+{
   # Handle extensions
   #------------------------------------------------------------------------------
   if [[ "$*" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
@@ -144,7 +155,7 @@ For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
   WORKTREE_DIR="" ;#< Do not allow environment in
   while [[ $# != 0 ]]; do
     if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
-      Echo "${SYNTAX}"; return 0
+      Build-help; return 0
     elif [[ "$1" == "-B" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_error "-B requires a directory argument"
@@ -383,6 +394,11 @@ For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
   fi
 }
 
-Build "$@"
+if [[ -r "${HOME}/.buildrc" ]]; then
+  BUILDRC="$(cat "${HOME}/.buildrc")"
+  Build "${BUILDRC}" "$@"
+else
+  Build "$@"
+fi
 
 # vim:nospell
