@@ -26,7 +26,7 @@ A collection of useful functions for output in bash/zsh.
 | HelpText [-md] "_FILE_"       | Displays help for specified file
 | Log [-n] "_MESSAGE_"          | Adds message to logfile
 | Logfile [--append] _FILE_     | Establishes a logfile name
-| PassFail [$?] "_MESSAGE_"     | Displays message with pass/fail status
+| PassFail [STAT?] "_MESSAGE_"  | Displays message with pass/fail status
 | Realpath FILESPEC             | Echo the real pathname for a file specification
 | Read "_PROMPT_"               | Shell independent read returns REPLY
 | Report_debug "_MESSAGE_"      | Echo a debug message
@@ -107,6 +107,7 @@ function _C()
   ESC=""
   for arg in "$@"; do
     test -z "${arg}" && continue
+    arg="$(echo "${arg}" | tr '[:upper:]' '[:lower:]')"
     if [[ ${COLOR_FG} == 1 ]]; then
       case ${COLOR_SET} in
         2)  PRF="3"  ;;
@@ -119,6 +120,9 @@ function _C()
         10) PRF="10" ;;
         *) return 1  ;;
       esac
+    fi
+    if [[ "${arg}" =~ ^-[a-z] ]]; then
+      arg="${arg/-}"
     fi
     case "${arg}" in
       dflt|default)    COLOR_SET=2 ; COLOR_FG=1 ;;
@@ -207,6 +211,12 @@ function Setup-Color()
   fi
 }
 Setup-Color bright
+
+#-------------------------------------------------------------------------------
+function Color()
+{
+  echo -n "$(_C "$@")"
+}
 
 #-------------------------------------------------------------------------------
 function Logfile()
@@ -323,10 +333,14 @@ function _do()
   Q=0
   export NOTREALLY
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
-  if [[ "$1" == "-q" ]]; then Q=1; shift; fi
-  if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
-  if [[ "$1" == "-q" ]]; then Q=1; shift; fi
-  if [[ $# -gt 0 && -z "$1" ]]; then shift; fi
+  while [[ "$1" =~ ^[^a-zA-Z] ]]; do
+    if [[ "$1" == "-q" ]]; then Q=1;
+    elif [[ "$1" == "-n" ]]; then NX="-";
+    elif [[ "$1" == "-q" ]]; then Q=1;
+    else Report_warning "Dropping '$1'"
+    fi
+    shift
+  done
   if [[ ${Q} == 0 ]]; then
     if [[ "${NX}" == "-" ]]; then
       Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
@@ -337,7 +351,7 @@ function _do()
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   if [[ -z "${LOGFILE}" ]]; then
-    "$@"
+    "$@" || Report_fatal "'$*' not found"
   else
     "$@" 2>&1 | tee -a "${LOGFILE}"
   fi
@@ -416,6 +430,26 @@ function PassFail()
     else
       Report_info "$* $(_C bold red)failure$(_C none)";
     fi
+  fi
+}
+
+#-------------------------------------------------------------------------------
+function Iff()
+{
+  export args cond
+  args=("$@")
+  if [[ $# -gt 2 && "$*" =~ -if ]]; then
+    local i
+    for (( i=2; i<$#; ++i )); do
+      if [[ "${args[${i}]}" == '-if' ]]; then
+        local n=$#
+        local j=$(( i + 1 ))
+        local e=$(( i - 1 ))
+        cond="${args[*]:${j}:${n}}"
+        args=("${args[@]:${0}:${e}}")
+        eval "test ${cond}" && return 0 || return 1
+      fi
+    done
   fi
 }
 
