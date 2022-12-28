@@ -30,6 +30,7 @@ OPTION                | DESCRIPTION
 -LANGUAGE             | Select a language: bash (default), csh, lua, perl, python2, python3, zsh
 --bin\-b              | Place in $HOME/bin
 --edit[=_editor_\|-e  | Enter the specified editor after creation
+--externs             | Place in $WORKTREE_DIR/externs/bin, where WORKTREE_DIR is the git working directory
 --help\|-h            | Display this text
 --local\-l            | Place in $HOME/.local/bin
 --notreally|-n        | Show what would be done
@@ -136,7 +137,7 @@ function Mkbin()
 {
   local CRED NONE
   CRED="$(_C bright red)"
-  CCYN="$(_C bright cyan)"
+# CCYN="$(_C bright cyan)"
   CBLU="$(_C bright blue)"
   NONE="$(_C none)"
   local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH
@@ -159,34 +160,34 @@ function Mkbin()
       exit 1
     elif Regex "${OPTION}" "^/" ; then
       HASHBANG="${OPTION}"
-    elif [[ "${OPTION}" =~ ^-{1,2}lua ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}lua$ ]]; then
       KIND="lua"
       HASHBANG="/usr/bin/env lua"
-    elif [[ "${OPTION}" =~ ^-{1,2}perl[45]? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}perl[45]?$ ]]; then
       KIND="perl"
       HASHBANG="/usr/bin/env perl5"
-    elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?2 ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?2$ ]]; then
       KIND="python"
       HASHBANG="/usr/bin/env python2"
-    elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?3? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?3?$ ]]; then
       KIND="python"
       HASHBANG="/usr/bin/env python3"
-    elif [[ "${OPTION}" =~ ^-{1,2}zsh ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}zsh$ ]]; then
       KIND="zsh"
       HASHBANG="/usr/bin/env zsh"
-    elif [[ "${OPTION}" =~ ^-{1,2}t?csh ]]; then # --csh|--tcsh
+    elif [[ "${OPTION}" =~ ^-{1,2}t?csh$ ]]; then # --csh|--tcsh
       KIND="csh"
       HASHBANG="/usr/bin/env csh"
-    elif [[ "${OPTION}" =~ ^-{1,2}(ba)?sh ]]; then # --bash|--sh
+    elif [[ "${OPTION}" =~ ^-{1,2}(ba)?sh$ ]]; then # --bash|--sh
       KIND="bash"
       HASHBANG="/usr/bin/env bash"
-    elif [[ "${OPTION}" =~ ^-{1,2}e(dit)? ]]; then # --edit
+    elif [[ "${OPTION}" =~ ^-{1,2}e(dit)?$ ]]; then # --edit
       if [[ -n "${VISUAL}" ]]; then
         EDIT="${VISUAL}"
       else
         EDIT="gvim"
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}b(in)? ]]; then # --bin
+    elif [[ "${OPTION}" =~ ^-{1,2}b(in)?$ ]]; then # --bin
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d ${HOME}/bin ]]; then
           DIRECTORY="${HOME}/bin"
@@ -198,7 +199,19 @@ function Mkbin()
       else
         Report_error "Missing ${DIRECTORY}/bin ?!"; return 1
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)? ]]; then # --local
+    elif [[ "${OPTION}" =~ ^-{1,2}externs$ ]]; then # --externs
+      WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
+      if [[ -z "${DIRECTORY}" ]]; then
+        DIRECTORY="${WORKTREE_DIR}/externs/bin"
+        mkdir -p "${DIRECTORY}"
+      else
+        if [[ "${DIRECTORY}" =~ ^/ ]]; then
+          Report_fatal "Directory specification for --externs must be a relative specification"
+        else
+          DIRECTORY="${WORKTREE_DIR}/externs/${DIRECTORY}"
+        fi
+      fi
+    elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)?$ ]]; then # --local
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d ${HOME}/.local/bin ]]; then
           DIRECTORY="${HOME}/.local/bin"
