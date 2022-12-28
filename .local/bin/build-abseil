@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install C++ Abseil Library under current project.
+#$Info: Install C++ Abseil Library under current project. $
 # IMPORTANT; Must be run inside project git repository.
 
 LIBNAME="Units"
@@ -35,7 +35,7 @@ fi
 WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_error "Not in git repo"
 REPO_DIR="$(basename "${GIT_URL}" .git)"
 INSTALL_DIR="${WORKTREE_DIR}/externs"
-mkdir -p "${INSTALL_DIR}"
+mkdir -p "${INSTALL_DIR}" || Report_fatal "Unable to create ${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
 Report_info "Building under ${INSTALL_DIR}"
 if [[ -d "${REPO_DIR}/.git" ]]; then
@@ -54,7 +54,7 @@ _do cmake --install "${REPO_DIR}/build"
 TARGET_DIR="$(Realpath "${REPO_DIR}")"
 if [[ ! -L "${INSTALL_DIR}/include/gsl" ]]; then
   _do ln -s "${TARGET_DIR}/include/gsl" "${INSTALL_DIR}/include/gsl"
-  echo "Successfully installed ${LIBNAME}"
+  Report_info "Successfully installed ${LIBNAME}"
 fi
 
 # vim:nospell
