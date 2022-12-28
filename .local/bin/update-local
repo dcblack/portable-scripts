@@ -1,13 +1,34 @@
 #!/usr/bin/env bash
 #
 #| NAME
+#| ----
 #|
-#| update-local - update local files if they exist in the specified master directories
+#| update-local - update local files if they exist in the specified origin directories
 #|
-#| SYNOPSYS
+#| SYNOPSIS
+#| --------
 #|
 #| update-local --help|-h
-#| update-local [-C TO_DIR] [FROM_DIRECTORIES]
+#| update-local [-C TO_DIR] [DIRECTORIES]
+#|
+#| DIRECTORIES a divided into two types:
+#|
+#| 1. Full paths (i.e., must start with leading "/") become source directories to copy from
+#| 2. Relative directories become target directories to copy to
+#|
+#| EXAMPLE
+#| -------
+#| 
+#| ```sh
+#| # update files in bin with names that match files in ~/.local/bin
+#| cd bin && update-local
+#|
+#| cd . && update-local
+#|
+#| # update corresponding files by name in specified directories
+#| update-local project/scripts project/bin $HOME/origin/scripts $HOME/origin/bin /alt/origin/bin
+#| ```
+#|
 
 function Realpath()
 { 
@@ -43,7 +64,10 @@ function Update-local()
   # shellcheck disable=SC1091
   source "${SCRIPTS_DIR}/Essential-IO"
 
-  local ExecPath ExecDir LocalDir Excludes V Q N
+  #-----------------------------------------------------------------------------
+  # Defaults
+  #-----------------------------------------------------------------------------
+  local ExecPath ExecDir LocalDir Excludes V Q N D
   ExecPath="$(Realpath "$0")"
   ExecDir="$(dirname "${ExecPath}")"
   LocalDir="$(basename "${ExecDir}")"
@@ -51,7 +75,11 @@ function Update-local()
   V=
   Q=
   N=
+  D=0
 
+  #-----------------------------------------------------------------------------
+  # Parse command-line
+  #-----------------------------------------------------------------------------
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     perl -ne 's/^#[|] ?// && print' "${ExecPath}"
     return
@@ -60,6 +88,7 @@ function Update-local()
     if   [[ "$1" == "-v" ]]; then V="-v";
     elif [[ "$1" == "-q" ]]; then Q="-q";
     elif [[ "$1" == "-n" ]]; then N="-n";
+    elif [[ "$1" == "-d" ]]; then D=1;
     elif [[ "$1" == "-C" ]]; then 
       if [[ $# -lt 2 ]]; then Report_error "Missing argument for directory"; fi
       cd "$2" || Report_fatal "Unable to cd into $2"
@@ -68,32 +97,82 @@ function Update-local()
     shift;
   done
 
-  if [[ $# == 0 ]]; then
-    set "${HOME}/.local/${LocalDir}"
-  fi
-  local MasterDir MasterFile LocalFile
+  #-----------------------------------------------------------------------------
+  # Collect the source and target information
+  #-----------------------------------------------------------------------------
+  local Dir SourceDir SourceFile TargetFile
+  Sources=()
+  Targets=()
   local errors=0
-  for MasterDir in "$@"; do
-    if [[ -d "${MasterDir}" ]]; then continue; fi
-    Report_error "'${MasterDir}' must be a directory"
+  for Dir in "$@"; do
+    if [[ -d "${Dir}" ]]; then
+      if [[ "${Dir}" =~ ^/ ]]; then
+        Sources+=("${Dir}")
+      else
+        Targets+=("${Dir}")
+      fi
+      continue;
+    fi
+    Report_error "'${Dir}' must be a directory"
     (( ++errors ))
   done
   if [[ ${errors} -gt 0 ]]; then
     return 1
   fi
+  if [[ ${#Sources} == 0 ]]; then
+    Sources+=("${HOME}/.local/${LocalDir}")
+  fi
+  if [[ ${#Targets} == 0 ]]; then
+    Targets+=(".")
+  fi
+  if [[ ${D} == 1 ]]; then
+    Report_debug "Sources=${Sources[*]}"
+    Report_debug "Targets=${Targets[*]}"
+    exit 0
+  fi
 
-  for MasterDir in "$@"; do
-    for LocalFile in *; do
-      if Excluded "${LocalFile}" "${Excludes[@]}"; then continue; fi
-      MasterFile="${MasterDir}/${LocalFile}"
-      if [[ -e "${MasterFile}" ]]; then
-        Report_info "Updating ${LocalFile}" 
-        if [[ "${N}" == "" && "${Q}" == "" ]]; then
-          _do rsync -auq "${V}" "${MasterFile}" ./
-        else
-          _do "${N}" "${Q}" rsync -auq "${V}" "${MasterFile}" ./
+  #-----------------------------------------------------------------------------
+  # Check for collisions
+  #-----------------------------------------------------------------------------
+  local CandidateFiles=()
+  local errors=0
+  for SourceDir in "${Sources[@]}"; do
+    for TargetDir in "${Targets[@]}"; do
+      for TargetFile in "${TargetDir}"/*; do
+        if Excluded "${TargetFile}" "${Excludes[@]}"; then continue; fi
+        for CandidateFile in "${CandidateFiles[@]}"; do
+          if [[ "${TargetFile}" == "${CandidateFile}" ]]; then
+            Report_error "More than one file named '${CandidateFile}' encountered!"
+          else
+            CandidateFiles+=("${TargetFile}")
+            (( ++errors ))
+          fi
+        done
+      done
+    done
+  done
+  if [[ ${errors} != 0 ]]; then
+    Report_info "Please fix errors."
+    exit 1
+  fi
+
+  #-----------------------------------------------------------------------------
+  # Do the update
+  #-----------------------------------------------------------------------------
+  for SourceDir in "${Sources[@]}"; do
+    for TargetDir in "${Targets[@]}"; do
+      for TargetFile in "${TargetDir}"/*; do
+        if Excluded "${TargetFile}" "${Excludes[@]}"; then continue; fi
+        SourceFile="${SourceDir}/${TargetFile}"
+        if [[ -e "${SourceFile}" ]]; then
+          Report_info "Updating ${TargetFile}" 
+          if [[ "${N}" == "" && "${Q}" == "" ]]; then
+            _do rsync -auq "${V}" "${SourceFile}" "${TargetDir}/"
+          else
+            _do "${N}" "${Q}" rsync -auq "${V}" "${SourceFile}" "${TargetDir}/"
+          fi
         fi
-      fi
+      done
     done
   done
 }
