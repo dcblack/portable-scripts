@@ -323,9 +323,17 @@ function Mkbin()
           ---> {
           --->   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
           ---> }
+          ---> 
+          ---> # Using Essential-IO
           ---> SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
-          ---> if [[ ! -d "${SCRIPTDIR}" ]]; then
-          --->   printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
+          ---> if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+          --->   SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+          ---> fi
+          ---> if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+          --->   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+          ---> fi
+          ---> if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+          --->   printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
           --->   crash
           ---> fi
           ---> # shellcheck disable=SC2250,SC1091
