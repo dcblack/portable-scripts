@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# vim:syntax=bash
 #
 # $Info: build version 1.0 $
 
@@ -46,6 +47,9 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -list-extensions | See EXTENSIONS description following.
 | -lldb    | Run under lldb
 | -noisy   | Some extra info is displayed
+| -norc    | Ignore .buildrc
+| -norun   | Revert -run
+| -notest  | Revert -test
 | -quiet   | Remove verbosity when -test invoked
 | -P DIR   | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
 | -run     | When done building, run the executable
@@ -68,10 +72,10 @@ For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
 ## DEFAULT OPTIONS
 
-If a the file ${HOME}/.buildrc exists, its contents will be used for initial command-line options. It will be as if invoked with:
+If a the file ${HOME}/.buildrc or ./.buildrc exists, their contents will be used for initial command-line options. It will be as if invoked with:
 
 ```sh
-build "$(cat "${HOME}/.buildrc"}" "$@"
+build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 ```
 
 ## EXAMPLES
@@ -92,13 +96,15 @@ function Build()
 {
   # Handle extensions
   #------------------------------------------------------------------------------
-  if [[ "$*" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
+  if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
     if command -v "build-$1" 1>/dev/null; then
       UTILITY="build-$1"
       shift
       exec "${UTILITY}" "$@"
+      return 0
     else
       Report_fatal "No build script found to build specified library or tool named ${UTILITY}"
+      return 0
     fi
   fi
   if [[ "$*" =~ ^-{1,2}list-extensions$ || "$*" == "-lx" ]]; then
@@ -106,6 +112,21 @@ function Build()
     bindir="$(dirname "$0")"
     perl -le '$_="@ARGV";s{[^[:space:]]+/build-}{}g;print "Extensions:";print "  $_"' "${bindir}/build-"*
     exit 0
+  fi
+
+  # Add .buildrc if present
+  #------------------------------------------------------------------------------
+  if [[ ! "$*" =~ norc ]]; then
+    local -a BUILDRC
+    if [[ -r "${HOME}/.buildrc" ]]; then
+      BUILDRC+=( "$(cat "${HOME}/.buildrc")" "$@"  )
+    fi
+    if [[ -r "./.buildrc" ]]; then
+      BUILDRC+=( "$(cat "./.buildrc")" "$@"  )
+    fi
+    if [[ ${#BUILDRC[@]} != 0 ]]; then
+      set "${BUILDRC[@]}"
+    fi
   fi
 
   # Setup defaults
@@ -205,6 +226,12 @@ function Build()
       DEBUG="--debug-output";
     elif [[ "$1" =~ ^-{1,2}noisy$ ]]; then
       NOISY=1;
+    elif [[ "$1" =~ ^-{1,2}norc$ ]]; then
+      echo -n "";# Do nothing
+    elif [[ "$1" =~ ^-{1,2}norun$ ]]; then
+      ACTION=
+    elif [[ "$1" =~ ^-{1,2}notest$ ]]; then
+      ACTION=
     elif [[ "$1" =~ ^-{1,2}quiet$ ]]; then
       QUIET=1;
     elif [[ "$1" =~ ^-{1,2}verbose$ ]]; then
@@ -394,11 +421,6 @@ function Build()
   fi
 }
 
-if [[ -r "${HOME}/.buildrc" ]]; then
-  BUILDRC="$(cat "${HOME}/.buildrc")"
-  Build "${BUILDRC}" "$@"
-else
-  Build "$@"
-fi
+Build "$@"
 
 # vim:nospell
