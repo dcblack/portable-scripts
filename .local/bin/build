@@ -17,7 +17,7 @@ build - use cmake to build and optionally run, test, or install
 
 ```sh
 build -h|--help
-build [-n] [-C DIR] [-debug][-verbose][-quiet][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
+build [-n] [-C DIR] [-verbose][-quiet][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
 build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
 ```
 
@@ -26,7 +26,7 @@ build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
 This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects.  It assumes a proper CMakeLists.txt has been set up. Basically, all this does is:
 
 + clean -a # OPTIONAL
-+ cmake -B build
++ cmake -B build -DCMAKE_BUILD_TYPE=Debug
 + cmake --build build
 + ctest --test-dir build # OPTIONAL -OR- run
 + cmake --install --config Debug
@@ -358,7 +358,7 @@ function Build()
   #------------------------------------------------------------------------------
   Report_info "Compiling ${SUBPROJ_DIR}"
   # shellcheck disable=SC2086
-  _do cmake --build "${BLD_DIR}" "${BUILD_OPTS[@]}" || return 1
+  _do cmake --build "${BLD_DIR}" --config "${CMAKE_BUILD_TYPE}" "${BUILD_OPTS[@]}" || return 1
 
   #------------------------------------------------------------------------------
   if [[ "${ACTION}" == gdb ]]; then
@@ -394,14 +394,14 @@ function Build()
   elif [[ "${ACTION}" == test ]]; then
     Report_info "Testing ${SUBPROJ_DIR}"
     # shellcheck disable=SC2086,SC2312
-    ( _do ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}" || return 1 ) 2>&1 | tee test.log
+    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" || return 1 ) 2>&1 | tee test.log
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
-      _do -n env ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
+      _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}"
     else
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
-      _do -n env ctest --test-dir "${BLD_DIR}" "${TEST_OPTS[@]}"
+      _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}"
     fi
   else
     Report_info "Executables in ${BLD_DIR}/ -- HINT: To run try:"
