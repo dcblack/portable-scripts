@@ -351,9 +351,21 @@ function _do()
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   if [[ -z "${LOGFILE}" ]]; then
-    "$@" || Report_fatal "'$*' not found"
+    local EXIT_STATUS
+    "$@"
+    EXIT_STATUS=$?
+    if [[ ${EXIT_STATUS} != 0 ]]; then Report_error "'$*' failed"; fi
+    return "${EXIT_STATUS}"
   else
-    "$@" 2>&1 | tee -a "${LOGFILE}"
+    local EXIT_STATUS STATUS_FILE
+    STATUS_FILE="/tmp/$(basename "$0")"
+    STATUS_FILE="$(mktemp "${STATUS_FILE}.XXXXXX")" || exit 1
+    ( "$@" 2>&1; echo $? >"${STATUS_FILE}" ) | tee -a "${LOGFILE}"
+    EXIT_STATUS="$(cat "${STATUS_FILE}")"
+    rm "${STATUS_FILE}"
+    if [[ ${EXIT_STATUS} != 0 ]]; then Report_error "'$*' failed"; fi
+    # shellcheck disable=SC2086
+    return ${EXIT_STATUS}
   fi
 }
 
