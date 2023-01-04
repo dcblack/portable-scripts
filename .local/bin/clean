@@ -30,6 +30,7 @@ OPTIONS
 | --exe    | Remove only executables
 | --git    | Remove non-tracked files
 | --logs   | Remove log files (i.e., have ".log" extension)
+| --outs   | Remove out files (i.e., have ".out" extension)
 | --mac    | Remove Mac junk (e.g., ".DS_Store")
 | --pc     | Remove PC junk (e.g., "thumbs.db")
 | --temps  | Remove Linux temporaries (e.g., *~ *.bak)
@@ -97,13 +98,13 @@ WHAT="intermediates"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" =~ ^-{1,2}(a|all)$ ]]; then
     WHAT="all"
-    OPTS=BLTX
+    OPTS=BLOTX
   elif [[ "$1" =~ ^-{1,2}(A|ALL)$ ]]; then
     WHAT="everything"
-    OPTS=BCLTVXCMP
+    OPTS=BCLOTVXCMP
   elif [[ "$1" =~ ^-{1,2}av$ ]]; then
     WHAT="all"
-    OPTS=BLTX
+    OPTS=BLOTX
     VV=1
   elif [[ "$1" =~ ^-{1,2}(b|build)$ ]]; then
     WHAT+=" + build"
@@ -126,14 +127,17 @@ while [[ $# -gt 0 ]]; do
   elif [[ "$1" =~ ^-{1,2}(l|logs)$  || "$1" =~ ^-L$ ]]; then
     WHAT+=" + logfiles"
     OPTS+=L
+  elif [[ "$1" =~ ^-{1,2}(O|outs)$  || "$1" =~ ^-L$ ]]; then
+    WHAT+=" + outfiles"
+    OPTS+=O
   elif [[ "$1" =~ ^-{1,2}(k|keep)$ ]]; then
     CMND="trash"
   elif [[ "$1" =~ ^-{1,2}mac$ ]]; then
     WHAT+=" + mac"
     OPTS+=M
   elif [[ "$1" =~ ^-{1,2}(m|most)$ ]]; then
-    WHAT="build including logs"
-    OPTS=BL
+    WHAT="build including logs and outs"
+    OPTS=BLO
   elif [[ "$1" =~ ^-{1,2}(n|notreally)$ ]]; then
     NOTREALLY=1
     CMND="echo '# ${CMND}'"
@@ -224,6 +228,10 @@ for DIR in "${DIRS[@]}"; do
   if   [[ "${OPTS}" =~ .*L.* ]]; then
     test -s "${V}" && echo "Removing log files"
     _do find "${DIR}" -type f -name '*.log'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+  fi
+  if   [[ "${OPTS}" =~ .*O.* ]]; then
+    test -s "${V}" && echo "Removing out files"
+    _do find "${DIR}" -type f -name '*.out'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
   fi
   if [[ "${OPTS}" =~ .*X.* ]]; then
     test -s "${V}" && echo "Removing executable files"
