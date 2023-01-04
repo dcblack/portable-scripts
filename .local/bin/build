@@ -27,9 +27,8 @@ This script was written to simplify using _cmake_ and educate along the way. It 
 
 + clean -a # OPTIONAL
 + cmake -B build -DCMAKE_BUILD_TYPE=Debug
-+ cmake --build build
-+ ctest --test-dir build # OPTIONAL -OR- run
-+ cmake --install --config Debug
++ cmake --build build --config Debug
++ ctest --test-dir build -C Debug -VV # OPTIONAL -OR- run
 
 IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
 
@@ -41,6 +40,8 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -n       | Don not actually do anything except show commands that would have been done
 | -B DIR   | Name of build directory -- defaults to \"build\"
 | -C DIR   | Change to specified directory before doing anything else
+| -clean   | Remove all build files and other output bits
+| -G "GEN" | Specify generator (defaults to Ninja)
 | -clean   | Remove all build files and other output bits
 | -gdb     | Run under gdb
 | -info    | Output information to help debug CMakeLists.txt etc.
@@ -152,6 +153,8 @@ function Build()
   CMAKE_BUILD_TYPE="Debug"
   BLD_DIR="build"
   SUBPROJ_DIR="$(pwd)"
+  GENERATOR="Ninja"
+  ADD_CMAKE_PREFIX=0
   APPS="${HOME}/.local/apps"
   CLEAN=0
   DEBUG=""
@@ -162,11 +165,10 @@ function Build()
   ACTION=
   OPTS_SEP=0
   declare -a BUILD_OPTS TEST_OPTS
-  BUILD_LOG=build.log
   BUILD_OPTS=()
   TEST_OPTS=()
-  Logfile "${BUILD_LOG}"
-  Log "% $0 $*"
+  BUILD_LOG=build.log
+  TEST_LOG=test.log
 
   #------------------------------------------------------------------------------
   # Scan for command-line options
@@ -195,6 +197,14 @@ function Build()
         SUBPROJ_DIR="$(pwd)"
         shift
       fi
+    elif [[ "$1" == "-G" ]]; then
+      if [[ $# -lt 2 ]]; then
+        Report_fatal "-P requires a directory argument" ; exit 1
+      else
+        GENERATOR="$2"
+      fi
+    elif [[ "$1" == "-CMP" ]]; then
+      ADD_CMAKE_PREFIX=1
     elif [[ "$1" == "-P" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-P requires a directory argument" ; exit 1
@@ -275,8 +285,13 @@ function Build()
   if [[ ${QUIET} == 0 ]]; then
     TEST_OPTS=(-VV "${TEST_OPTS[@]}")
   fi
+
   BLD_DIR="${BLD_DIR}/$(perl -le 'print lc(qq{@ARGV})' "${CMAKE_BUILD_TYPE}")"
   mkdir -p "${BLD_DIR}"
+
+  Logfile "${BLD_DIR}/${BUILD_LOG}"
+  Log "% $0 $*"
+
 
   #-------------------------------------------------------------------------------
   # Validate environment
@@ -303,26 +318,30 @@ function Build()
   #-------------------------------------------------------------------------------
   # Locate cmake modules that we assume
   #-------------------------------------------------------------------------------
-  export CMAKE_PREFIX_PATH
-  CMAKE_PREFIX_PATH=
-  for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
-    CDIR="$(Realpath "${CDIR}")"
-    if [[ ! -d "${CDIR}" ]]; then continue; fi
-    if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then
-      if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
-        CMAKE_PREFIX_PATH="${CDIR}"
-      else
-        CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH};${CDIR}"
+  if [[ ${ADD_CMAKE_PREFIX} == 1 ]]; then
+    export CMAKE_PREFIX_PATH
+    CMAKE_PREFIX_PATH=
+    for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+      CDIR="$(Realpath "${CDIR}")"
+      if [[ ! -d "${CDIR}" ]]; then continue; fi
+      if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then
+        if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
+          CMAKE_PREFIX_PATH="${CDIR}"
+        else
+          CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH};${CDIR}"
+        fi
       fi
-    fi
-  done
+    done
+  fi
 
   #------------------------------------------------------------------------------
   # Add horizontal line to help if visually scrolling backward
   #------------------------------------------------------------------------------
   Ruler
-  #! cd "${SUBPROJ_DIR}" || Die "Unable to enter ${SUBPROJ_DIR}" # Should not be needed
 
+  #------------------------------------------------------------------------------
+  # Show them the value computed if requested
+  #------------------------------------------------------------------------------
   if [[ -n "${DEBUG}" ]]; then
     Report_debug -f "export CMAKE_PREFIX_PATH='${CMAKE_PREFIX_PATH}'"
   elif [[ ${NOISY} == 1 ]]; then
@@ -341,15 +360,15 @@ function Build()
   Report_info "Configuring ${SUBPROJ_DIR}"
   if [[ -z "${DEBUG}" ]]; then
     if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
-      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" || exit 1
+      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" || exit 1
     else
-      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" || exit 1
+      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" || exit 1
     fi
   else
     if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
-      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}" || exit 1
+      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}" || exit 1
     else
-      _do cmake -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" "${DEBUG}" || exit 1
+      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" "${DEBUG}" || exit 1
     fi
   fi
 
@@ -394,7 +413,7 @@ function Build()
   elif [[ "${ACTION}" == test ]]; then
     Report_info "Testing ${SUBPROJ_DIR}"
     # shellcheck disable=SC2086,SC2312
-    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" ) 2>&1 | tee test.log
+    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" ) 2>&1 | tee "${BLD_DIR}/${TEST_LOG}"
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
