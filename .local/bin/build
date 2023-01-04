@@ -262,7 +262,7 @@ function Build()
     elif [[ "$1" =~ ^-v$ ]]; then
       BUILD_OPTS=("-v")
     elif [[ "$1" =~ ^-V$ ]]; then
-      TEST_OPTS=("-V")
+      TEST_OPTS=("-VV")
     else
       TEST_OPTS=("${TEST_OPTS[@]}" "$1")
     fi
@@ -273,7 +273,7 @@ function Build()
   fi
 
   if [[ ${QUIET} == 0 ]]; then
-    TEST_OPTS=(-V "${TEST_OPTS[@]}")
+    TEST_OPTS=(-VV "${TEST_OPTS[@]}")
   fi
   BLD_DIR="${BLD_DIR}/$(perl -le 'print lc(qq{@ARGV})' "${CMAKE_BUILD_TYPE}")"
   mkdir -p "${BLD_DIR}"
@@ -306,6 +306,8 @@ function Build()
   export CMAKE_PREFIX_PATH
   CMAKE_PREFIX_PATH=
   for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+    CDIR="$(Realpath "${CDIR}")"
+    if [[ ! -d "${CDIR}" ]]; then continue; fi
     if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then
       if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
         CMAKE_PREFIX_PATH="${CDIR}"
@@ -355,6 +357,7 @@ function Build()
   Report_info "Compiling ${SUBPROJ_DIR}"
   # shellcheck disable=SC2086
   _do cmake --build "${BLD_DIR}" --config "${CMAKE_BUILD_TYPE}" "${BUILD_OPTS[@]}"
+  # shellcheck disable=SC2181
   if [[ $? != 0 ]]; then exit 1; fi
 
   #------------------------------------------------------------------------------
