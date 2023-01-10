@@ -34,6 +34,7 @@ export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON
 #|
 #| The following are all from the `GetBuildOpts` function in `utils.bash`
 #|
+#|  --build-dir=DIR | -bd DIR
 #|  --cc=C_COMPILER | CC=C_COMPILER
 #|  --clang
 #|  --clean
@@ -41,7 +42,11 @@ export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON
 #|  --debug # developer use
 #|  --doxy
 #|  --gcc
+#|  --help | -h
 #|  --install=DIR | -i DIR
+#|  --not-really | -n
+#|  --no-install
+#|  --no-patch
 #|  --patch[=NAME | -patch [NAME]
 #|  --src=DIR | -s DIR
 #|  --std=N | -std=N
