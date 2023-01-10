@@ -61,6 +61,7 @@ export CXX
 export DEBUG
 export ERRORS
 export GENERATOR
+export BUILDER
 export GITROOT_DIR
 export LOGDIR
 export LOGFILE
@@ -76,7 +77,6 @@ export TOOL_VERS
 export TOOL_URL
 export TOOL_PATCHES
 export BUILD_DIR
-export GENERATOR
 export NOINSTALL
 export UNINSTALL
 export VERBOSITY
@@ -87,9 +87,17 @@ function Realpath()
   if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
+
+# Using Essential-IO
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
-if [[ ! -d "${SCRIPTDIR}" ]]; then
-  printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
   crash
 fi
 # shellcheck disable=SC2250,SC1091
@@ -154,7 +162,7 @@ function ShowBuildOpts()
   for (( i=0; i<${#ARGV[@]}; ++i )); do
     Report_debug "ARGV[${i}]='${ARGV[${i}]}'"
   done
-  ShowVars \
+  ShowVars -x\
     APPS \
     BUILD_SOURCE_DOCUMENTATION \
     CLEAN \
@@ -177,6 +185,7 @@ function ShowBuildOpts()
     TOOL_URL \
     TOOL_PATCHES \
     BUILD_DIR \
+    BUILDER \
     GENERATOR \
     NOINSTALL \
     UNINSTALL \
@@ -228,6 +237,7 @@ function GetBuildOpts()
 #|  Option             |  Alternative      | Description
 #|  ------             |  ------------     | -----------
 #|  --build-dir=DIR    |  -bd DIR          | source subdirectory to build in
+#|  --builder=TYPE     |  -bld TYPE        | cmake or autotools
 #|  --cc=C_COMPILER    |  CC=C_COMPILER    | chooses C compiler executable
 #|  --clang            |                   | quick --cc=clang --cxx=clang++
 #|  --clean            |  -clean           | reinstall source
@@ -236,7 +246,7 @@ function GetBuildOpts()
 #|  --debug            |  -d               | developer use
 #|  --default          |                   | quick -i=$HOME/.local -src=$HOME/.local/src
 #|  --gcc              |                   | quick --cc=gcc --cxx=g++
-#|  --generator=TYPE   |  -gen TYPE        | cmake or autotools
+#|  --generator=GEN    |                   | generator (for cmake)
 #|  --home             |                   | quick -i $HOME -s $HOME/src
 #|  --info=TEXT        |  -info TEXT       | choose installation directory
 #|  --install=DIR      |  -i DIR           | choose installation directory
@@ -285,7 +295,8 @@ function GetBuildOpts()
 #| - $TOOL_URL
 #| - $TOOL_VERS
 #| - $BUILD_DIR
-#| - $GENERATOR {cmake|autotools}
+#| - $BUILDER {cmake|autotools}
+#| - $GENERATOR {|Ninja|Unix Makefiles}
 #| - $TOOL_URL
 #| - $UNINSTALL
 #| - $VERBOSITY integer
@@ -357,6 +368,17 @@ function GetBuildOpts()
         BUILD_DIR="${1//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         BUILD_DIR="$2"
+        shift
+      else
+        Report_fatal "Need argument for $1"
+      fi
+      shift;
+      ;;
+    --builder=*|-bld)
+      if [[ "$1" != '-gen' ]]; then
+        BUILDER="${1//*=}"
+      elif [[ $# -gt 1 && -d "$2" ]]; then
+        BUILDER="$2"
         shift
       else
         Report_fatal "Need argument for $1"
@@ -579,11 +601,11 @@ function GetBuildOpts()
   if [[ -z "${CMAKE_INSTALL_PREFIX}" ]]; then
     CMAKE_INSTALL_PREFIX="${APPS}"
   fi
-  if [[ -z "${GENERATOR}" ]]; then
-    GENERATOR=cmake
+  if [[ -z "${BUILDER}" ]]; then
+    BUILDER=cmake
   fi
   if [[ -z "${BUILD_DIR}" ]]; then
-    BUILD_DIR="build-${GENERATOR}-$(basename "${CC}")"
+    BUILD_DIR="build-${BUILDER}-$(basename "${CC}")"
   fi
   if [[ -z "${BUILD_SOURCE_DOCUMENTATION}" ]]; then
     BUILD_SOURCE_DOCUMENTATION="off"
@@ -591,10 +613,10 @@ function GetBuildOpts()
 
   #-------------------------------------------------------------------------------
   # Test some assumptions
-  if [[ "${GENERATOR}" =~ (cmake|autotools) ]]; then
+  if [[ "${BUILDER}" =~ (cmake|autotools) ]]; then
     Comment all is ok
   else
-    Report_error "GENERATOR must be one of 'cmake' or 'autotools'"
+    Report_error "BUILDER must be one of 'cmake' or 'autotools'"
   fi
 
   #-------------------------------------------------------------------------------
@@ -651,15 +673,15 @@ function SetupLogdir()
 # Make directory and enter
 function Create_and_Cd()
 {
-  Assert $# = 1
-  _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}"
-  _do cd "${1}" || Report_fatal "Unable to enter ${1} directory"
+  Assert $# = 1 || return 1
+  _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}" || return 1
+  _do cd "${1}" || Report_fatal "Unable to enter ${1} directory" || return 1
 }
 
 # Download and enter directory and patch
 function GetSource_and_Cd()
 {
-  Assert $# = 2
+  Assert $# = 2 || return 1
   if [[ -n "${CLEAN}" && "${CLEAN}" == 1 ]]; then
     _do rm -fr "${1}"
   fi
@@ -688,28 +710,53 @@ function Configure_tool()
 {
   Report_info -grn "Configuring ${TOOL_NAME}"
   if [[ $# == 1 ]]; then # option generator
-    GENERATOR="$1"
+    BUILDER="$1"
     shift
   else
-    Assert -n "${GENERATOR}"
+    Assert -n "${BUILDER}" || return 1
   fi
-  Assert $# = 0
-  case "${GENERATOR}" in
+  Assert $# = 0 || return 1
+  case "${BUILDER}" in
     cmake)
       _do rm -fr "${BUILD_DIR}"
-      local HOST_OS TARGET_ARCH APPLE
+      local HOST_OS TARGET_ARCH APPLE T
       HOST_OS="$(uname -s)"
       TARGET_ARCH="$(uname -m)"
+      T=
       # Handle Apple Silicon
       APPLE=
       if [[ "${HOST_OS}" == Darwin ]]; then
         APPLE="-DCMAKE_APPLE_SILICON_PROCESSOR=${TARGET_ARCH}"
+        T+=A
       fi
-      _do cmake -B "${BUILD_DIR}"\
-          -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
-          -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
-          -DBUILD_SOURCE_DOCUMENTATION="${BUILD_SOURCE_DOCUMENTATION}"\
-          "${APPLE}"
+      if [[ -n "${GENERATOR}" ]];then
+        T+=G
+      fi
+      # Avoid empty arguments
+      case "${T}" in
+        A) _do cmake -B "${BUILD_DIR}"\
+            -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
+            -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+            -DBUILD_SOURCE_DOCUMENTATION="${BUILD_SOURCE_DOCUMENTATION}"\
+            "${APPLE}"
+            ;;
+        G) _do cmake -G "${GENERATOR}" -B "${BUILD_DIR}"\
+            -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
+            -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+            -DBUILD_SOURCE_DOCUMENTATION="${BUILD_SOURCE_DOCUMENTATION}"\
+            ;;
+        AG) _do cmake -G "${GENERATOR}" -B "${BUILD_DIR}"\
+            -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
+            -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+            -DBUILD_SOURCE_DOCUMENTATION="${BUILD_SOURCE_DOCUMENTATION}"\
+            "${APPLE}"
+            ;;
+        *) _do cmake -B "${BUILD_DIR}"\
+            -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"\
+            -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}"\
+            -DBUILD_SOURCE_DOCUMENTATION="${BUILD_SOURCE_DOCUMENTATION}"\
+            ;;
+      esac
       ;;
     autotools)
       reconfigure
@@ -719,7 +766,7 @@ function Configure_tool()
           ../configure --prefix="${SYSTEMC_HOME}"
       ;;
     *)
-      Report_error "Unknown generator '${GENERATOR}'"
+      Report_error "Unknown builder '${BUILDER}'"
       ;;
   esac
 }
@@ -730,7 +777,7 @@ alias Generate=Configure_tool
 function Compile_tool()
 {
   Report_info -grn "Compiling ${TOOL_NAME}"
-  case "${GENERATOR}" in
+  case "${BUILDER}" in
     cmake)
       _do cmake --build "${BUILD_DIR}"
       ;;
@@ -739,7 +786,7 @@ function Compile_tool()
       _do make
       ;;
     *)
-      Report_error "Unknown generator '${GENERATOR}'"
+      Report_error "Unknown builder '${BUILDER}'"
       ;;
   esac
 }
@@ -747,7 +794,7 @@ function Compile_tool()
 function Install_tool()
 {
   Report_info -grn "Installing ${TOOL_NAME} to final location"
-  case "${GENERATOR}" in
+  case "${BUILDER}" in
     cmake)
       _do cmake --install "${BUILD_DIR}"
       ;;
@@ -755,7 +802,7 @@ function Install_tool()
       _do make install
       ;;
     *)
-      Report_error "Unknown generator '${GENERATOR}'"
+      Report_error "Unknown builder '${BUILDER}'"
       ;;
   esac
 }
