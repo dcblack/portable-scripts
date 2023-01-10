@@ -38,7 +38,7 @@ A collection of useful functions for output in bash/zsh.
 | Rows                          | Display the number rows in the current terminal
 | Ruler [-CLR] [_MESSAGE_]      | Echo a ruler with option embedded message
 | Setup-Color ON_or_OFF         | Enables color (e.g., $(_C bold blue))
-| ShowVars VARLIST              | Echo values of variables
+| ShowVars [-x] VARLIST         | Echo values of variables
 | Summary TARGET ["_MESSAGE_"]  | Echo a report summary of errors and warnings
 | Usage [-h] "_MESG_" || return | Echo syntax if first option is -h and return false
 | Warnings                      | Display number of errors
@@ -747,11 +747,16 @@ function HelpText()
 function ShowVars()
 {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
-  local DLR VAR VAL
+  local DLR VAR VAL X
+  X=0
   for VAR in "$@"; do
+    if [[ "${VAR}" =~ ^-x$ ]]; then X=1; continue; fi
     DLR='$'
     VAL="$(eval "echo ${DLR}${VAR}")"
     if [[ -n "${VAL}" ]]; then
+      if [[ ${X} == 1 ]]; then
+        Echo -n "export "
+      fi
       Echo "${VAR}='${VAL}'"
     fi
   done
