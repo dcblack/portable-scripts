@@ -16,10 +16,11 @@ function j() {
   # Begin parsing options
   #-----------------------------------------------------------------------------
   export lwd nwd lws cws nws
-  local J_VERBOSE J_NOSCRIPT J_DEBUG TMP1 TMP2 J_MK
+  local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK
   #local FAV FAV1
   J_VERBOSE=0
   J_NOSCRIPT=0
+  J_SHOW=0
   J_DEBUG=0
   # Setup favorites list if not defined via exported FAVS variable
   if [[ -z "${FAVS}" ]]; then
@@ -64,12 +65,13 @@ Description
 
   Option  | Description
   ------  | -----------
+  --debug | Turns on debugging of *this* script
   -help   | Displays this help text
   -list   | Briefly lists all favorites
-  --debug | Turns on debugging of *this* script
   -lns    | Lists all favorites exanding their targets
   -mk FAV | Adds a symbolic links to the favorites directory
   -rm FAV | Removes a symbolic links from the favorites directory
+  -show   | Pass to setup.profile
   -v      | Verbosely provide information on operation
 
 Examples
@@ -86,6 +88,9 @@ EOT
         ;;
       -ns | -noscript | --noscript )
         J_NOSCRIPT=1
+        ;;
+      -show | --show )
+        J_SHOW=1
         ;;
       -v | --verbose )
         J_VERBOSE=1
@@ -270,7 +275,7 @@ EOT
       ACTION='rm'
       if [[ ${J_NOSCRIPT} == 0 ]]; then
         # shellcheck disable=SC1090
-        source "${lws}"
+        source "${lws}" --rm
       fi
       unset ACTION
     fi
@@ -280,8 +285,13 @@ EOT
       export ACTION
       ACTION='add'
       if [[ ${J_NOSCRIPT} == 0 ]]; then
-        # shellcheck disable=SC1090
-        source "${nws}"
+        if [[ ${J_SHOW} == 0 ]]; then
+          # shellcheck disable=SC1090
+          source "${nws}" --add
+        else
+          # shellcheck disable=SC1090
+          source "${nws}" --add --show
+        fi
       fi
       unset ACTION
       cws="${nws}"
@@ -292,7 +302,7 @@ EOT
         ACTION='repeat'
         if [[ ${J_NOSCRIPT} == 0 ]]; then
           # shellcheck disable=SC1090
-          source "${nws}"
+          source "${nws}" --repeat
         fi
         unset ACTION
         cws="${nws}"
