@@ -25,13 +25,19 @@
 #-------------------------------------------------------------------------------
 # Make things more visible in the output
 
-SCRIPT="$(dirname "$0")/utils.bash"
-if [[ -x "${SCRIPT}" ]]; then
-  # shellcheck disable=SC1090
-  source "${SCRIPT}" "$0"
-else
-  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../bin)"
+if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/bin)"
 fi
+if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/utils.bash"
+  exit 1
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/utils.bash"
 
 # Defaults
 #-------------------------------------------------------------------------------
