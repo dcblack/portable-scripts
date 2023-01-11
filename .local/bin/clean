@@ -98,10 +98,10 @@ WHAT="intermediates"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" =~ ^-{1,2}(a|all)$ ]]; then
     WHAT="all"
-    OPTS=BLOTX
+    OPTS=cBLOTX
   elif [[ "$1" =~ ^-{1,2}(A|ALL)$ ]]; then
     WHAT="everything"
-    OPTS=BCLOTVXCMP
+    OPTS=cBCLOTVXCMP
   elif [[ "$1" =~ ^-{1,2}av$ ]]; then
     WHAT="all"
     OPTS=BLOTX
