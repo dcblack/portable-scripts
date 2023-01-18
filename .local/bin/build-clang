@@ -27,8 +27,11 @@ done
 function Build_clang()
 {
   Beta || return 1
-  local URL ONLINE INSTALL_DIR GIT_DIR SRC_DIR BLD_DIR GENERATOR SOURCE
+  local URL BUILD_TYPE ONLINE INSTALL_DIR GIT_DIR SRC_DIR BLD_DIR GENERATOR SOURCE
   URL="https://github.com/llvm/llvm-project.git"
+  BUILD_TYPE="-DCMAKE_BUILD_TYPE=Release"
+  BRANCH=""
+  DEPTH="--depth 1"
   ONLINE=1
   INSTALL_DIR="${HOME}/.local"
   GIT_DIR="llvm-project"
@@ -51,12 +54,12 @@ function Build_clang()
   mkdir -p "${SRC_DIR}" || Report_fatal "Unable to create ${SRC_DIR}" || return 1
   if [[ ${ONLINE} == 1 ]]; then
     if [[ ! -d "${SRC_DIR}/${GIT_DIR}" ]]; then
-      _do git -C "${SRC_DIR}" clone "${URL}" || Report_fatal "Unable to clone" || return 1
+      _do git -C "${SRC_DIR}" clone "${DEPTH}" "${BRANCH}" "${URL}" || Report_fatal "Unable to clone" || return 1
     else
-      _do git -C "${SRC_DIR}" update || Report_fatal "Unable to update" || return 1
+      _do git -C "${SRC_DIR}" pull || Report_fatal "Unable to update" || return 1
     fi
   fi
-  _do cmake -S "${SRC_DIR}/${SOURCE}" -B "${SRC_DIR}/${BLD_DIR}" -G "${GENERATOR}" || return 1
+  _do cmake -S "${SRC_DIR}/${SOURCE}" -B "${SRC_DIR}/${BLD_DIR}" -G "${GENERATOR}" "${BUILD_TYPE}" || return 1
   _do cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" -P cmake_install.cmake -S "${SRC_DIR}/${SOURCE}" || return 1
   _do cmake --build "${SRC_DIR}/${BLD_DIR}" || return 1
   _do cmake --build "${SRC_DIR}/${BLD_DIR}" --target install || return 1
