@@ -167,9 +167,9 @@ function Update-local()
         if [[ -e "${SourceFile}" ]]; then
           Report_info "Updating ${TargetFile}" 
           if [[ "${N}" == "" && "${Q}" == "" ]]; then
-            _do rsync -auq "${V}" "${SourceFile}" "${TargetDir}/"
+            _do rsync -aq "${V}" "${SourceFile}" "${TargetDir}/"
           else
-            _do "${N}" "${Q}" rsync -auq "${V}" "${SourceFile}" "${TargetDir}/"
+            _do "${N}" "${Q}" rsync -aq "${V}" "${SourceFile}" "${TargetDir}/"
           fi
         fi
       done
