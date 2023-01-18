@@ -37,7 +37,7 @@ function Build_clang()
   BLD_DIR=build
   GENERATOR="$(command -v Ninja)"
   if [[ -z "${GENERATOR}" ]]; then
-    GENERATOR="unix makefiles"
+    GENERATOR="Unix Makefiles"
   fi
   SOURCE="${GIT_DIR}/llvm"
 
