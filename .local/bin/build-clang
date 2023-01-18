@@ -2,13 +2,67 @@
 #
 # Derived from https://llvm.org/docs/CMake.html
 
-ROOT=$HOME/.local
-mkdir -p $ROOT/src
-cd $ROOT/src
-git clone https://github.com/llvm/llvm-project.git
-cd llvm-project
-cmake -S llvm -B build -G Ninja
-cmake -DCMAKE_INSTALL_PREFIX=$ROOT -P cmake_install.cmake -S llvm
-cd build
-cmake --build .
-cmake --build . --target install
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+function Build_clang()
+{
+  export BETA
+  if [[ ${BETA} != 1 ]]; then
+    Report_fatal "Refusing to execute beta status script"; return 1
+  fi
+  local URL ONLINE INSTALL_DIR GIT_DIR SRC_DIR BLD_DIR GENERATOR SOURCE
+  URL="https://github.com/llvm/llvm-project.git"
+  ONLINE=1
+  INSTALL_DIR="${HOME}/.local"
+  GIT_DIR="llvm-project"
+  SRC_DIR="${HOME}/.local/src"
+  BLD_DIR=build
+  GENERATOR="$(command -v Ninja)"
+  if [[ -z "${GENERATOR}" ]]; then
+    GENERATOR="unix makefiles"
+  fi
+  SOURCE="${GIT_DIR}/llvm"
+
+  # Command-line
+  while [[ $# != 0 ]]; do
+    if [[ "$1" =~ ^-{1,2}offline$ ]]; then
+      ONLINE=0
+    fi
+    shift
+  done
+
+  mkdir -p "${SRC_DIR}" || Report_fatal "Unable to create ${SRC_DIR}" || return 1
+  if [[ ${ONLINE} == 1 ]]; then
+    if [[ ! -d "${SRC_DIR}/${GIT_DIR}" ]]; then
+      _do git -C "${SRC_DIR}" clone "${URL}" || Report_fatal "Unable to clone" || return 1
+    else
+      _do git -C "${SRC_DIR}" update || Report_fatal "Unable to update" || return 1
+    fi
+  fi
+  _do cmake -S "${SRC_DIR}/${SOURCE}" -B "${SRC_DIR}/${BLD_DIR}" -G "${GENERATOR}" || return 1
+  _do cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" -P cmake_install.cmake -S "${SRC_DIR}/${SOURCE}" || return 1
+  _do cmake --build "${SRC_DIR}/${BLD_DIR}" || return 1
+  _do cmake --build "${SRC_DIR}/${BLD_DIR}" --target install || return 1
+}
+
+Build_clang "$@"
+
+# vim:nospell
