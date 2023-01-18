@@ -195,7 +195,9 @@ function Setup-Color()
     return
   fi
   if [[ ${COLOR_VARS} == 1 ]]; then
-    local PREV_FG=${COLOR_FG} PREV_SET=${COLOR_SET}
+    local PREV_FG PREV_SET
+    PREV_FG=${COLOR_FG}
+    PREV_SET=${COLOR_SET}
     BOLD="$(_C bold)"  UBLD="$(_C nobold)"
     DARK="$(_C dark)"  UDRK="$(_C nodark)"
     UNDR="$(_C undr)"  UNUN="$(_C noun)"
@@ -470,7 +472,8 @@ function Report_debug()
 {
   #@ Echo tagged debug message iff debugging (i.e., $DEBUG defined and non-zero)
   #| Report_debug MESSAGE
-  local args=("$@")
+  local -a args
+  args=("$@")
   local n=$#
   local debug
   export DEBUG
