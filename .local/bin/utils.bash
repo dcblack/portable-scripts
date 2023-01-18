@@ -23,6 +23,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | Create_and_Cd DIR          | Creates directory and enters it
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
 | Configure_tool [TYPE]      | Invokes cmake or autotools
+| Compile_tool               | 
 
 USAGE
 =====
@@ -237,7 +238,7 @@ function GetBuildOpts()
 #|  Option             |  Alternative      | Description
 #|  ------             |  ------------     | -----------
 #|  --build-dir=DIR    |  -bd DIR          | source subdirectory to build in
-#|  --builder=TYPE     |  -bld TYPE        | cmake or autotools
+#|  --builder=TYPE     |  -bld TYPE        | cmake, autotools, or boost
 #|  --cc=C_COMPILER    |  CC=C_COMPILER    | chooses C compiler executable
 #|  --clang            |                   | quick --cc=clang --cxx=clang++
 #|  --clean            |  -clean           | reinstall source
@@ -466,6 +467,10 @@ function GetBuildOpts()
       fi
       shift
       ;;
+    --externs)
+      APPS="${WORKTREE_DIR}"
+      SRC="${WORKTREE_DIR}"
+      ;;
     --home)
       APPS="${HOME}"
       SRC="${HOME}/src"
@@ -671,42 +676,56 @@ function SetupLogdir()
 }
 
 # Make directory and enter
-function Create_and_Cd()
+function Create_and_Cd() # DIR
 {
   Assert $# = 1 || return 1
   _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}" || return 1
   _do cd "${1}" || Report_fatal "Unable to enter ${1} directory" || return 1
 }
 
-# Download and enter directory and patch
-function GetSource_and_Cd()
+# Download and enter directory and patch (TODO)
+function GetSource_and_Cd() # DIR URL
 {
   Assert $# = 2 || return 1
-  if [[ -n "${CLEAN}" && "${CLEAN}" == 1 ]]; then
-    _do rm -fr "${1}"
+  local DIR URL
+  DIR="$1"
+  URL="$2"
+  if [[ -n "${CLEAN}" && "${CLEAN}" == 1 && -d "${DIR}" ]]; then
+    _do rm -fr "${DIR}"
   fi
-  if [[ -d "${1}/.git" ]]; then
+  if [[ "${URL}" =~ [.]git$ ]]; then
+  if [[ -d "${DIR}/.git" ]]; then
     _do git pull
   else
-    if [[ -d "${1}/." ]]; then
-      _do mkdir -p "${1}-save"
-      _do rsync -a "${1}/" "${1}-save/"
-      _do rm -fr "${1}" 
+    if [[ -d "${DIR}/." ]]; then
+      _do mkdir -p "${DIR}-save"
+      _do rsync -a "${DIR}/" "${DIR}-save/"
+      _do rm -fr "${DIR}" 
     fi
-    _do git clone "${2}" "${1}" || Report_fatal "Unable to clone into ${1}"
+    _do git clone "${URL}" "${DIR}" || Report_fatal "Unable to clone into ${DIR}" || exit 1
   fi
-  cd "${1}" || Report_fatal "Unable to enter ${1}"
+  cd "${DIR}" || Report_fatal "Unable to enter ${DIR}" || exit 1
   if [[ -n "${TOOL_VERS}" ]]; then
     _do git  checkout "${TOOL_VERS}"
   fi
   if [[ -n "${TOOL_PATCHES}" ]]; then
     _do git  am --empty=drop "${TOOL_PATCHES}"
   fi
+  elif [[ "${URL}" =~ ^https://.+tgz$ ]]; then
+    local ARCHIVE WDIR
+    ARCHIVE="$(basename "${URL}")"
+    _do wget "${URL}" || Report_fatal "Unable to download from ${URL}" || exit 1
+    _do tar xf "${ARCHIVE}" || "Unable to expand ${ARCHIVE}" || exit 1
+    WDIR="$(tar tf "${URL}" | head -1)"
+    _do cd "${WDIR}" || Report_fatal "Unable to enter directory ${WDIR}" || exit 1
+  else
+    Report_fatal "Unknown URL type - currently only handle *.git or *.tgz" || exit 1
+  fi
 }
 
 # Arguments are optional
 # shellcheck disable=SC2120
-function Configure_tool()
+function Configure_tool() # [TYPE]
 {
   Report_info -grn "Configuring ${TOOL_NAME}"
   if [[ $# == 1 ]]; then # option generator
@@ -765,6 +784,9 @@ function Configure_tool()
       _do env CXXFLAGS="-std=c++${CMAKE_CXX_STANDARD} -I/opt/local/include -I${SYSTEMC_HOME}/include"\
           ../configure --prefix="${SYSTEMC_HOME}"
       ;;
+    boost)
+      _do ./bootstrap.sh --prefix="${WORKTREE_DIR}/externs"
+      ;;
     *)
       Report_error "Unknown builder '${BUILDER}'"
       ;;
@@ -785,6 +807,9 @@ function Compile_tool()
       _do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
       _do make
       ;;
+    boost)
+      _do ./b2
+      ;;
     *)
       Report_error "Unknown builder '${BUILDER}'"
       ;;
@@ -800,6 +825,9 @@ function Install_tool()
       ;;
     autotools)
       _do make install
+      ;;
+    boost)
+      _do ./b2 install --prefix=
       ;;
     *)
       Report_error "Unknown builder '${BUILDER}'"
