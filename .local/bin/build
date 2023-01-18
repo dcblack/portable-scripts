@@ -5,9 +5,9 @@
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
-function Build-help()
+function Build_help()
 {
-  Echo <<'END-HELP';
+  cat <<'END_HELP'
 NAME
 ----
 
@@ -57,7 +57,6 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -S DIR   | Name of source directory -- defaults to \".\"
 | -test    | When done building, run the tests verbosely unless -q supplied
 | -install | When done building, install
-| -targets | List explicit targets
 | -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
 | -verbose | Adds more information to output. Opposite of quiet.
 
@@ -90,7 +89,7 @@ build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 % build fmt
 ```
 
-END-HELP
+END_HELP
 }
 
 function Build()
@@ -98,6 +97,7 @@ function Build()
   # Handle extensions
   #------------------------------------------------------------------------------
   if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
+    echo "extensions"
     if command -v "build-$1" 1>/dev/null; then
       UTILITY="build-$1"
       shift
@@ -177,7 +177,8 @@ function Build()
   WORKTREE_DIR="" ;#< Do not allow environment in
   while [[ $# != 0 ]]; do
     if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
-      Build-help; return 0
+      Build_help
+      return 0
     elif [[ "$1" == "-B" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-B requires a directory argument" ; exit 1
@@ -308,7 +309,7 @@ function Build()
   PERLSCRIPT='
   chomp; chomp;
   next if m{[{}]};
-  print " $2" if m{(add_executable|set_target)[( "]+([^" )]+)};
+  print " $2" if m{(add_executable|add_library|set_target)[(] "([^")]+)};
   '
   TARGETS="$(/usr/bin/perl -ne "${PERLSCRIPT}" CMakeLists.txt)"
   if [[ "${ACTION}" == list ]]; then
