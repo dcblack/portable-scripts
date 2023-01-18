@@ -19,15 +19,14 @@ if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
   crash
 fi
-# shellcheck disable=SC2250,SC1091
-source "$SCRIPTDIR/Essential-IO"
+for SCRIPT in Essential-IO Beta; do
+  # shellcheck disable=SC1090,SC2250,SC1091
+  source "$SCRIPTDIR/$SCRIPT"
+done
 
 function Build_clang()
 {
-  export BETA
-  if [[ ${BETA} != 1 ]]; then
-    Report_fatal "Refusing to execute beta status script"; return 1
-  fi
+  Beta || return 1
   local URL ONLINE INSTALL_DIR GIT_DIR SRC_DIR BLD_DIR GENERATOR SOURCE
   URL="https://github.com/llvm/llvm-project.git"
   ONLINE=1

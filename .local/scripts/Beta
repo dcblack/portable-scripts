@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+
+export BETA
+function Beta()
+{
+  if [[ ${BETA} != 1 ]]; then
+    Report_fatal "Refusing to execute beta software $*"
+    return 1
+  else
+    Report_warning "Beta software $*"
+  fi
+}
