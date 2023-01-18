@@ -81,6 +81,13 @@ function Append_path() {
   fi
 }
 
+export LANG LC_ALL
+if [[ -z "${LANG}" ]]; then
+  LANG="en_US.UTF-8"
+fi
+if [[ -z "${LC_ALL}" ]]; then
+  LC_ALL="en_US.UTF-8"
+fi
 PORTABLE_SETUP_SCRIPT="$(Realpath "$0")"
 PORTABLE_SETUP_DIR="$(dirname "${PORTABLE_SETUP_SCRIPT}")"
 PORTABLE_ROOT_DIR="$(git -C "${PORTABLE_SETUP_DIR}" rev-parse --show-toplevel)"
