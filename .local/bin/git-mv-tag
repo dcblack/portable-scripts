@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+#$Info: git-mv-tag - rename tags. $
+
+function Git_mv_tag()
+{
+  local f new old found
+  if [[ "$*" =~ ^-{1,2}h(elp)?$ ]]; then
+    echo "SYNTAX: git mv-tag OLD NEW"
+    return
+  fi
+  f=0
+  if [[ "$1" =~ ^-f$ ]]; then
+    f=1
+  fi
+  new="${2}"
+  old="${1}"
+  found="$(git tag -l "${old}")"
+  if [[ -z "${found}" ]]; then
+    Report_error "No such tag ${old}"
+    exit 1
+  fi
+  found="$(git tag -l "${new}")"
+  if [[ ${f} == 0 && -n "${found}" ]]; then
+    Report_error "New tag ${old} already exists"
+    exit 1
+  fi
+  git tag "${new}" "${old}"
+  git tag -d "${old}"
+  git push origin "${new}" :"${old}"
+}
+
+Git_mv_tag "$@"
