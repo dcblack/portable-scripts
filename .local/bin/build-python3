@@ -27,14 +27,15 @@ done
 function Build_python3()
 {
   Beta || return 1
-  local URL VERS BRANCH DEPTH ONLINE INSTALL_DIR GIT_DIR SRC_DIR BLD_DIR
+  local URL VERS ONLINE INSTALL_DIR GIT_DIR SRC_DIR BLD_DIR
+  local -a BRANCH DEPTH
   URL="https://github.com/python/cpython.git"
   VERS="3.11.1"
-  BRANCH="--branch v${VERS}"
-  DEPTH="--depth 1"
+  BRANCH=('--branch' "v${VERS}")
+  DEPTH=('--depth' 1)
   ONLINE=1
   INSTALL_DIR="${HOME}/.local/apps/python${VERS}"
-  GIT_DIR="llvm-project"
+  GIT_DIR="cpython"
   SRC_DIR="${HOME}/.local/src"
   BLD_DIR=build
 
@@ -49,9 +50,9 @@ function Build_python3()
   mkdir -p "${SRC_DIR}/${BLD_DIR}" || Report_fatal "Unable to create ${SRC_DIR}/${BLD_DIR}" || return 1
   if [[ ${ONLINE} == 1 ]]; then
     if [[ ! -d "${SRC_DIR}/${GIT_DIR}" ]]; then
-      _do git -C "${SRC_DIR}" clone "${DEPTH}" "${BRANCH}" "${URL}" || Report_fatal "Unable to clone" || return 1
+      _do git -C "${SRC_DIR}" clone "${DEPTH[@]}" "${BRANCH[@]}" "${URL}" || Report_fatal "Unable to clone" || return 1
     else
-      _do git -C "${SRC_DIR}" pull || Report_fatal "Unable to update" || return 1
+      _do git -C "${SRC_DIR}/${GIT_DIR}" pull || Report_fatal "Unable to update" || return 1
     fi
   fi
   _do cd "${SRC_DIR}/${BLD_DIR}" || Report_fatal "Unable to cd ${SRC_DIR}/${BLD_DIR}" || return 1 
