@@ -161,7 +161,7 @@
 " LiberationMonoPowerline:h14
 
 :set guifont=
-:colorscheme elflord
+:colorscheme default
 
 "#######################################
 " Keystroke mappings for vim
