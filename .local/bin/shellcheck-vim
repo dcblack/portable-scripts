@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#
+# Used for syntax checking in vim adding --color=never
+
+export SHELL
+SHELL=bash
+
+OPTS=""
+while [[ "$1" =~ ^- ]]; do
+  OPT="$1"
+  shift
+  if [[ "${OPT}" =~ ^-[efiPosSW]$ ]]; then
+    OPT="${OPT} $1"
+    shift
+  fi
+  if [[ -z "${OPTS+x}" ]]; then
+    OPTS="${OPT}"
+  else
+    OPTS="${OPTS} ${OPT}"
+  fi
+done
+# shellcheck disable=SC2086
+shellcheck --color=never ${OPTS} "$*"
