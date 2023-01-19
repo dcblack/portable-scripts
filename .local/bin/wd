@@ -36,7 +36,7 @@ fi
 # shellcheck source=$HOME/scripts/Essential-IO disable=SC2250,SC1091
 source "${SCRIPTDIR}/Essential-IO"
 
-export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
+export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
 real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
 wd_favs="$(Realpath "${real_favs}")"
 wd_init=false
@@ -61,7 +61,7 @@ Name
 
 swd - save working directory
 lwd - load working directory (aka wd)
-rwd - remove working directory
+rwd - remove working directory(s)
 wds - list saved working directories
 
 Synopsis
@@ -84,10 +84,27 @@ EOT
 }
 
 #-------------------------------------------------------------------------------
+function Wd_set()
+{
+  export wd_set wd_sets wd_setn
+  if [[ ${wd_setn} == 0 ]]; then
+    wd_set="$1"
+    wd_sets="$1"
+    wd_setn=1
+  else
+    wd_sets+=" $1"
+    (( ++wd_setn ))
+  fi
+}
+
+#-------------------------------------------------------------------------------
 function Wd_parse() # internal
 {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
-  export wd_favs wd_set wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers wd_print
+  #-----------------------------------------------------------------------------
+  # Defaults
+  #-----------------------------------------------------------------------------
+  export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers wd_print
   wd_vers=1.0.3
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
@@ -97,6 +114,8 @@ function Wd_parse() # internal
   wd_debug=false
   wd_print=false
   wd_notreally=false
+  wd_sets=""
+  wd_setn=0
   if [[ -n "${wd_set}" ]]; then
     wd_pset="${wd_set}"
   fi
@@ -109,7 +128,9 @@ function Wd_parse() # internal
     wd_set="${ITERM2_TAB}"
   fi
   wd_dir=.
+  #-----------------------------------------------------------------------------
   # Parse command-line
+  #-----------------------------------------------------------------------------
   local arg
   ARGS=""
   while [[ "$#" != 0 ]]; do
@@ -143,12 +164,12 @@ function Wd_parse() # internal
       -debug|--debug|-D) wd_debug=true ;;
       -N|-notreally|--notreally) wd_notreally=true ;;
       -f|-force|--force) wd_force=true ;;
-          -[1-9][0-9]) wd_set=$(( -"${arg}" )) ;;
-       [ci][1-9][0-9]) wd_set="${arg}" ;;
-           [1-9][0-9]) wd_set="${arg}" ;;
-               -[0-9]) wd_set=$(( -"${arg}" )) ;;
-            [ci][0-9]) wd_set="${arg}" ;;
-                [0-9]) wd_set="${arg}" ;;
+          -[1-9][0-9]) Wd_set $(( -"${arg}" )) ;;
+       [ci][1-9][0-9]) Wd_set "${arg}" ;;
+           [1-9][0-9]) Wd_set "${arg}" ;;
+               -[0-9]) Wd_set $(( -"${arg}" )) ;;
+            [ci][0-9]) Wd_set "${arg}" ;;
+                [0-9]) Wd_set "${arg}" ;;
       -P|-print|--print) wd_print=true ;;
       -*) Report_error "Unknown option: '${arg}'" || return 1 ;;
       *)
@@ -166,6 +187,8 @@ function Wd_parse() # internal
     Report_debug -f "wd_dir='${wd_dir}'"
     Report_debug -f "wd_pset='${wd_pset}'"
     Report_debug -f "wd_pdir='${wd_pdir}'"
+    Report_debug -f "wd_setn='${wd_setn}'"
+    Report_debug -f "wd_sets='${wd_sets}'"
     Report_debug -f "wd_init='${wd_init}'"
     Report_debug -f "wd_verb='${wd_verb}'"
     Report_debug -f "ARGS='${ARGS}'"
@@ -213,41 +236,53 @@ function lwd() # lwd_func
 #-------------------------------------------------------------------------------
 function rwd() # rwd_func
 {
-  Comment "Remove working directory"
+  Comment "Remove working directory(s)"
+  export wd_favs wd_set wd_sets wd_setn wd_force
   Wd_parse "$@" || return 1
 
-  local REPLY wd_rdir
-  wd_rdir="$(Realpath "${wd_favs}/wd-${wd_set}")"
-  if [[ -h "${wd_favs}/wd-${wd_set}" ]]; then
-    if [[ ${wd_force} == false ]]; then
-      while true; do
-        REPLY="?"
-        Read "Confirm removal of wd-${wd_set} -> ${wd_rdir} (y|n):"
-        case "${REPLY}" in
-          y|yes) REPLY="y" ; break ;;
-          n|no)  REPLY="n" ; break ;;
-          abort) return ;;
-          *)     REPLY=""  ;;
-        esac
-      done
-    fi
-    if [[ "${REPLY}" == "y" ]]; then
-      if rm "${wd_favs}/wd-${wd_set}"; then
-        Report_info  "Removed ${wd_favs}/wd-${wd_set}"
-      else
-        Report_error "Unable to remove ${wd_favs}/wd-${wd_set}"
-      fi
-    else
-      Report_info "Ignored removal of ${wd_favs}/wd-${wd_set}"
-    fi
+  local REPLY wd_rdir all=0
+  local -a sets
+  if [[ ${wd_setn} == 0 ]]; then
+    Report_fatal "Did not specify any set(s) to remove"
+    return 1
   else
-    Report_info "No saved set to remove wd-${wd_set}"
+    sets=( ${wd_sets} )
   fi
+  for s in "${sets[@]}"; do
+    wd_rdir="$(Realpath "${wd_favs}/wd-${s}")"
+    if [[ -h "${wd_favs}/wd-${s}" ]]; then
+      if [[ ${wd_force} == false ]]; then
+        if [[ ${all} == 0 ]]; then
+          while true; do
+            REPLY="?"
+            Read "Confirm removal of wd-${s} -> ${wd_rdir} (y|all|n):"
+            case "${REPLY}" in
+              y|yes) REPLY="y" ; break ;;
+              n|no)  REPLY="n" ; break ;;
+              a|all) REPLY="y"; all=1 ; break ;;
+              abort) return ;;
+              *)     REPLY=""  ;;
+            esac
+          done
+        fi
+      fi
+      if [[ "${REPLY}" == "y" ]]; then
+        if rm "${wd_favs}/wd-${s}"; then
+          Report_info  "Removed ${wd_favs}/wd-${s}"
+        else
+          Report_error "Unable to remove ${wd_favs}/wd-${s}"
+        fi
+      else
+        Report_info "Ignored removal of ${wd_favs}/wd-${s}"
+      fi
+    fi
+  done
 }
 
 #-------------------------------------------------------------------------------
 function wds() # wds_func
 {
+  export wd_favs
   local NONE
   NONE="$(_C none)"
   Comment "List saved working directories"
