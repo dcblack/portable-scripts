@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-function Remove_path() {
+function Remove_path()
+{
   export Remove_path_VERSION=1.4
   # USAGE: remove_path [-sep char] VAR PATH
   if [[ "$1" =~ ^[_A-Za-z][-_A-Za-z0-9]*$ ]]; then

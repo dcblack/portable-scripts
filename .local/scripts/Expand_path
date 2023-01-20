@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Expand_path() {
+function Expand_path()
+{
   export Expand_path_VERSION=1.0
   # DESCR: Expands paths to their full name in specified variable
   # EXCEPT: . or .. are kept use ./. or ./../.. in list to expand

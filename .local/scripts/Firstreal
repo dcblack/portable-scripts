@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Firstreal() {
+function Firstreal()
+{
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }

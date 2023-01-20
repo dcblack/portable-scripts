@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Unique_path() {
+function Unique_path()
+{
   export Unique_path_VERSION=1.5
   # DESCR: Removes duplicate paths in specified variable
   # USAGE: Unique_path [-n][-v] VAR
@@ -25,6 +26,7 @@ function Unique_path() {
     $s=q{;} if $ENV{$v} =~ q{;};
     exit 1 if not exists $ENV{$v};
     for my $d(split(qr{$s},$ENV{$v})){
+      next if $d =~ m{^[[:space:]]*$};
       $e=abs_path($d);
       next if exists $e{$e};
       $e{$e}=1;

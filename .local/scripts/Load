@@ -4,12 +4,14 @@
 
 export LOADED
 
-function Run() {
+function Run()
+{
   Load "$1"
   "$@"
 }
 
-function Load() {
+function Load()
+{
   export Load_VERSION=1.4
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     echo "
