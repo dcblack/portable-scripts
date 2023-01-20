@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Remove_missing() {
+function Remove_missing()
+{
   export Remove_missing_VERSION=1.0
   # DESCR: Keeps only real paths in specified variable
   # USAGE: Remove_missing [-n][-v] VAR

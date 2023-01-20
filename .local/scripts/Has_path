@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function Has_path() {
+function Has_path()
+{
   #| USAGE: Has_path VAR PATH
   local arg plscript
   arg="$(Realpath "$2")"
