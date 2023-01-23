@@ -160,7 +160,7 @@
 " Andale\ Mono:h14
 " LiberationMonoPowerline:h14
 
-:set guifont=
+:set guifont=Monospace\ 16
 :colorscheme murphy
 
 "#######################################
