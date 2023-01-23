@@ -1,0 +1,111 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+    if 0;
+
+=pod
+
+=head1 NAME
+
+spawn - spawn a process and don't worry about STDIN
+
+=head1 SYNOPSIS
+
+B<spawn> I<COMMAND[ ARGS]>
+
+=head1 DESCRIPTION
+
+Creates a background process similar to '&'; however, doesn't care if you
+forget to provide STDIN or other important stuff. Can be dangerous if
+mis-used.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-log> I<LOG_FILE_PATH>
+
+Log output for I<both> B<STDOUT> and B<STDERR> to I<LOG_FILE_PATH>.
+
+=item B<-q>
+
+Quiet suppresses all stdout/stderr. For GUI or background tools.
+
+=item B<-sleep> I<SECONDS>
+
+Delay spawning by I<SECONDS>.
+
+=item B<-s>
+
+Suppress all output (both B<STDOUT> and B<STDERR>).
+
+=item B<-v>
+
+Verbose echos the command that is spawned.
+
+=back
+
+=head1 AUTHOR
+
+David C. Black <dcblack@hldwizard.com>
+
+=cut
+
+exec "perldoc $0" if @ARGV == 0 or "@ARGV" =~ m/^(-h)|(--help)$/;
+
+use POSIX qw(mkfifo);
+
+# Parse command-line
+our %OPT;
+while ($ARGV[0] =~ m{^-}) {
+  my $opt = shift(@ARGV);
+  if ($opt eq '-v') {
+    $OPT{-v} = 1;
+  } elsif ($opt eq '-q') {
+    delete $OPT{-v} if defined $OPT{-v};
+  } elsif ($opt eq '-sleep') {
+    $OPT{-sleep} = shift(@ARGV);
+  } elsif ($opt eq '-log') {
+    $OPT{-log} = '>'.shift(@ARGV);
+  } elsif ($opt eq '-s') {
+    $OPT{-log} = '>/dev/null';
+  }#endif
+}#endwhile
+if (defined $OPT{-log}) {
+  push @ARGV,$OPT{-log};
+  push @ARGV,"2>&1";
+}#endif
+
+sub REPORT_FATAL {
+  # USAGE: &REPORT_FATAL(MESSAGE); # use sprintf within if needed
+  # See 'perldoc carp' for information that motivated this routine
+  # NOTE: No need to buffer because we're exiting anyhow.
+  my ($msg) = @_;
+  chomp $msg;
+  print STDERR "FATAL: $msg\n";
+  exit 2;
+}
+
+sub Spawn { # fork a process
+  printf "INFO: % spawn @_\n" if defined $OPT{-v};
+  my ($pid, $pid2);
+  my $pipe = $$.'pipe';
+  #mkfifo($pipe, 0700) or die "mkfifo $pipe failed: $!";
+  $SIG{CHLD} = IGNORE;
+  unless ($pid = fork) {
+    no warnings;
+    unless ($pid2 = fork) {
+      sleep $OPT{-sleep} if defined $OPT{-sleep};
+      $SIG{PIPE} = IGNORE;
+      exec("@_");
+      &REPORT_FATAL("no exec for '@_'!?");
+    }#endunless
+    exit 0;
+    use warnings;
+  }#endunless
+  waitpid($pid,0);
+
+}#endsub Spawn
+
+&Spawn(@ARGV);
+
+1;
