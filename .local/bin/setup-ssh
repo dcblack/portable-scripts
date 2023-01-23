@@ -24,12 +24,15 @@
 
 function Setup_ssh() {
 
+  TYPE="$1"
   case "${TYPE}" in
-    "") TYPE=rsa ;;
+    "") TYPE=ed25519 ;;
     dsa|ecdsa|ed25519|rsa) ;;
     *) echo "Error: Unknown TYPE" ;;
   esac
   BASENAME="$(hostname)_$(whoami)_${TYPE}"
-  echo ssh-keygen -t "${TYPE}" -f "${BASENAME}"
+  _do ssh-keygen -t "${TYPE}" -f "${BASENAME}"
 
 }
+
+Setup_ssh "$@"
