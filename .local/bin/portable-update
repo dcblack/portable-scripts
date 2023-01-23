@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  - {:ONE_LINE_DESCRIPTION_HERE:}
+# portable-update - Get the latest version from github
 
 function Realpath ()
 {
@@ -9,8 +9,41 @@ function Realpath ()
 
 function Portable-update()
 {
-  SCRIPTDIR="$(Realpath "$(dirname "$0")"/..)"
-  git -C "${SCRIPTDIR}" pull
+  local GIT_WORK_DIR MAIN BRANCH
+  MAIN="main" # Name of the main branch
+
+  # First we locate the git working directory
+  GIT_WORK_DIR="$(Realpath "$(dirname "$0")"/..)"
+  if [[ -z "${GIT_WORK_DIR}" ]]; then
+    echo "Error: Unable to locate script directory" 1>&2 ; return 1
+  fi
+  if git -C "${GIT_WORK_DIR}" rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
+    GIT_WORK_DIR="$(git -C "${GIT_WORK_DIR}" rev-parse --show-toplevel)"
+  else
+    echo "Error: Script directory, ${GIT_WORK_DIR}, is not a git repository" 1>&2 ; return 1
+  fi
+  echo "Info: Updating ${GIT_WORK_DIR}"
+
+  # Now there are several possibilities:
+  #   1. Everything is clean and we are in the main branch
+  #   2. Some files are changed and we are on the main branch
+  #   3. We are in an alternate branch
+  #   4. Some files are changed AND we are in an alternate branch
+  # Ideally, case 2 does not happen.
+
+  BRANCH="$(git -C "${GIT_WORK_DIR}" branch --show-current)"
+  CHANGED="$(git -C "${GIT_WORK_DIR}" ls-files -m)"
+
+  # Save everything
+  if [[ -n "${CHANGED}" ]];          then git -C "${GIT_WORK_DIR}" stash push; fi
+  if [[ "${BRANCH}" != "${MAIN}" ]]; then git -C "${GIT_WORK_DIR}" co "${MAIN}"; fi
+
+  git -C "${GIT_WORK_DIR}" pull
+
+  # Restore the dirty state
+  if [[ "${BRANCH}" != "${MAIN}" ]]; then git -C "${GIT_WORK_DIR}" co -; fi
+  if [[ -n "${CHANGED}" ]];          then git -C "${GIT_WORK_DIR}" stash pop; fi
+  if [[ "${BRANCH}" != "${MAIN}" ]]; then git -C "${GIT_WORK_DIR}" merge -m synchronize "${MAIN}"; fi
 }
 
 Portable-update
