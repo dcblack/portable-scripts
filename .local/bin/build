@@ -41,7 +41,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -B DIR   | Name of build directory -- defaults to \"build\"
 | -C DIR   | Change to specified directory before doing anything else
 | -clean   | Remove all build files and other output bits
-| -G "GEN" | Specify generator (defaults to Ninja)
+| -G "GEN" | Specify generator (defaults to Ninja if available)
 | -clean   | Remove all build files and other output bits
 | -gdb     | Run under gdb
 | -info    | Output information to help debug CMakeLists.txt etc.
@@ -90,6 +90,7 @@ build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 ```
 
 END_HELP
+  echo "exiting help"
 }
 
 function Build()
@@ -153,7 +154,11 @@ function Build()
   CMAKE_BUILD_TYPE="Debug"
   BLD_DIR="build"
   SUBPROJ_DIR="$(pwd)"
-  GENERATOR="Ninja"
+  if [[ -n "$(command -v ninja)" ]]; then
+    GENERATOR="Ninja"
+  else
+    GENERATOR="Unix Makefiles"
+  fi
   ADD_CMAKE_PREFIX=0
   APPS="${HOME}/.local/apps"
   CLEAN=0
