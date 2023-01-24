@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+#
+#$Info: mkflexlm - setup aliased flexlm utilities and adjust path. $
+
+function Realpath()
+{
+  if [[ $# == 0 ]]; then set - .; fi
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO & Essential-manip
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  exit 1
+fi
+for SCRIPT in Essential-IO Essential-manip Beta; do
+  # shellcheck disable=SC1090,SC2250,SC1091
+  source "$SCRIPTDIR/$SCRIPT"
+done
+
+function MkFlexlm() # dir
+{
+  export NOTREALLY
+  local DEBUG FORCE
+  DEBUG=0
+  FORCE=0
+  while [[ "$1" =~ ^- ]]; do
+    case "$1" in
+      -n) NOTREALLY="$1" ;;
+      -d) DEBUG=1 ;;
+      -f) FORCE=1 ;;
+      *) Report_warning "Skipping unknown option $1" ;;
+    esac
+    shift
+  done
+
+  export FLEXLM_DIR
+  local LMUTIL COMMAND ALIAS COMMANDS
+
+  FLEXLM_DIR="$(pwd)/flexlm"
+  case $# in
+    0) ;;
+    1) 
+      if [[ -d "$1" ]]; then
+        FLEXLM_DIR="$(Realpath "$1")"
+      fi
+      if [[ "${FLEXLM_DIR}" =~ /(bin|flexlm)$ ]]; then
+        echo -n ""
+      else
+        FLEXLM_DIR+="/flexlm"
+      fi
+      ;;
+    *) Report_fatal "Too many arguments" || return 1 ;;
+  esac
+  if [[ ! -d "${FLEXLM_DIR}" ]]; then
+    _do mkdir -p "${FLEXLM_DIR}" || Report_fatal "Unable to create '${FLEXLM_DIR}'" || return 1
+  fi
+
+  LMUTIL=$(command -v lmutil)
+  if [[ -z "${LMUTIL}" ]]; then Report_fatal "Couldn't find lmutil" || return 1; fi
+  COMMANDS="$("${LMUTIL}" | perl -lane 'print $F[1] if $F[1] =~ m/^lm/' | sort -u)"
+  COMMANDS+="$(printf "\nlmutil\n")"
+  for COMMAND in ${COMMANDS}; do
+    if [[ -z "${COMMAND}" ]]; then continue; fi
+    ALIAS="${FLEXLM_DIR}/${COMMAND}"
+    test "${DEBUG}" = 1 && Report_info "LMUTIL=${LMUTIL} COMMANDS=${COMMANDS[*]}"
+    if [[ ${FORCE} == 0 && -r "${ALIAS}" ]]; then continue; fi
+    if [[ ${FORCE} == 1 && -r "${ALIAS}" ]]; then _do rm "${ALIAS}"; fi
+    _do ln -s "${LMUTIL}" "${ALIAS}"
+  done
+}
+
+MkFlexlm "$@"
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 1 ]]; then
+  _do Append_path PATH "${FLEXLM_DIR}"
+elif Has_path PATH "${FLEXLM_DIR}"; then
+  echo -n ""
+else
+  Report_info "PATH+=:${FLEXLM_DIR}"
+fi

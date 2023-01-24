@@ -74,6 +74,9 @@ function portable-env() {
     FAVS\
     LESS\
     VISUAL\
+    WHOME\
+
+  WHOME="/mnt/c/Users/${USER}"
 
   # Favorites
   FAVS="${HOME}"/Favorites

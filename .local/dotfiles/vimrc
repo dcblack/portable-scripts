@@ -160,8 +160,8 @@
 " Andale\ Mono:h14
 " LiberationMonoPowerline:h14
 
-:set guifont=
-:colorscheme elflord
+:set guifont=Monospace\ 16
+:colorscheme murphy
 
 "#######################################
 " Keystroke mappings for vim

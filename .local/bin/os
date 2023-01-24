@@ -9,15 +9,28 @@ function Realpath ()
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -d "${SCRIPTDIR}" ]]; then
   printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
-  crash
+  exit 1
 fi
-# shellcheck disable=SC2250,SC1091
+# shellcheck disable=SC2250,SC1091,SC1090
 source "$SCRIPTDIR/Essential-IO"
 
 function Os_main()
 {
   local OS 
   OS="$(uname -s)"
+  if [[ "${OS}" != "Darwin" && -r /etc/os-release ]]; then
+    OS="$(perl -lne 'if(m{PRETTY_NAME="([^"]+)"}){$os=$1;$os=~s{Oracle}{CentOS};print $os;}' /etc/os-release)"
+  fi
+
+  local VERBOSE
+  VERBOSE=0
+  if [[ "$1" =~ ^-{1,2}v(erbose)?$ ]]; then
+    VERBOSE=1
+  fi
+  if [[ ${VERBOSE} == 0 ]]; then
+    echo "${OS}"
+    return
+  fi
 
   _do uname -a
   case "${OS}" in
@@ -32,4 +45,4 @@ function Os_main()
   esac
 }
 
-Os_main
+Os_main "$@"
