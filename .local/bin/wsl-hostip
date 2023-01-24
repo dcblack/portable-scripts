@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+#$Info: hostip - {:ONE_LINE_DESCRIPTION_HERE:}. $
+
+perl -lane 'chomp; print $F[1] if m/^nameserver/' /etc/resolv.conf
