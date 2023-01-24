@@ -19,5 +19,9 @@ while [[ "$1" =~ ^- ]]; do
     OPTS="${OPTS} ${OPT}"
   fi
 done
-# shellcheck disable=SC2086
-shellcheck --color=never ${OPTS} "$*"
+if [[ -n "$(command -v shellcheck)" ]]; then
+  # shellcheck disable=SC2086
+  shellcheck --color=never ${OPTS} "$*"
+else
+  echo "shellcheck not installed -- skipping"
+fi
