@@ -4,8 +4,25 @@
 
 function Realpath ()
 {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
+# Using Essential-IO & Essential-manip
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  exit 1
+fi
+for SCRIPT in Essential-IO Essential-manip; do
+  # shellcheck disable=SC1090,SC2250,SC1091
+  source "$SCRIPTDIR/$SCRIPT"
+done
 
 function Portable-update()
 {
@@ -34,16 +51,21 @@ function Portable-update()
   BRANCH="$(git -C "${GIT_WORK_DIR}" branch --show-current)"
   CHANGED="$(git -C "${GIT_WORK_DIR}" ls-files -m)"
 
-  # Save everything
-  if [[ -n "${CHANGED}" ]];          then git -C "${GIT_WORK_DIR}" stash push; fi
-  if [[ "${BRANCH}" != "${MAIN}" ]]; then git -C "${GIT_WORK_DIR}" co "${MAIN}"; fi
+  if [[ "$1" =~ ^-{1,2}v(erbose)?$ ]]; then
+    Report_info "BRANCH: ${BRANCH} CHANGED: ${CHANGED}"
+    return
+  fi
 
-  git -C "${GIT_WORK_DIR}" pull
+  # Save everything
+  if [[ -n "${CHANGED}" ]];          then _do git -C "${GIT_WORK_DIR}" stash push; fi
+  if [[ "${BRANCH}" != "${MAIN}" ]]; then _do git -C "${GIT_WORK_DIR}" co "${MAIN}"; fi
+
+  _do git -C "${GIT_WORK_DIR}" pull
 
   # Restore the dirty state
-  if [[ "${BRANCH}" != "${MAIN}" ]]; then git -C "${GIT_WORK_DIR}" co -; fi
-  if [[ -n "${CHANGED}" ]];          then git -C "${GIT_WORK_DIR}" stash pop; fi
-  if [[ "${BRANCH}" != "${MAIN}" ]]; then git -C "${GIT_WORK_DIR}" merge -m synchronize "${MAIN}"; fi
+  if [[ "${BRANCH}" != "${MAIN}" ]]; then _do git -C "${GIT_WORK_DIR}" co -; fi
+  if [[ -n "${CHANGED}" ]];          then _do git -C "${GIT_WORK_DIR}" stash pop; fi
+  if [[ "${BRANCH}" != "${MAIN}" ]]; then _do git -C "${GIT_WORK_DIR}" merge -m synchronize "${MAIN}"; fi
 }
 
-Portable-update
+Portable-update "$@"
