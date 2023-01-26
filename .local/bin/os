@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  - {:ONE_LINE_DESCRIPTION_HERE:}
+# os - display the operating system name
 
 function Realpath ()
 {
@@ -22,13 +22,33 @@ function Os_main()
     OS="$(perl -lne 'if(m{PRETTY_NAME="([^"]+)"}){$os=$1;$os=~s{Oracle}{CentOS};print $os;}' /etc/os-release)"
   fi
 
-  local VERBOSE
+  # Parse command options
+  local VERBOSE SUCCINCT
   VERBOSE=0
-  if [[ "$1" =~ ^-{1,2}v(erbose)?$ ]]; then
-    VERBOSE=1
-  fi
+  SUCCINCT=0
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+      printf "SYNTAX: os [-1|-v]\n"
+      exit 0
+    elif [[ "$1" =~ ^-{1,2}v(erbose)?$ ]]; then
+      VERBOSE=1
+    elif [[ "$1" == "-1" ]]; then
+      VERBOSE=0
+      SUCCINCT=1
+    else
+      Report_error "Unknown option $1" 1>&2
+      exit 1
+    fi
+    shift
+  done
+
+
   if [[ ${VERBOSE} == 0 ]]; then
-    echo "${OS}"
+    if [[ ${SUCCINCT} == 1 ]]; then
+      echo "${OS/ *}"
+    else
+      echo "${OS}"
+    fi
     return
   fi
 
