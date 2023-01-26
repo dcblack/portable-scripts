@@ -74,6 +74,7 @@ export BUILDER
 export WORKTREE_DIR
 export LOGDIR
 export LOGFILE
+export NOPATCH
 export NOTREALLY
 export SRC
 export SYSTEMC_HOME
@@ -93,6 +94,10 @@ export UNINSTALL
 export VERBOSITY
 export WARNINGS
 
+if [[ -z "${VERBOSITY}" ]]; then
+  VERBOSITY=0
+fi
+
 function Realpath()
 {
   if [[ $# == 0 ]]; then set - .; fi
@@ -111,7 +116,7 @@ if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
   crash
 fi
-# shellcheck disable=SC2250,SC1091
+# shellcheck disable=SC2250,SC1091,SC1090
 source "$SCRIPTDIR/Essential-IO"
 
 PATCHDIR="$(Realpath "$(dirname "$0")"/../patches)"
@@ -178,7 +183,7 @@ function Step_Show()
   if [[ -z "${STEP_CURRENT}" ]]; then STEP_CURRENT=0; fi
   local STEP=0
   (( STEP = STEP_CURRENT + 1 ))
-  Report_info "Step %d %s" "${STEP}" "$*"
+  Report_info "Step ${STEP} $*"
 }
 
 #-------------------------------------------------------------------------------
@@ -393,7 +398,7 @@ function GetBuildOpts()
       NOINSTALL="-n"
       shift
       ;;
-    -no-patch|--no-patch|--nopatch)
+    -no-patch|-nopatch|--no-patch|--nopatch)
       NOPATCH=1
       shift
       ;;
@@ -461,6 +466,7 @@ function GetBuildOpts()
       ;;
     --doxy)
       BUILD_SOURCE_DOCUMENTATION=on
+      shift
       ;;
     --gcc)
       CC=gcc
@@ -532,6 +538,7 @@ function GetBuildOpts()
       shift
       ;;
     -patch|--patch=*)
+      NOPATCH=0
       PATCH=
       if [[ "$1" != '-patch' ]]; then
         PATCH="${1//*=}"
@@ -616,9 +623,11 @@ function GetBuildOpts()
       ;;
     --quiet|-q)
       VERBOSITY=0
+      shift
       ;;
     --verbose|-v)
       VERBOSITY=1
+      shift
       ;;
     --version=*|-vers)
       if [[ "$1" != '-vers' ]]; then
@@ -758,7 +767,7 @@ function GetSource_and_Cd() # DIR URL
   if [[ -n "${TOOL_VERS}" ]]; then
     _do git  checkout "${TOOL_VERS}"
   fi
-  if [[ -n "${TOOL_PATCHES}" ]]; then
+  if [[ ${NOPATCH} == 0 && -n "${TOOL_PATCHES}" ]]; then
     _do git  am --empty=drop "${TOOL_PATCHES}"
   fi
   elif [[ "${URL}" =~ ^https://.+tgz$ ]]; then
