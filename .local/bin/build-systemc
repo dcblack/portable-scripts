@@ -7,7 +7,7 @@ TOOL_SRC="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS=2.3.4
 
-export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS TOOL_PATCHES
+export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS TOOL_PATCHES NOINSTALL
 export SYSTEMC_HOME SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_APPLE_SILICON_PROCESSOR
 
 #-------------------------------------------------------------------------------
@@ -77,9 +77,9 @@ GetBuildOpts "$0" "$@"
 CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
 ConfirmBuildOpts || exit
 
-Create_and_Cd "${SRC}"
+Create_and_Cd "${SRC}" || exit
 Report_info -grn "Obtaining ${TOOL_NAME} source"
-GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}"
+GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}" || exit
 
 Report_info -grn "Building ${TOOL_NAME}"
 # shellcheck disable=SC2119,SC2312

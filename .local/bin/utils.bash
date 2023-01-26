@@ -2,6 +2,14 @@
 #
 # shellcheck disable=SC2312
 
+# This code is intended for use inside build scripts (e.g., see build-systemc) and provides aids.
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+  echo "Don't run $0, source it" >&2
+  exit 1
+fi
+
 cat >/dev/null <<'EOF' ;# Documentation begin_markdown {
 SYNOPSIS
 ========
@@ -63,12 +71,14 @@ export DEBUG
 export ERRORS
 export GENERATOR
 export BUILDER
-export GITROOT_DIR
+export WORKTREE_DIR
 export LOGDIR
 export LOGFILE
 export NOTREALLY
 export SRC
 export SYSTEMC_HOME
+export STEP_CURRENT
+export STEP_MAX
 export SUFFIX
 export TOOL_NAME
 # shellcheck disable=SC2090
@@ -153,6 +163,24 @@ function Needs()
   fi
 }
 
+function Step_Next()
+{
+  export STEP_CURRENT STEP_MAX
+  if [[ -z "${STEP_CURRENT}" ]]; then STEP_CURRENT=0; fi
+  (( ++STEP_CURRENT ));
+  if [[ -n "${STEP_MAX}" && "${STEP_CURRENT}" -ge "${STEP_MAX}" ]]; then return 1; fi
+}
+
+function Step_Show()
+{
+  if [[ ${VERBOSITY} == 0 ]]; then return; fi
+  export STEP_CURRENT
+  if [[ -z "${STEP_CURRENT}" ]]; then STEP_CURRENT=0; fi
+  local STEP=0
+  (( STEP = STEP_CURRENT + 1 ))
+  Report_info "Step %d %s" "${STEP}" "$*"
+}
+
 #-------------------------------------------------------------------------------
 
 Setup-Color on
@@ -173,12 +201,14 @@ function ShowBuildOpts()
     CC \
     CXX \
     DEBUG \
-    GITROOT_DIR \
+    WORKTREE_DIR \
     LOGDIR \
     LOGFILE \
     NOTREALLY \
     SRC \
     SYSTEMC_HOME \
+    STEP_CURRENT \
+    STEP_MAX \
     SUFFIX \
     TOOL_NAME \
     TOOL_INFO \
@@ -211,6 +241,7 @@ function ConfirmBuildOpts()
 
 function GetBuildOpts()
 {
+  Step_Show "Get build options"
 
 # Establishes options for building
 #
@@ -258,6 +289,7 @@ function GetBuildOpts()
 #|  --patch[=name]     |  -patch [name]    | apply patches
 #|  --src=DIR          |  -s DIR           | choose source directory
 #|  --std=N            |  -std=N           | set make C++ compiler version where N={98,11,14,17,20,...}
+#|  --steps=N          |  -steps=N         | Only execute N steps
 #|  --systemc=DIR      |  -sc              | reference SystemC installation
 #|  --suffix=TEXT      |  -suf TEXT        | set suffix for installation name
 #|  --tool=NAME        |  -tool NAME       | set the desired tool name for tool source
@@ -281,7 +313,7 @@ function GetBuildOpts()
 #| - $CXX
 #| - $DEBUG
 #| - $ERRORS integer
-#| - $GITROOT_DIR
+#| - $WORKTREE_DIR
 #| - $LOGDIR
 #| - $LOGFILE
 #| - $NOTREALLY
@@ -308,7 +340,8 @@ function GetBuildOpts()
 #|LICENSE
 #|-------
 #|
-#| Apache 2.0
+#| Copyright 2023 by Doulos Inc.
+#| Licensed using Apache 2.0
 
   if [[ "$2" =~ ^-{1,2}(na|nogetbuildopts)$ ]]; then return; fi
 
@@ -333,10 +366,10 @@ function GetBuildOpts()
     fi
   fi
   if git rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
-    GITROOT_DIR="$(git rev-parse --show-toplevel)"
+    WORKTREE_DIR="$(git rev-parse --show-toplevel)"
   else
-    Report_warning "Not inside a git controlled area"
-    GITROOT_DIR="Unknown"
+    # Report_warning "Not inside a git controlled area"
+    WORKTREE_DIR="Unknown"
   fi
 
   #-------------------------------------------------------------------------------
@@ -373,7 +406,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     --builder=*|-bld)
       if [[ "$1" != '-gen' ]]; then
@@ -384,7 +417,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     --cc=*|CC=*)
       CC="${1//*=}"
@@ -402,11 +435,11 @@ function GetBuildOpts()
       ;;
     --clean|-clean)
       CLEAN=1;
-      shift;
+      shift
       ;;
     --cleanup|-cleanup)
       CLEANUP=1;
-      shift;
+      shift
       ;;
     --cxx=*|CXX=*)
       CXX="${1//*=}"
@@ -415,11 +448,11 @@ function GetBuildOpts()
       elif [[ "${CXX}" == clang++ ]]; then
         CC=clang
       fi
-      shift;
+      shift
       ;;
     -d|-debug|--debug)
       DEBUG=1;
-      shift;
+      shift
       ;;
     --default)
       APPS="${HOME}.local/apps"
@@ -443,7 +476,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     --info=*|-info)
       if [[ "$1" != '-info' ]]; then
@@ -454,7 +487,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     -i|--install=*|--apps=)
       if [[ "$1" != '-i' ]]; then
@@ -489,14 +522,14 @@ function GetBuildOpts()
       ;;
     --root-dir=*|-rd)
       if [[ "$1" != '-rd' ]]; then
-        GITROOT_DIR="${1//*=}"
+        WORKTREE_DIR="${1//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
-        GITROOT_DIR="$2"
+        WORKTREE_DIR="$2"
         shift
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     -patch|--patch=*)
       PATCH=
@@ -534,7 +567,11 @@ function GetBuildOpts()
       ;;
     --std=*|-std=*)
       CMAKE_CXX_STANDARD="${1//*=}"
-      shift;
+      shift
+      ;;
+    --steps=*|-steps=*)
+      STEP_MAX="${1//*=}"
+      shift
       ;;
     --systemc=*|-sc)
       if [[ "$1" != '-sc' ]]; then
@@ -545,7 +582,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     --suffix=*|-suf)
       if [[ "$1" != '-suf' ]]; then
@@ -556,7 +593,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     --tool=*|-tool)
       if [[ "$1" != '-tool' ]]; then
@@ -567,15 +604,21 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     --uninstall|-rm)
       CLEANUP=1;
-      shift;
+      shift
       ;;
     --url=*|-url)
       TOOL_URL="${1//*=}"
-      shift;
+      shift
+      ;;
+    --quiet|-q)
+      VERBOSITY=0
+      ;;
+    --verbose|-v)
+      VERBOSITY=1
       ;;
     --version=*|-vers)
       if [[ "$1" != '-vers' ]]; then
@@ -586,7 +629,7 @@ function GetBuildOpts()
       else
         Report_fatal "Need argument for $1"
       fi
-      shift;
+      shift
       ;;
     *)
       ARGV[${#ARGV[@]}]="$1"
@@ -649,13 +692,16 @@ function GetBuildOpts()
     ShowBuildOpts
   fi
 
+  Step_Next || return 1
 }
 
 function SetupLogdir()
 {
+  Step_Show "Set up log directory $1"
   local NONE
   NONE="$(_C none)"
   # Creates log directory and sets initial LOGFILE
+  export LOGFILE
   LOGDIR="${HOME}/logs"
   mkdir -p "${LOGDIR}"
   case $# in
@@ -673,20 +719,24 @@ function SetupLogdir()
       echo "$(_C red)Error: Too many parameters specified${NONE}"
       ;;
   esac
+  Step_Next || return 1
 }
 
 # Make directory and enter
 function Create_and_Cd() # DIR
 {
-  Assert $# = 1 || return 1
+  if [[ $# != 1 ]]; then return 1; fi # Assert
+  Step_Show "Create source ${1}"
   _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}" || return 1
   _do cd "${1}" || Report_fatal "Unable to enter ${1} directory" || return 1
+  Step_Next || return 1
 }
 
 # Download and enter directory and patch (TODO)
 function GetSource_and_Cd() # DIR URL
 {
-  Assert $# = 2 || return 1
+  if [[ $# != 2 ]]; then return 1; fi # Assert
+  Step_Show "Get source code from $2 and enter $1"
   local DIR URL
   DIR="$1"
   URL="$2"
@@ -721,20 +771,22 @@ function GetSource_and_Cd() # DIR URL
   else
     Report_fatal "Unknown URL type - currently only handle *.git or *.tgz" || exit 1
   fi
+  Step_Next || return 1
 }
 
 # Arguments are optional
 # shellcheck disable=SC2120
 function Configure_tool() # [TYPE]
 {
+  Step_Show "Configure $1"
   Report_info -grn "Configuring ${TOOL_NAME}"
   if [[ $# == 1 ]]; then # option generator
     BUILDER="$1"
     shift
   else
-    Assert -n "${BUILDER}" || return 1
+    if [[ -z "${BUILDER}" ]]; then return 1; fi # Assert
   fi
-  Assert $# = 0 || return 1
+  if [[ $# != 0 ]]; then return 1; fi # Assert
   case "${BUILDER}" in
     cmake)
       _do rm -fr "${BUILD_DIR}"
@@ -791,6 +843,7 @@ function Configure_tool() # [TYPE]
       Report_error "Unknown builder '${BUILDER}'"
       ;;
   esac
+  Step_Next || return 1
 }
 alias Generate=Configure_tool
  
@@ -798,6 +851,7 @@ alias Generate=Configure_tool
 # shellcheck disable=SC2120
 function Compile_tool()
 {
+  Step_Show "Compile"
   Report_info -grn "Compiling ${TOOL_NAME}"
   case "${BUILDER}" in
     cmake)
@@ -814,10 +868,12 @@ function Compile_tool()
       Report_error "Unknown builder '${BUILDER}'"
       ;;
   esac
+  Step_Next || return 1
 }
 
 function Install_tool()
 {
+  Step_Show "Install"
   Report_info -grn "Installing ${TOOL_NAME} to final location"
   case "${BUILDER}" in
     cmake)
@@ -833,20 +889,23 @@ function Install_tool()
       Report_error "Unknown builder '${BUILDER}'"
       ;;
   esac
+  Step_Next || return 1
 }
 
 function Cleanup()
 {
-  Assert $# = 1
+  if [[ $# = 1 ]]; then return 1; fi # Assert
+  Step_Show "Clean up"
   if [[ -n "${CLEANUP}" && "${CLEANUP}" == 1 ]]; then
     cd "${SRC}" || Report_fatal "Unable to enter source directory"
     rm -fr "${1}"
   fi
+  Step_Next || return 1
 }
 
 function Main()
 {
-  Assert "${BASH_VERSINFO[0]}" -ge 5
+  if [[ "${BASH_VERSINFO[0]}" -ge 5 ]]; then return 1; fi # Assert
   if [[ $# != 0 ]]; then
     GetBuildOpts "$0" "$@"
     if [[ ${#ARGV[@]} -gt 0 ]]; then
