@@ -30,7 +30,7 @@ OPTION                | DESCRIPTION
 -LANGUAGE             | Select a language: bash (default), csh, lua, perl, python2, python3, zsh
 --bin\-b              | Place in $HOME/bin
 --edit[=_editor_\|-e  | Enter the specified editor after creation
---externs             | Place in $WORKTREE_DIR/externs/bin, where WORKTREE_DIR is the git working directory
+--extern             | Place in $WORKTREE_DIR/extern/bin, where WORKTREE_DIR is the git working directory
 --help\|-h            | Display this text
 --local\-l            | Place in $HOME/.local/bin
 --notreally|-n        | Show what would be done
@@ -199,16 +199,16 @@ function Mkbin()
       else
         Report_error "Missing ${DIRECTORY}/bin ?!"; return 1
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}externs$ ]]; then # --externs
+    elif [[ "${OPTION}" =~ ^-{1,2}extern$ ]]; then # --extern
       WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
       if [[ -z "${DIRECTORY}" ]]; then
-        DIRECTORY="${WORKTREE_DIR}/externs/bin"
+        DIRECTORY="${WORKTREE_DIR}/extern/bin"
         mkdir -p "${DIRECTORY}"
       else
         if [[ "${DIRECTORY}" =~ ^/ ]]; then
-          Report_fatal "Directory specification for --externs must be a relative specification"
+          Report_fatal "Directory specification for --extern must be a relative specification"
         else
-          DIRECTORY="${WORKTREE_DIR}/externs/${DIRECTORY}"
+          DIRECTORY="${WORKTREE_DIR}/extern/${DIRECTORY}"
         fi
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)?$ ]]; then # --local

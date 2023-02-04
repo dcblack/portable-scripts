@@ -149,7 +149,7 @@ TARGETS="$(perl -lne '/add_executable[[:space:]]*[(][[:space:]]*([^[:space:]]+)/
 #-------------------------------------------------------------------------------
 export CMAKE_PREFIX_PATH
 CMAKE_PREFIX_PATH=
-for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/extern" "${APPS}" "${APPS}/lib"; do
   if [[ -d "${CDIR}/cmake" ]]; then
     if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
       CMAKE_PREFIX_PATH="${CDIR}"

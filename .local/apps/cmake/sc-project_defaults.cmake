@@ -12,7 +12,7 @@ set( PROJECT_DEFAULTS ON )
 #set(CMAKE_CXX_VISIBILITY_PRESET hidden) 
 
 if( DEFINED ENV{WORKTREE_DIR} )
-  set( PROJECT_DIRS "$ENV{WORKTREE_DIR}/externs;$ENV{APPS}" )
+  set( PROJECT_DIRS "$ENV{WORKTREE_DIR}/extern;$ENV{APPS}" )
   foreach( _dir ${PROJECT_DIRS} )
      if( EXISTS "${_dir}" )
        list( APPEND CMAKE_PREFIX_PATH "${_dir}" )

@@ -29,12 +29,12 @@ source "$SCRIPTDIR/Essential-IO"
 TOOL_PATH="$(Realpath "$0")"
 Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
 HERE="$(Realpath ".")"
-if [[ "${HERE}" =~ .*/externs ]]; then
-  cd "${HERE/externs*/}" || Report_fatal "Trying to escape externs sub-directory failed"
+if [[ "${HERE}" =~ .*/extern ]]; then
+  cd "${HERE/extern*/}" || Report_fatal "Trying to escape extern sub-directory failed"
 fi
 WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
 REPO_DIR="$(basename "${GIT_URL}" .git)"
-INSTALL_DIR="${WORKTREE_DIR}/externs"
+INSTALL_DIR="${WORKTREE_DIR}/extern"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
 Report_info "Building under ${INSTALL_DIR}"

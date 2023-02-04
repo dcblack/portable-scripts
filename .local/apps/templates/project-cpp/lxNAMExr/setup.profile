@@ -84,18 +84,18 @@ fi
 export APPS WORKTREE_DIR
 
 if [[ "${ACTION}" != rm ]]; then
-  Prepend_path MANPATH "${WORKTREE_DIR}/externs/share/man"
-  Prepend_path PATH "${WORKTREE_DIR}/externs/bin"
+  Prepend_path MANPATH "${WORKTREE_DIR}/extern/share/man"
+  Prepend_path PATH "${WORKTREE_DIR}/extern/bin"
   Prepend_path PATH "${WORKTREE_DIR}/bin"
 else
-  Remove_path  MANPATH "${WORKTREE_DIR}/externs/share/man"
-  Remove_path  PATH "${WORKTREE_DIR}/externs/bin"
+  Remove_path  MANPATH "${WORKTREE_DIR}/extern/share/man"
+  Remove_path  PATH "${WORKTREE_DIR}/extern/bin"
   Remove_path  PATH "${WORKTREE_DIR}/bin"
 fi
 
 #-------------------------------------------------------------------------------
 # Cmake should refer to project and group directories to find scripts
-CMAKE_PREFIX_PATH="${WORKTREE_DIR}/cmake;${APPS}/cmake;${WORKTREE_DIR}/externs/lib/cmake"
+CMAKE_PREFIX_PATH="${WORKTREE_DIR}/cmake;${APPS}/cmake;${WORKTREE_DIR}/extern/lib/cmake"
 export CMAKE_PREFIX_PATH
 
 #-------------------------------------------------------------------------------
@@ -103,8 +103,8 @@ export CMAKE_PREFIX_PATH
 if [[ ! -d "${APPS}/cmake" ]]; then
   Report_warning "${APPS} missing!? Did you install portable scripts?"
 fi
-if [[ ! -d "${WORKTREE_DIR}/externs/lib/cmake" ]]; then
-  Report_warning "${WORKTREE_DIR}/externs/lib/cmake missing!? Did you build GoogleTest?"
+if [[ ! -d "${WORKTREE_DIR}/extern/lib/cmake" ]]; then
+  Report_warning "${WORKTREE_DIR}/extern/lib/cmake missing!? Did you build GoogleTest?"
 fi
 
 #-------------------------------------------------------------------------------

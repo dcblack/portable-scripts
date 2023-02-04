@@ -74,7 +74,7 @@ function _do()
   if [[ "$1" == "-n" ]]; then NX="-"; shift; fi
   if [[ "${NX}" == "-" ]]; then
     echo "# $*"
-    return 0;
+  # return 0;
   else
     echo "${BOLD}${CCYN}${NX}%${NONE} ${CGRN}$*${NONE}"
   fi
@@ -192,20 +192,20 @@ for DIR in "${DIRS[@]}"; do
   Report_info "Cleaning ${DIR}"
   if   [[ "${OPTS}" =~ .*c.* ]]; then
     test -s "${V}" && echo "Removing cmake files"
-    _do find "${DIR}" -type d -name 'CMakeFiles'          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-    _do find "${DIR}" -type f -name 'CMakeCache.txt'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
-    _do find "${DIR}" -type f -name 'cmake_install.cmake' ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
-    _do find "${DIR}" -type f -name 'CTestTestfile.cmake' ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type d -name 'CMakeFiles'          ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
+    _do find "${DIR}" -type f -name 'CMakeCache.txt'      ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name 'cmake_install.cmake' ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name 'CTestTestfile.cmake' ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   test -s "${V}" && echo "Remove objects and dependencies under ${DIR}"
   {
-    _do find "${DIR}" -name '*.[doP]'                ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
-    _do find "${DIR}" -path "*/compile-${YMD}*.sh"   ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
-    _do find "${DIR}" -name '*.x.dSYM'               ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+    _do find "${DIR}" -name '*.[doP]'                ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -path "*/compile-${YMD}*.sh"   ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -name '*.x.dSYM'               ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
   }
   if   [[ "${OPTS}" =~ .*M.* ]]; then
     test -s "${V}" && echo "Removing Mac files"
-    _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name '.DS_Store'      ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*G.* ]]; then
     # shellcheck disable=SC2207
@@ -214,45 +214,45 @@ for DIR in "${DIRS[@]}"; do
   fi
   if   [[ "${OPTS}" =~ .*C.* ]]; then
     test -s "${V}" && echo "Removing CLion files"
-    _do find "${DIR}" -type d -name '.idea'          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-    _do find "${DIR}" -type f -name 'clion.*'        ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type d -name '.idea'          ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
+    _do find "${DIR}" -type f -name 'clion.*'        ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*v.* ]]; then
     test -s "${V}" && echo "Removing VSCode files"
-    _do find "${DIR}" -type d -name '.vscode'        ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+    _do find "${DIR}" -type d -name '.vscode'        ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
   fi
   if   [[ "${OPTS}" =~ .*P.* ]]; then
     test -s "${V}" && echo "Removing PC files"
-    _do find "${DIR}" -type f -name 'thumbs.db'      ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name 'thumbs.db'      ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*L.* ]]; then
     test -s "${V}" && echo "Removing log files"
-    _do find "${DIR}" -type f -name '*.log'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name '*.log'          ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if   [[ "${OPTS}" =~ .*O.* ]]; then
     test -s "${V}" && echo "Removing out files"
-    _do find "${DIR}" -type f -name '*.out'          ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name '*.out'          ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if [[ "${OPTS}" =~ .*X.* ]]; then
     test -s "${V}" && echo "Removing executable files"
-    _do find "${DIR}" -type f -name '*.x'            ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name '*.x'            ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if [[ "${OPTS}" =~ .*T.* ]]; then
     test -s "${V}" && echo "Removing linux temporary files"
     {
-      _do find "${DIR}" -type d -name '*~'           ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-      _do find "${DIR}" -type d -name '*.bak'        ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name '*~'           ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name '*.bak'        ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
     }
   fi
   if   [[ "${OPTS}" =~ .*V.* ]]; then
     test -s "${V}" && echo "Removing vim swap files"
-    _do find "${DIR}" -type f -name '.*.sw?'         ! -path '*/externs/*' -exec "${CMND}" "${V}" {} \;
+    _do find "${DIR}" -type f -name '.*.sw?'         ! -path '*/extern/*' -exec "${CMND}" "${V}" {} \;
   fi
   if [[ "${OPTS}" =~ .*B.* ]]; then
     test -s "${V}" && echo "Removing build directories"
     {
-      _do find "${DIR}" -type d -name build          ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
-      _do find "${DIR}" -type d -name cmake-build-\* ! -path '*/externs/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name build          ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
+      _do find "${DIR}" -type d -name cmake-build-\* ! -path '*/extern/*' -exec "${CMND}" "${V}" -fr {} \;
     }
   fi
 done 2>/dev/null | tee -a "${NEW_LOG}" 

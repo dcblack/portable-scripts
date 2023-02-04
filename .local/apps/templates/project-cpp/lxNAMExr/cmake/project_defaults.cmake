@@ -32,8 +32,8 @@ set( CMAKE_C_STANDARD_REQUIRED   11 CACHE BOOL   "The CMAKE_CXX_STANDARD selecte
 # Setup GoogleTest
 #------------------------------------------------------------------------------
 find_package( GTest REQUIRED )
-include_directories( $ENV{WORKTREE_DIR}/externs/include ${GTEST_INCLUDE_DIRS} )
-link_directories( AFTER $ENV{WORKTREE_DIR}/externs/lib )
+include_directories( $ENV{WORKTREE_DIR}/extern/include ${GTEST_INCLUDE_DIRS} )
+link_directories( AFTER $ENV{WORKTREE_DIR}/extern/lib )
 link_libraries(  gtest gmock gtest_main pthread )
 
 #-------------------------------------------------------------------------------

@@ -327,7 +327,7 @@ function Build()
   if [[ ${ADD_CMAKE_PREFIX} == 1 ]]; then
     export CMAKE_PREFIX_PATH
     CMAKE_PREFIX_PATH=
-    for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/externs" "${APPS}" "${APPS}/lib"; do
+    for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/extern" "${APPS}" "${APPS}/lib"; do
       CDIR="$(Realpath "${CDIR}")"
       if [[ ! -d "${CDIR}" ]]; then continue; fi
       if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then

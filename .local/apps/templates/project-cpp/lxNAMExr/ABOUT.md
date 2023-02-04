@@ -20,7 +20,7 @@ Directory organization:
   │   ├── ABOUT.md
   │   ├── project_defaults.cmake
   │   └── set_target.cmake
-  ├── externs/
+  ├── extern/
   │   ├── ABOUT.md
   │   ├── include/
   │   │   └── ABOUT.md

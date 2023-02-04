@@ -37,9 +37,9 @@ set( CMAKE_C_STANDARD_REQUIRED   11 CACHE BOOL   "The CMAKE_CXX_STANDARD selecte
 #------------------------------------------------------------------------------
 find_package( GTest )
 
-if( EXISTS $ENV{WORKTREE_DIR}/externs )
-  include_directories( $ENV{WORKTREE_DIR}/externs/include ${GTEST_INCLUDE_DIRS} )
-  link_directories( AFTER $ENV{WORKTREE_DIR}/externs/lib )
+if( EXISTS $ENV{WORKTREE_DIR}/extern )
+  include_directories( $ENV{WORKTREE_DIR}/extern/include ${GTEST_INCLUDE_DIRS} )
+  link_directories( AFTER $ENV{WORKTREE_DIR}/extern/lib )
 endif()
 
 if( GTest_FOUND )

@@ -506,7 +506,7 @@ function GetBuildOpts()
       fi
       shift
       ;;
-    --externs)
+    --extern)
       APPS="${WORKTREE_DIR}"
       SRC="${WORKTREE_DIR}"
       ;;
@@ -846,7 +846,7 @@ function Configure_tool() # [TYPE]
           ../configure --prefix="${SYSTEMC_HOME}"
       ;;
     boost)
-      _do ./bootstrap.sh --prefix="${WORKTREE_DIR}/externs"
+      _do ./bootstrap.sh --prefix="${WORKTREE_DIR}/extern"
       ;;
     *)
       Report_error "Unknown builder '${BUILDER}'"

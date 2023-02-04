@@ -18,13 +18,13 @@ function Realpath() {
 TOOL_PATH="$(Realpath "$0")"
 echo "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
 HERE="$(pwd)"
-if [[ "${HERE}" =~ .*/externs ]]; then
-  cd "${HERE/externs*/}" || Die "Trying to escape externs sub-directory failed"
+if [[ "${HERE}" =~ .*/extern ]]; then
+  cd "${HERE/extern*/}" || Die "Trying to escape extern sub-directory failed"
 fi
 WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
 REPO_DIR="$(basename "${GIT_URL}" .git)"
 BUILD_DIR="build"
-INSTALL_DIR="${WORKTREE_DIR}/externs"
+INSTALL_DIR="${WORKTREE_DIR}/extern"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Die "Unable to enter ${INSTALL_DIR}"
 if [[ -d "${REPO_DIR}/.git" ]]; then
