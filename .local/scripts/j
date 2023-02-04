@@ -6,7 +6,7 @@ function Realpath() {
 }
 
 # l=last c=current n=next wd=working_directory ws=working_script
-export lwd nwd lws cws nws
+export ACTION lwd nwd lws cws nws
 function j() {
   export j_VERSION=1.4 FAVS
   # Synopsis
@@ -15,7 +15,7 @@ function j() {
   #   j DIR(S)
   # Begin parsing options
   #-----------------------------------------------------------------------------
-  export lwd nwd lws cws nws
+  export ACTION lwd nwd lws cws nws
   local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK
   #local FAV FAV1
   J_VERBOSE=0
@@ -271,19 +271,16 @@ EOT
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
       test "${J_VERBOSE}" = 1 && Report_info "Removing ${nws}"
-      export ACTION
-      ACTION='rm'
+      export ACTION='rm'
       if [[ ${J_NOSCRIPT} == 0 ]]; then
         # shellcheck disable=SC1090
         source "${lws}" --rm
       fi
-      unset ACTION
     fi
     # Source new working script
     if [[ ${NEXTOK} == 1 ]]; then
       test "${J_VERBOSE}" = 1 && Report_info "Adding ${nws}"
-      export ACTION
-      ACTION='add'
+      export ACTION='add'
       if [[ ${J_NOSCRIPT} == 0 ]]; then
         if [[ ${J_SHOW} == 0 ]]; then
           # shellcheck disable=SC1090
@@ -293,18 +290,15 @@ EOT
           source "${nws}" --add --show
         fi
       fi
-      unset ACTION
       cws="${nws}"
     elif [[ ${REPEAT} == 1 ]]; then
       if grep -q ACTION "${nws}"; then
         test "${J_VERBOSE}" = 1 && Report_info "Repeating ${nws}"
-        export ACTION
-        ACTION='repeat'
+        export ACTION='repeat'
         if [[ ${J_NOSCRIPT} == 0 ]]; then
           # shellcheck disable=SC1090
           source "${nws}" --repeat
         fi
-        unset ACTION
         cws="${nws}"
       else
         Report_warning "${nws} does not contain ACTION"
@@ -320,6 +314,5 @@ EOT
     set_icon "${TMP2}"
   fi
 
-  unset ACTION
 }
 
