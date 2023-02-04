@@ -10,6 +10,11 @@ git clone https://github.com/dcblack/portable-scripts.git
 source portable-scripts/setup ;#<-- sets up a symbolic link ~/.local to the portable scripts
 ```
 
+Background
+----------
+
+The reason for this project is historical. I've used many computers, operating systems, and programming languages over the course of my career. Every time I encounter a new machine/OS, I end up wanting to install familiar "bits" that I use daily. Each of these "bits" has some unique installation aspect that can vary from one OS to the next.
+
 Description
 -----------
 
