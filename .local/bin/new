@@ -530,7 +530,7 @@ sub INFO { #<<<2
       my $template_dir = &path("$rootdir/$template");
       next unless -d $template_dir;
       if (exists $OPT{-path} and $OPT{-path}) {
-        printf "%s/.\n",$template_dir;
+        printf "%s/\n",realpath $template_dir;
         $success = 1;
       } elsif (-r "$template_dir/$rc" and -T "$template_dir/$rc") {
         my $TMPL_FH;
