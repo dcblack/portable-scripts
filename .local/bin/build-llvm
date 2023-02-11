@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+INSTALL=/usr/local
+
+git clone https://github.com/llvm/llvm-project llvm-project
+mkdir build
+cd build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=lld -DCMAKE_INSTALL_PREFIX="${INSTALL}" llvm-project/llvm
+make -C build install

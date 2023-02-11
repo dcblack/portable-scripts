@@ -1,0 +1,122 @@
+#!/usr/bin/env perl5
+require v5.6;
+use strict;
+use warnings;
+#
+sub Syntax {
+  print STDERR q{
+NAME
+----
+sc-nomac - convert SC_MODULE and SC_CTOR definitions to pure C++
+
+SYNOPSIS
+--------
+destruct [-nbu] FILENAME(S)
+
+ Option | Description
+ ------ | -----------
+ -nbu   | Don't keep backup files
+};
+}
+
+if( $ARGV[0] =~ m{^-{1,2}h(elp)?$} ) {
+  &Syntax();
+  exit 0;
+}
+
+
+use Cwd qw(abs_path getcwd);
+use FindBin qw($RealBin $RealScript);
+use File::Basename;
+use FileHandle;
+use FindBin qw($RealBin $RealScript);
+use Getopt::Long;
+use Pod::Usage;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+my $nobackup = 0;
+my $total_macros = 0;
+my $total_changes = 0;
+my $total_renamed = 0;
+for my $file (@ARGV) {
+
+  if ( $file eq '-nbu' ) {
+    $nobackup = 1;
+    next;
+  }
+
+  if ( not -r $file ) {
+    printf STDERR "Unable to read file '%s' -- ignoring\n", $file;
+    next;
+  }
+  open(my $FH,'<',$file)
+    or die "Unable to open '$file' for reading!?\n";
+  my @text = <$FH>;
+  close $FH;
+  my $state = 'LOOK_FOR_START';
+  my $changes = 0;
+  my ($nm,$module,$indent);
+  for my $line (@text) {
+    $line =~ s{\r\n}{\n}; # Just in case Windows text
+    if ($state eq 'LOOK_FOR_START') {
+      if ($line =~ m{\bSC_MODULE\((\s*\w+)}) {
+        $module = $2;
+        $indent = '';
+        if( $module =~ s{^\s+}{} ) {
+          $indent = $1;
+        }
+        printf "Found SC_MODULE %s\n",$2;
+        ++$total_macros;
+        $changes += $line =~ s{SC_MODULE\([^\)]+\)}{struct $module : sc_core::sc_module};
+      } elsif ($line =~ m{\bSC_CTOR\((\s*\w+)}) { 
+        $module = $2;
+        $indent = '';
+        if( $module =~ s{^\s+}{} ) {
+          $indent = $1;
+        }
+        printf "Found SC_CTOR %s\n",$2;
+        ++$total_macros;
+        $changes += $line =~ s{SC_CTOR\([^\)]+\)}{explicit $module( const sc_core::sc_module_name& nm )\n$indent: sc_module{ nm }};
+      }
+    } elsif ($state eq 'LOOK_FOR_END') {
+      if ($line =~ m{[\}];}) {
+        $state = 'LOOK_FOR_START';
+      }
+    } else {
+      die "Unknown state!!!?\n";
+    }
+  }#endfor
+
+  my $text = join('',@text);
+
+  $total_changes += $changes;
+
+  if ($changes != 0) {
+    ++$total_renamed;
+    printf "Updated %s\n",$file;
+
+    # Save results
+    my $temp = $file."-tmp";
+    open(my $TH,'>',$temp)
+      or die "Unable to open '$temp' for writing!?\n";
+    print $TH $text;
+    close $TH;
+
+    if ( $nobackup != 0 ) {
+      unlink $file;
+      rename $temp,$file;
+    } else {
+      # Rename files
+      my $orig = $file.'-orig';
+      rename $file,$orig;
+      rename $temp,$file;
+    }#endif
+  }
+}#endfor
+
+printf "Found %d macros\n",$total_macros;
+printf "Changed %d files\n",$total_renamed;
+printf "Made %d modifications\n",$total_changes;
+
+# vim:nospell

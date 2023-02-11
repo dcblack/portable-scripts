@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-# $Info: build version 1.0 $
+BUILD_TOOL_VERSION=1.2
+BUILD_TOOL_NAME="$(basename "$0")"
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
@@ -17,6 +18,7 @@ build - use cmake to build and optionally run, test, or install
 
 ```sh
 build -h|--help
+build --version
 build [-n] [-C DIR] [-verbose][-quiet][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
 build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
 ```
@@ -41,6 +43,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -B DIR   | Name of build directory -- defaults to \"build\"
 | -C DIR   | Change to specified directory before doing anything else
 | -clean   | Remove all build files and other output bits
+| -DVAR=VAL| Specify a configuration definition (i.e., passed to cmake -B)
 | -G "GEN" | Specify generator (defaults to Ninja if available)
 | -clean   | Remove all build files and other output bits
 | -gdb     | Run under gdb
@@ -55,10 +58,13 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -P DIR   | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
 | -run     | When done building, run the executable
 | -S DIR   | Name of source directory -- defaults to \".\"
+| -std=NN  | Specify C++ standard version
 | -test    | When done building, run the tests verbosely unless -q supplied
 | -install | When done building, install
 | -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
 | -verbose | Adds more information to output. Opposite of quiet.
+| -version | Display version information
+| VAR=VAL  | Specify an environment variable
 
 ## CONFIGURATION
 
@@ -149,12 +155,13 @@ function Build()
   # Setup defaults
   #------------------------------------------------------------------------------
   export SUBPROJ_DIR DEBUG
-  local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY
+  local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY HAS_NINJA
   SRC_DIR="."
   CMAKE_BUILD_TYPE="Debug"
   BLD_DIR="build"
   SUBPROJ_DIR="$(pwd)"
-  if [[ -n "$(command -v ninja)" ]]; then
+  HAS_NINJA="$(command -v ninja)"
+  if [[ -n "${HAS_NINJA}" ]]; then
     GENERATOR="Ninja"
   else
     GENERATOR="Unix Makefiles"
@@ -169,7 +176,8 @@ function Build()
   PREFIX=
   ACTION=
   OPTS_SEP=0
-  declare -a BUILD_OPTS TEST_OPTS
+  declare -a CONFIG_OPTS BUILD_OPTS TEST_OPTS
+  CONFIG_OPTS=()
   BUILD_OPTS=()
   TEST_OPTS=()
   BUILD_LOG=build.log
@@ -203,6 +211,10 @@ function Build()
         SUBPROJ_DIR="$(pwd)"
         shift
       fi
+    elif [[ "$1" =~ ^-D[a-zA-Z_]+= ]]; then
+      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "$1")
+    elif [[ "$1" =~ ^[a-zA-Z_]+= ]]; then
+      eval "export $1"
     elif [[ "$1" == "-G" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-P requires a directory argument" ; exit 1
@@ -251,6 +263,25 @@ function Build()
       QUIET=1;
     elif [[ "$1" =~ ^-{1,2}verbose$ ]]; then
       QUIET=0
+    elif [[ "$1" =~ ^-{1,2}version$ ]]; then
+      Report_info -blu "
+ -------------------------------------------------------------------------------
+ ${BUILD_TOOL_NAME} version ${BUILD_TOOL_VERSION}
+ Copyright 2023 by Doulos Inc. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the \"License\");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an \"AS IS\" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-------------------------------------------------------------------------------"      
+      exit 0
     elif [[ "$1" =~ ^-{1,2}install$ ]]; then
       INSTALL=1
     elif [[ "$1" =~ ^--prefix$ ]]; then
@@ -260,6 +291,17 @@ function Build()
         Report_fatal "--prefix must be followed by a valid installation directory" ; exit 1
       else
         shift
+      fi
+    elif [[ "$1" =~ ^-std= ]]; then
+      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DUSE_CXX_VERSION=${1/-std=/}")
+    elif [[ "$1" =~ ^-type$ ]]; then
+      if [[ "$2" =~ ^(Debug|Release|RelWithDebInfo)$ ]]; then
+        CMAKE_BUILD_TYPE="$2"
+        shift
+      elif [[ "$2" =~ ^- ]]; then
+        Report_fatal "Missing -type build specification (Debug, Release or RelWithDebInfo)" ; exit 1
+      else
+        Report_warning "Ignoring unknown build type $2"
       fi
     elif [[ "$1" =~ ^-{1,2}(list-)?targets$ ]]; then
       ACTION="list"
@@ -362,20 +404,17 @@ function Build()
     _do rm -fr "${BLD_DIR}"
   fi
 
+  if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
+    CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+  fi
+  CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+
   #------------------------------------------------------------------------------
   Report_info "Configuring ${SUBPROJ_DIR}"
   if [[ -z "${DEBUG}" ]]; then
-    if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
-      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" || exit 1
-    else
-      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" || exit 1
-    fi
+    _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" || exit 1
   else
-    if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
-      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${DEBUG}" || exit 1
-    else
-      _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" "${DEBUG}" || exit 1
-    fi
+    _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" "${DEBUG}" || exit 1
   fi
 
   #------------------------------------------------------------------------------

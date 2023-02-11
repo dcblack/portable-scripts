@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+find ~/* -name '*.x' -exec ls -l '{}' ';' | cut -c 31-

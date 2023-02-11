@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+cd "${LOCAL}/src" || exit
+git clone https://github.com/rurban/safeclib.git
+autoreconf -i
+./configure --prefix="${LOCAL}/apps" \
+  CC="gcc -arch arm64" \
+  CXX="g++ -arch arm64" \
+  CPP="gcc -E" CXXCPP="g++ -E"
+make

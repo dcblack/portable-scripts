@@ -1,0 +1,162 @@
+#!/usr/bin/make -f
+
+# Options to override as needed
+# -----------------------------
+TRUNK   = master
+MERGED  = patched
+BASEDIR = ..
+PATCHES_DIR  = ${BASEDIR}/patches
+PATCHESNAME  = systemc
+PATCHES_PATH = ${BASEDIR}/${PATCHESNAME}.patches
+
+THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
+PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
+.PHONY: ${PHONIES}
+CHECK=perl -le 'die "[11m$2[0m" unless qq{@ARGV} =~ m{$1}' $3
+
+# Graphics characters:
+#  ─ └ ┘ ┌ ┐ │ ┴ ├ ┬ ┤ ┼
+#  ╔ ═ ╗ ╚ ╝ ║ ╬ ╠ ╥ ╦ ╧ ╨ ╩ ╬
+#  ╟ ╢ ╡ ╤ ╪ ╫ 
+#  ← → ↑ ↓ ↔ ╳ ⇅ ⟸ ⟹ ⟰ ⟱ ⟲ ⟳ ↱ ↲ ↳ ↴ ⮐  ⮑
+
+help:
+	@echo "╔══════════════════════════════════════════════════════════════════════════════╗"; \
+	 echo "║                                                                              ║"; \
+	 echo "║ TARGET   | DESCRIPTION                                                       ║"; \
+	 echo "║ ------   | -----------                                                       ║"; \
+	 echo "║ bugfix   | Alias for start                                                   ║"; \
+	 echo "║ change   | Change to alternate existing task branch                          ║"; \
+	 echo "║ checkout | Switches to the current task branch                               ║"; \
+	 echo "║ close    | Removes task from local config (does not remove branch)           ║"; \
+	 echo "║ commit   | Commit all changes on the current task/branch                     ║"; \
+	 echo "║ current  | Displays the name of the currently active task                    ║"; \
+	 echo "║ delete   | Removes the task branch completely                                ║"; \
+	 echo "║ do-patch | Applies patches                                                   ║"; \
+	 echo "║ edit     | Edit this file                                                    ║"; \
+	 echo "║ feature  | Alias for start                                                   ║"; \
+	 echo "║ info     | Display current work task and patch directory information         ║"; \
+	 echo "║ mk-patch | Create patches in PATCHES_DIR and summary                         ║"; \
+	 echo "║ mkbranch | Creates a new branch with description for the task from trunk     ║"; \
+	 echo "║ modified | List all files currently modified in the branch                   ║"; \
+	 echo "║ new-task | Requests a branch description and saves it                        ║"; \
+	 echo "║ start TP | Creates a task branch and adds it to local config                 ║"; \
+	 echo "║ tasks    | List existing task branches                                       ║"; \
+	 echo "║ phonies  | List commands (aka phony targets)                                 ║"; \
+	 echo "║ works    | Commits, merges into MERGED branch & creates patch files          ║"; \
+	 echo "║                                                                              ║"; \
+	 echo "║ Follow tasks with the following flow.                                        ║"; \
+	 echo "║                                                                              ║"; \
+	 echo "║  feature ─>─┐                                                                ║"; \
+	 echo "║  bugfix ──>─┤                                                                ║"; \
+	 echo "║  continue >─┼─> EDIT/TEST >-┬-> works -> close                               ║"; \
+	 echo "║  change ──>─┴─<───────────<─┴-> delete                                       ║"; \
+	 echo "║                                                                              ║"; \
+	 echo "╚══════════════════════════════════════════════════════════════════════════════╝"; \
+	 echo ""
+
+TP=bugfix
+feature: TP=feature
+feature: start
+bugfix:  TP=bugfix
+bugfix:  start
+start:   new-task mkbranch
+works:   commit merge format
+
+modified:
+	BRANCH="$$(git config --global --get user.work)" ;\
+	git checkout "${BRANCH}" && \
+	git status -s -uno
+
+current:
+	@echo "TASK="`git config --global --get user.work`
+
+info: current
+	@echo "PATCHES_DIR=$(realpath ${PATCHES_DIR})"; \
+	 echo "PATCHES_PATH=$(realpath ${PATCHES_PATH})"
+
+tasks:
+	@git branch --list | perl -pe 's/[*]/ /' | grep '.*-.*'
+
+phonies:
+	@echo "${PHONIES}" | fmt
+
+new-task:
+	@read -p "Short ${TP} tag> " REPLY && \
+	 $(call CHECK,^[-A-Za-z0-9_]{6},ERROR: Bad ${TP} tag '$${REPLY}',$${REPLY}) && \
+	 TAG="${USER}-${TP}-$${REPLY}" && \
+	 git config --global user.work "$$TAG" && \
+	 echo "Did $$TAG"
+#        perl -le 'die "[11mERROR: Bad tag[0m" unless qq{@ARGV} =~ m{^[-A-Za-z0-9_]{8,32}$$}' $$REPLY && 
+
+continue:
+	@BRANCH="$$(git config --global --get user.work)" ;\
+	 git checkout "$${BRANCH}" ;\
+         echo "Continue work on $${BRANCH}"
+
+change:
+	@TASKS=`git branch --list | perl -pe 's/[*]/ /' | grep '.*-.*' | fmt`; \
+	 read -p "Choose from $${TASKS}>" REPLY && \
+	 git config --global user.work "$${USER}-$${REPLY}" && \
+	 echo "Did $@ to $${USER}-$${REPLY}"
+
+confirm:
+	BRANCH="$$(git config --global --get user.work)" ;\
+	 read -p "Confirm ${ACTION} of $$BRANCH by typing 'Yes'. Abort with any other response -> " REPLY && \
+	 perl -le 'die "Aborting" unless qq{@ARGV} =~ m{[yY][eE][sS]}' $$REPLY
+
+close: ACTION=closing
+close: confirm
+	 git config --global --unset user.work && \
+	 echo "Did $@"
+
+delete: ACTION=removal
+delete: confirm
+	BRANCH="$$(git config --global --get user.work)" ;\
+	git checkout ${TRUNK} && \
+	git branch -D "$${BRANCH}" && \
+	git config --global --unset user.work && \
+	echo "Did $@"
+
+cancel: delete
+remove: delete
+
+mkbranch:
+	BRANCH="$$(git config --global --get user.work)" ;\
+	git checkout ${TRUNK} && \
+	git checkout -b "$${BRANCH}" && \
+	git branch --edit "$${BRANCH}" && \
+	echo "Did $@"
+
+checkout:
+	BRANCH="$$(git config --global --get user.work)" ;\
+	git checkout "$${BRANCH}" && \
+	echo "Did $@"
+
+commit:
+	BRANCH="$$(git config --global --get user.work)" ;\
+	git checkout "${BRANCH}" && \
+	git commit -a -m "${COMMENT}" && \
+	echo "Did $@"
+
+merge:
+	BRANCH="$$(git config --global --get user.work)" ;\
+	git checkout "${MERGED}" && \
+	git merge - && \
+	echo "Did $@"
+
+mk-patch:
+	git checkout "${MERGED}"
+	rm -f "${PATCHES_DIR}"/* &&\
+	git format-patch -o "${PATCHES_DIR}" "${TRUNK}" &&\
+	cat "${PATCHES_DIR}"/* >"${PATCHES_PATH}" &&\
+	git-flow info
+
+do-patch:
+	git checkout -b "${MERGED}" &&\
+	git am --empty=drop "${PATCHES_PATH}" &&\
+	echo "Did $@"
+
+edit:
+	gvim -f ${THIS_MAKEFILE}
+#TAF!

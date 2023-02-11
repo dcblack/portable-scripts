@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+function Setup-project()
+{
+DOCUMENTATION='
+NAME
+----
+
+SYNOPSIS
+--------
+setup-project [-d directory] NAME
+
+DESCRIPTION
+-----------
+Creates and updates the following directory structure and contents for projects.
+
+```
+PROJECT_NAME
+├── bin/
+│   ├── build
+│   └── Essential-IO
+├── cmake/
+├── extern/
+│   ├── bin/
+│   ├── include/
+│   └── lib/
+└── tests/
+```
+
+ASSUMPTIONS
+-----------
+Portable scripts contains:
+
+```
+${HOME}/.local/
+├── apps/
+│   ├── cmake/
+│   └── templates/
+├── bin/
+│   ├── build
+└── scripts/
+    └── Essential-IO
+```
+
+'
+}

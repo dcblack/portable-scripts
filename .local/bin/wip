@@ -1,0 +1,83 @@
+#!/bin/bash
+echo "WARNING: Unfinished script"
+
+function SimpleName() {
+  if [[ "$1" =~ ^[A-Za-z][-A-Za-z0-9_]+$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function NotSimple() {
+  echo "Error: Name '$1' must match the pattern ^[A-z][-A-z_]+\$"
+  exit 1
+}
+
+function Main() {
+  local RM NAME WIP
+  NAME='${NAME}'
+  WIP="WORK_IN_PROGRESS"
+  while [[ "$1" =~ ^- ]]; do
+    if [[ "$1" =~ ^-rm$ ]]; then
+      RM="$1"
+    elif [[ "$1" =~ ^-tag$ ]]; then
+      if [[ $# == 2 ]]; then
+        WIP="$(echo "$2" | tr a-z A-Z)"
+        shift
+      else
+        NotSimple "$1"
+      fi
+    fi
+    shift
+  done
+  if [[ $# != 1 || "$1" =~ ^-+h(elp)?$ ]]; then
+    cat <<"EOT"
+================================================================================
+SYNOPSIS
+
+  $0 indicates work-in-progress
+
+SYNTAX
+------
+
+  $0 [-rm] [-tag TAGNAME] USERNAME
+
+DESCRIPTION
+-----------
+
+  $0 creates/removes an empty file in the current directory and the $HOME directory
+  with the name "${WIP}-${NAME}"
+
+PARAMETERS
+----------
+
+  1. -rm removes all work-in-progress files from ${HOME}
+  2. Names be simple must match the pattern ^[A-z][-A-z_]+\$"
+
+EXAMPLES
+--------
+
+```bash
+$0 joe
+$0 -rm joe
+$0 -tag WORKING eve
+```
+
+================================================================================
+EOT
+  else
+    if SimpleName "$1"; then
+      NAME="$1"
+      if [[ "$RM" == "-rm" ]]; then
+        find "${HOME}" -name "${WIP}-${NAME}" -exec rm -f {} \;
+      else
+        touch "${HOME}/${WIP}-${NAME}" "./${WIP}-${NAME}"
+      fi
+    else
+      NotSimple "$1"
+    fi
+  fi
+}
+
+Main "$@"
