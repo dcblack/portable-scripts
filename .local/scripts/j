@@ -15,7 +15,7 @@ function j() {
   #   j DIR(S)
   # Begin parsing options
   #-----------------------------------------------------------------------------
-  export ACTION lwd nwd lws cws nws
+  export ACTION PATH lwd nwd lws cws nws
   local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK
   #local FAV FAV1
   J_VERBOSE=0
