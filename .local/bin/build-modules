@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Script to build/install Silver searcher, the fastest file searching tool on the planet!
+# Script to build/install modules, the fastest file searching tool on the planet!
 TOOL_NAME="Modules"
 # shellcheck disable=SC2089
 TOOL_INFO="Use 'module --help' for more information."
