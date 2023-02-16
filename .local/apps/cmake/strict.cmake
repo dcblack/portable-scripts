@@ -1,3 +1,8 @@
+# Insist on full C++ compliance
+
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 if (MSVC)
     # warning level 4
     add_compile_options( /W4 )
