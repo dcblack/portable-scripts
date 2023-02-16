@@ -220,6 +220,7 @@ function Build()
         Report_fatal "-P requires a directory argument" ; exit 1
       else
         GENERATOR="$2"
+        shift
       fi
     elif [[ "$1" == "-CMP" ]]; then
       ADD_CMAKE_PREFIX=1
@@ -302,6 +303,7 @@ function Build()
         Report_fatal "Missing -type build specification (Debug, Release or RelWithDebInfo)" ; exit 1
       else
         Report_warning "Ignoring unknown build type $2"
+        shift
       fi
     elif [[ "$1" =~ ^-{1,2}(list-)?targets$ ]]; then
       ACTION="list"
