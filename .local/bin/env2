@@ -1,7 +1,4 @@
 #!/usr/bin/perl
-eval 'exec perl -S $0 ${1+"$@"}'
-  if 0;#running_under_some_shell;
-
 #
 #$Info: env2 - Converts environment variables to various script languages. $
 
@@ -32,8 +29,8 @@ they (or you) supply an initialization script to source? If any of these
 situations sounds familiar, then this may be the script for you.
 
 B<env2> takes shell scripts of one flavor in and spits out scripts effectively
-equivalent in another dialect. We say "effectively equivalent" because it does
-not translate syntax such as B<if>/B<else> statements. Instead, the original
+equivalent in another dialect. We say "effectively equivalent" because it I<does
+*not* translate> syntax such as B<if>/B<else> statements. Instead, the original
 (source) script is evaluated to determine what environment variables it
 modifies, and the effective values of those variables are simply expressed in
 the syntax of the destination script's dialect. Typically, this is all you
@@ -49,6 +46,8 @@ currently include:
 =over
 
 =item * B<bash>
+
+=item * B<cmake>
 
 =item * B<csh>
 
@@ -127,7 +126,7 @@ in HTML, PDF, RTF, plain text or as a man page.
 =item B<-ignore> VARLIST
 
 Comma separated list of variables to ignore. By default, B<env2> starts
-with the list set to 
+with the list set to
 
  _,ENV,ENV2,OLDPWD,SHLVL
 
@@ -144,6 +143,10 @@ Specifies that pre-existing variables will not have their values overwritten, bu
 rather prepended. This helps preserve things like B<$PATH>. By default, the varlist
 is PATH, MANPATH
 
+=item B<-noorig>
+
+Opposite of B<-orig>.
+
 =item B<-o> [I<FILE>]
 
 Specifies a I<FILE> to save the results in. By default results are sent to STDOUT.
@@ -153,6 +156,31 @@ If you leave off the I<FILE>, the filename will be C<env2.>B<$SHELL>.
 
 Comma separated list of variables to save. If B<-clear> is present, this option
 should be specified after B<-clear> to take effect.
+
+=item B<-orig>
+
+Attempts to preserve variables in the output instead of expanding. For instance,
+consider the following scenario (assume csh).
+
+Before:
+
+C<PATH='/home/john/bin:/usr/bin:/bin'>
+
+Running script to perform:
+
+C<setenv PATH "./prefix/bin:$PATH:suffix/bin">
+
+Results:
+
+=over
+
+=item 1 C<setenv PATH './bin:/home/john/bin:/usr/bin:/bin' ;# without -orig>
+
+=item 2 C<setenv PATH "./bin:$PATH" ;# with -orig>
+
+This won't always work, but we'll make a best attempt.
+
+=back
 
 =item B<-prev> I<FILE>
 
@@ -168,7 +196,7 @@ Must be in Perl format.
 
 =item B<-reset>
 
-Resets the ignore list to a minimum set. 
+Resets the ignore list to a minimum set.
 
 See also B<-clear>, B<-ignore> and B<-unsafe_clear>.
 
@@ -207,7 +235,7 @@ colon separated list. Default is to apply this to common path variables:
 Resets the ignore list to completely empty. This is potentially
 dangerous because allows inclusion of dangerous environment variables
 that the user should not touch. These dangerous variables can have an
-adverse affect on operation of UNIX. 
+adverse affect on operation of UNIX.
 
 See also B<-clear>, B<-ignore> and B<-reset>.
 
@@ -223,7 +251,7 @@ ENV2 environment variable contains default command-line arguments if defined.
 
 =head1 DEPENDENCIES
 
-To support YAML, this script uses the CPAN YAML module.
+To support YAML::XS, this script uses the CPAN YAML::XS module.
 
 =head1 EXAMPLES
 
@@ -243,7 +271,7 @@ To support YAML, this script uses the CPAN YAML module.
 
 =head1 COPYRIGHT/LICENSE
 
-env2 is copyright (C) 2003-2008 David C Black. All rights reserved. 
+env2 is copyright (C) 2003-2023 David C Black. All rights reserved.
 This code may is hereby made available under Apache 2.0 licensing.
 
 =head1 AUTHOR
@@ -266,8 +294,8 @@ use FileHandle;
 use Cwd qw(getcwd abs_path);
 BEGIN { eval 'use Digest::SHA qw(sha1)'; }
 our $use_sha1=defined &sha1;
-BEGIN { eval 'use YAML'; }
-our $use_yaml=defined &YAML::LoadFile;
+BEGIN { eval 'use YAML::XS'; }
+our $use_yaml=defined &Load;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 our $start_dir = &getcwd();
@@ -275,19 +303,35 @@ our $LINE = '?';
 use vars qw{$SHA1};
 our $verbose = 0;
 our (@DANGER_LIST,@USER_PREFS,@DEFAULT_IGNORE,@IGNORE,@ONLY);
-our $VERSION = '1.3.1'; ########################## <<< UPDATE THIS LINE WHEN FIXING BUGS OR ADDING FEATURES >>> ###
+our $VERSION = '1.5.0'; ########################## <<< UPDATE THIS LINE WHEN FIXING BUGS OR ADDING FEATURES >>> ###
 my  $homedir = (getpwuid($<))[7];
 our $SHA1FILE = "$homedir/.$RealScript.sha1";
 our $SHA1_HEX;
 our @ORIG = @ARGV;
+our %_C = (
+  red     => "\e[1;91m",
+  green   => "\e[1;92m",
+  yellow  => "\e[1;93m",
+  blue    => "\e[1;94m",
+  magenta => "\e[1;95m",
+  cyan    => "\e[1;96m",
+  white   => "\e[1;97m",
+  none    => "\e[0m",
+);
+$_C{debug} = $_C{magenta};
+$_C{error} = $_C{red};
+$_C{warn} = $_C{yellow};
+$_C{text} = $_C{none};
 
+#-------------------------------------------------------------------------------
 # Compute SHA for the script
+#-------------------------------------------------------------------------------
+our $SHA1 = q{2ba63cdb4baddc038ee0dcf00c829980668e139f}; # this is the version string
 if ($use_sha1) {
-  our $SHA1 = '5b6a0e34f88c635022087703835e24e06c70e66d'; # this is the version string
   my $sha = Digest::SHA->new(1);
-  open SCRIPT,'<',"$RealBin/$RealScript";
+  open SCRIPT,"<","$RealBin/$RealScript";
   while (<SCRIPT>) {
-    next if m{^  our .SHA1 = '};
+    next if m{^our .SHA1 = q};
     $sha->add($_);
   }#endwhile
   close SCRIPT;
@@ -299,19 +343,19 @@ if ($use_sha1) {
       chomp $oldsha1;
       chomp $oldsha1;
       close SHA1FILE;
-      warn "WARNING: $RealBin/$RealScript is new version $SHA1_HEX. You may want to examine and --INSTALL\n" if $oldsha1 ne $SHA1_HEX;
+      warn "$_C{warn}WARNING(env2): $RealBin/$RealScript is new version $SHA1_HEX. You may want to examine and --INSTALL\n$_C{none}" if $oldsha1 ne $SHA1_HEX;
     } elsif ("@ORIG" !~ m{^-{1,2}INSTALL$}) {
-      warn "WARNING: Missing or incorrect SHA1 digest protection file. You may want to examine and --INSTALL\n";
+      warn "$_C{warn}WARNING(env2): Missing or incorrect SHA1 digest protection file. You may want to examine and --INSTALL\n$_C{none}";
     }#endif
   } else {
-    warn "WARNING: $RealBin/$RealScript has inconsistent SHA1 digest $SHA1_HEX!\n";
+    warn "$_C{warn}WARNING(env2): $RealBin/$RealScript has inconsistent SHA1 digest $SHA1_HEX\n$_C{none}";
   }#endif
 }#endif
 our $NEWENV;
 
 if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   exec "perldoc $RealBin/$RealScript";
-} elsif (scalar(@ARGV) and $ARGV[0] eq '+TEST') { 
+} elsif (scalar(@ARGV) and $ARGV[0] eq '+TEST') {
   # +TEST is a hidden option for testing the script itself
   &TestIndexPath( 1, 'a',       'a',    0,  0);
   &TestIndexPath( 2, 'a',       'e',   -1, -1);
@@ -338,7 +382,7 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   my $efile = 'env2.pl';
   $efile = $ARGV[1] if defined $ARGV[1];
   my $EFILE;
-  open $EFILE,">$efile";
+  open $EFILE,">",$efile;
   $EFILE->autoflush(1);
   my %SAVENV;
   for my $var (keys %ENV) {
@@ -349,7 +393,7 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   }#endif
   $Data::Dumper::Sortkeys = 1;
   my $newenv = Data::Dumper->new([ \%SAVENV ] ,[qw{NEWENV}]);
-  print  $EFILE "#!/opt/local/bin/perl\n";
+  print  $EFILE "#!/usr/bin/perl\n";
   printf $EFILE "%s\n",$newenv->Dump;
   print  $EFILE "1;\n";
   close  $EFILE;
@@ -378,8 +422,8 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   # automatically by scripts, and are generally uninteresting.
   @DEFAULT_IGNORE = qw(
     _
-    ENV2 
-    OLDPWD 
+    ENV2
+    OLDPWD
     PS1
     PS2
     PRINTER
@@ -388,8 +432,8 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
     TCL_INTERP_DEBUG_FRAME
     TTY
     TZ
-    __CF_USER_TEXT_ENCODING 
-    VERSIONER_PERL_PREFER_32_BIT 
+    __CF_USER_TEXT_ENCODING
+    VERSIONER_PERL_PREFER_32_BIT
     VERSIONER_PERL_VERSION
   ); # Variables to completely ignore
   push @DEFAULT_IGNORE,@USER_PREFS;
@@ -397,6 +441,7 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   @ONLY = (); # only used if non-empty
   our @PATHVARS;
   our @KEEPVARS;
+  our $orig = 0; # default
   our $ishell = 'UNKNOWN';
   our $oshell = 'UNKNOWN';
   our $profile = undef;
@@ -404,22 +449,28 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   our $ofile = '-';
   our $USER = getlogin || $ENV{HOME} || 'kilroy';
   our $HOME = $ENV{HOME} || $start_dir;
+
+  # Process startup files
   for my $rcfile ('/etc/env2rc',"$HOME/.env2rc",'./env2rc') {
     next unless -r $rcfile;
     unshift @ARGV,&read_args($rcfile);
   }#endfor
   unshift @ARGV,split(':',$ENV{'ENV2'}) if exists $ENV{'ENV2'};
+
+  # Handle special case of installation
   if ("@ORIG" =~ m{^-{1,2}INSTALL$}) {
     if (defined $SHA1_HEX) {
-      open   SHA1FILE,">$SHA1FILE";
+      open   SHA1FILE,">",$SHA1FILE;
       printf SHA1FILE "%s\n",$SHA1_HEX;
       close  SHA1FILE;
       chmod  0600,$SHA1FILE;
     } else {
-      die "ERROR: Requires Perl module 'Digest::SHA' to be installed -- obtain from CPAN\n";
+      die "$_C{error}ERROR: Requires Perl module 'Digest::SHA' to be installed -- obtain from CPAN$_C{none}\n";
     }#endif
     exit 0;
   }#endif
+
+  # Parse resulting command-line arguments and options
   our @LIST = ();
   while (@ARGV) {
     my $arg = shift(@ARGV);
@@ -439,6 +490,10 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
       } else {
         die "FATAL(env2): -f requires a valid filename!\n";
       }#endif
+    } elsif ($arg =~ m{^-{1,2}nocolor}) {
+      for my $color (keys %_C) {
+        $_C{$color} = '';
+      }
     } elsif ($arg eq '-v') {
       $verbose++;
       print "Using YAML\n" if $use_yaml;
@@ -448,14 +503,14 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
     } elsif ($arg =~ m{^-{1,2}debug$}) {
       $debug = 1; # suppress deletion of temporary files
     } elsif ($arg =~ m{^-{1,2}version$}) {
-      printf STDERR "%s Version #%s\n",$RealBin,$VERSION;
+      printf STDERR "%s Version %s\n",$RealBin,$VERSION;
     } elsif ($arg =~ m{^-{1,2}sha(?:1?)$}) {
       printf STDERR "%s %s/%s\n",$SHA1,$RealBin,$RealScript;
-    } elsif ($arg =~ m{^-{1,2}only$}) { 
+    } elsif ($arg =~ m{^-{1,2}only$}) {
       push @ONLY,split('[ :,]',shift(@ARGV));
     } elsif ($arg =~ m{^-{1,2}ignored$}) {
       printf STDERR "Ignoring: %s\n",join(' ',@IGNORE);
-    } elsif ($arg =~ m{^-{1,2}ignore$}) { 
+    } elsif ($arg =~ m{^-{1,2}ignore$}) {
       push @IGNORE,split('[ :,]',shift(@ARGV));
     } elsif ($arg eq '-o' or $arg =~ m{^-+output\b}) {
       if ($arg =~ m{"="}) {
@@ -467,6 +522,10 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
       } else {
         $ofile = undef;
       }#endif
+    } elsif ($arg =~ m{^-{1,2}noorig$}) {
+      $orig = 0;
+    } elsif ($arg =~ m{^-{1,2}orig$}) {
+      $orig = 1;
     } elsif ($arg =~ m{^-{1,2}clear$}) {
       @IGNORE = @DANGER_LIST;
       @ONLY = ();
@@ -507,11 +566,11 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
       die "FATAL: Missing valid file for -$opt option!?\n" unless defined $pfile and -r $pfile;
       my $return;
       unless ($return = do $pfile) {
-        warn "couldn't parse $pfile: $@" if $@;
-        warn "couldn't do $pfile: $!"    unless defined $return;
-        warn "couldn't run $pfile"       unless $return;
+        warn "$_C{warn}WARNING(env2): couldn't parse $pfile: $@$_C{none}" if $@;
+        warn "$_C{warn}WARNING(env2): couldn't do $pfile: $!$_C{none}"    unless defined $return;
+        warn "$_C{warn}WARNING(env2): couldn't run $pfile$_C{none}"       unless $return;
       }
-      
+
       %ENV = %$NEWENV;
       $NEWENV = undef;
     } elsif ($arg =~ m{^-{1,2}save$}) {
@@ -526,11 +585,11 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
         shift @ARGV;
       }#endif
       my $EFILE;
-      open $EFILE,">$efile";
+      open $EFILE,">",$efile;
       $EFILE->autoflush(1);
       $Data::Dumper::Sortkeys = 1;
       my $newenv = Data::Dumper->new([ \%ENV ] ,[qw{NEWENV}]);
-      print  $EFILE "#!/opt/local/bin/perl\n";
+      print  $EFILE "#!/usr/bin/perl\n";
       printf $EFILE "%s\n",$newenv->Dump;
       print  $EFILE "1;\n";
       close  $EFILE;
@@ -550,14 +609,15 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
       my $line;
       while ($line = <IFILE>) {
         chomp $line; chomp $line;
-        $ishell = $1    if $line =~ m{^#!(\S+)};
-        $ishell = $1    if $ishell eq 'UNKNOWN' and $line =~ m{^eval\s+`exec (\S+)};
+        if ($line =~ m{^#!\S+/env (\S+)}) { $ishell = $1; }
+        elsif ($line =~ m{^#!(\S+)}) { $ishell = $1; }
+        if ($ishell eq 'UNKNOWN' and $line =~ m{^eval\s+`exec (\S+)}) { $ishell = $1; }
         $ishell =~ s{.*/}{};
       }#endwhile
       close IFILE;
       $ishell = 'csh' if $ishell eq 'UNKNOWN'; # Default for a file
     }#endif
-    printf STDERR "DEBUG: ishell={%s} ifile={%s}\n", $ishell, $ifile  if ($debug); 
+    printf STDERR "$_C{debug}DEBUG:$_C{text} ishell={%s} ifile={%s}$_C{none}\n", $ishell, $ifile  if ($debug);
   } elsif (scalar(@LIST) == 0) { # No file
     ; # nothing to do
   } else { # Standard input -- save in a temporary file
@@ -565,7 +625,7 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
     $ishell =~ s{.*/}{};
     $ifile = "/tmp/env2.$$.$ishell";
     $LINE = __LINE__ + 1;
-    open TFILE,">$ifile" or die "FATAL(env2:$LINE): Unable to write $ifile!?\n";
+    open TFILE,">",$ifile or die "FATAL(env2:$LINE): Unable to write $ifile!?\n";
     TFILE->autoflush(1);
     print TFILE "#!$ishell\n";
     $LINE = __LINE__ + 1;
@@ -616,31 +676,38 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   $args = q{ "}.join(q{" },@LIST).q{"} if scalar @LIST;
   our $status = 0;
   if ($ishell eq 'UNKNOWN' or not defined $ifile) {
-    $status = system 'bash','--noprofile','--norc','-c',"$exe --save $efile";
+    $status = &System('bash','--noprofile','--norc','-c',"$exe --save $efile");
   } elsif ($ishell =~ m/\b(?:yml|yaml|YAML)\b/) {
-    $NEWENV = YAML::LoadFile $ifile;
+    open YAML,"<",$ifile;
+    my @yaml = <YAML>;
+    close YAML;
+    $NEWENV = Load "@yaml";
   } elsif ($ishell =~ m/\bcsh/) {
-    $status = system $ishell,'-f','-c',"source $ifile$args >&$logfile;$exe --save $efile";
+    $status = &System($ishell,'-f','-c',"source $ifile$args >&$logfile;$exe --save $efile");
+  } elsif ($ishell =~ m/cmake/) {
+    open  TFILE,">",$tfile;
+    print TFILE qq{include( "$ifile" )\nexecute( COMMAND $exe --save "$efile" )\n};
+    close TFILE;
   } elsif ($ishell =~ m/tcl/) {
-    open  TFILE,">$tfile";
+    open  TFILE,">",$tfile;
     print TFILE qq{source "$ifile" ; exec $exe --save "$efile"\n};
     close TFILE;
-    $status = system qq{$ishell $tfile$args >$logfile 2>&1};
+    $status = &System(qq{$ishell $tfile$args >$logfile 2>&1});
   } elsif ($ishell =~ m/lua/) {
-    open  TFILE,">$tfile";
+    open  TFILE,">",$tfile;
     print TFILE qq{dofile("$ifile")\nos.execute("$exe --save '$efile')\n};
     close TFILE;
-    $status = system qq{$ishell $tfile$args >$logfile 2>&1};
+    $status = &System(qq{$ishell $tfile$args >$logfile 2>&1});
   } elsif ($ishell =~ m/ksh/) {
-    $status = system $ishell,'-c',". $ifile$args >$logfile 2>&1;$exe --save $efile";
+    $status = &System($ishell,'-c',". $ifile$args >$logfile 2>&1;$exe --save $efile");
   } elsif ($ishell =~ m/bash/) {
-    $status = system $ishell,'--noprofile','--norc','-c',". $ifile$args >$logfile 2>&1;$exe --save $efile";
+    $status = &System($ishell,'--noprofile','--norc','-c',". $ifile$args >$logfile 2>&1;$exe --save $efile");
   } elsif ($ishell =~ m/\bperl/) {
-    system("cp $ifile $efile");
+    &System("cp $ifile $efile");
   } elsif ($ishell =~ m/vim\b/) {
     die "FATAL(env2:$LINE): vim not yet supported for input!";
   } elsif ($ishell !~ m/perl/) { # all others...
-    $status = system $ishell,'-f','-c',". $ifile$args >$logfile;$exe --save $efile";
+    $status = &System($ishell,'-f','-c',". $ifile$args >$logfile;$exe --save $efile");
   }#endif
   die "FATAL(env2:$LINE): $?\n" if $status != 0;
   if ($ishell !~ m/\b(?:yml|yaml|YAML)\b/) {
@@ -670,7 +737,11 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   # OUTPUT
   ############################################################################
   $LINE = __LINE__ + 1;
-  open OFILE,">$ofile" or die "FATAL(env2:$LINE): Unable to open '$ofile' for writing!?\n";
+  if( $ofile eq '-' ) {
+    open OFILE,">-";
+  } else {
+    open OFILE,">",$ofile or die "FATAL(env2:$LINE): Unable to open '$ofile' for writing!?\n";
+  }
   OFILE->autoflush(1);
   ############################################################################
   # File header
@@ -712,7 +783,7 @@ EOT
     if ($oshell =~ m/\bmodule(cmd|file|s)?\b/) {
       printf OFILE "unsetenv %s;\n",$var;
     } elsif ($oshell =~ m/lmod|lua/) {
-      printf OFILE "unsetenv(\"%s\")\n",$var;
+      printf OFILE "#unsetenv(\"%s\")\n",$var;
     } elsif ($oshell =~ m/plist/) {
       # Nothing
     } elsif ($oshell =~ m/csh/) {
@@ -728,7 +799,7 @@ EOT
   for my $var (keys %$NEWENV) {
     next if not @ONLY and grep($_ eq $var,@IGNORE);
     next if @ONLY and not grep($_ eq $var,@ONLY);
-    warn "WARNING(env2): setting $var\n" 
+    warn "$_C{warn}WARNING(env2): setting $var\n$_C{none}"
       if $verbose and @ONLY and grep($_ eq $var,@DEFAULT_IGNORE);
     next if (exists $OLDENV{$var} and $OLDENV{$var} eq $NEWENV->{$var}); # Skip duplicates
     ##########################################################################
@@ -764,7 +835,7 @@ EOT
               printf OFILE "append-path %s {%s};\n",$var,$tclval;
             }#endfor
           }#endif
-        }#end
+        }#endif
       } else {
         printf OFILE "setenv %s {%s};\n",$var,$tclval;
       }#endif
@@ -776,7 +847,7 @@ EOT
         my @oldlist = &List($oldval);
         my @newlist = &List($rawval);
         if ($pos < 0) {
-          printf OFILE "setenv(\"%s\",\"%s\")\n",$var,$tclval;
+          printf OFILE "#setenv(\"%s\",\"%s\")\n",$var,$tclval;
         } else {
           splice @newlist,$pos,scalar(@oldlist);
           if ($pos > 0) {
@@ -791,7 +862,7 @@ EOT
               printf OFILE "append_path(\"%s\",\"%s\")\n",$var,$tclval;
             }#endfor
           }#endif
-        }#end
+        }#endif
       } else {
         printf OFILE "setenv(\"%s\",\"%s\")\n",$var,$tclval;
       }#endif
@@ -800,12 +871,42 @@ EOT
   <key>$var</key>
   <string>$xmlval</string>
 EOT
+    } elsif ($oshell =~ m/cmake/) {
+      printf OFILE qq{set( "ENV(%s)" "%s" )\n},$var,$rawval;
     } elsif ($oshell =~ m/tcl/) {
       printf OFILE "set env(%s) {%s};\n",$var,$tclval;
     } elsif ($oshell =~ m/vim/) {
       printf OFILE ":let \$%s='%s'\n",$var,$escval;
     } elsif ($oshell =~ m/csh/) {
-      printf OFILE "setenv %s '%s';\n",$var,$escval;
+      if (exists $OLDENV{$var} and ($OLDENV{$var} =~ m/:/ or $rawval =~ m/:/)) {
+        my $oldval = $OLDENV{$var};
+        my $pos = index($escval,$oldval);
+        my $pre = "";
+        my $suf = "";
+        if ($orig == 1 and $pos >= $[) {
+          # Embedded
+          if ($pos > 1 and substr($escval,$pos-1,1) eq ':') { #pre-pending
+            $pre = substr($escval,0,$pos);
+          } elsif ($pos > 1) {
+            # weird - may need to do something different here
+            $pre = substr($escval,0,$pos);
+          }#endif
+          my $oldlen = length $oldval;
+          my $esclen = length $escval;
+          my $end = $pos + $oldlen;
+          if ($esclen > $end and substr($escval,$end+1,1) eq ':') { # appending
+            $suf = substr($escval,$end+1);
+          } elsif ($esclen > $end) {
+            # weird - may need to do something different here
+            $suf = substr($escval,$end+1);
+          }#endif
+          printf OFILE "setenv %s '%s\$\{%s\}%s';\n",$var,$pre,$var,$suf;
+        } else {
+          printf OFILE "setenv %s '%s';\n",$var,$escval;
+        }#endif
+      } else {
+        printf OFILE "setenv %s '%s';\n",$var,$escval;
+      }#endif
     } elsif ($oshell =~ m/perl/) {
       printf OFILE "\$ENV{'%s'}=q{%s};\n",$var,$escval;
     } elsif ($oshell =~ m/\b(yml|yaml|YAML)\b/) {
@@ -840,17 +941,24 @@ EOT
   }#endif
   close OFILE;
   if ($debug) {
-    printf STDERR "DEBUG: diff={%s}\n",    $diff;   
-    printf STDERR "DEBUG: ishell={%s}\n",  $ishell; 
-    printf STDERR "DEBUG: ifile={%s}\n",   $ifile;  
-    printf STDERR "DEBUG: ofile={%s}\n",   $ofile;  
-    printf STDERR "DEBUG: args={%s}\n",    $args;   
-    printf STDERR "DEBUG: logfile={%s}\n", $logfile;
+    printf STDERR "$_C{debug}DEBUG:$_C{text} diff={%s}$_C{none}\n",    $diff;
+    printf STDERR "$_C{debug}DEBUG:$_C{text} ishell={%s}$_C{none}\n",  $ishell;
+    printf STDERR "$_C{debug}DEBUG:$_C{text} ifile={%s}$_C{none}\n",   $ifile;
+    printf STDERR "$_C{debug}DEBUG:$_C{text} ofile={%s}$_C{none}\n",   $ofile;
+    printf STDERR "$_C{debug}DEBUG:$_C{text} args={%s}$_C{none}\n",    $args;
+    printf STDERR "$_C{debug}DEBUG:$_C{text} logfile={%s}$_C{none}\n", $logfile;
   }#endif
 }#endif
 
 exit 0;
 
+################################################################################
+sub System {
+  printf STDERR "$_C{debug}DEBUG:$_C{green} %%$_C{text} %s$_C{none}\n", "@_" if $main::debug;
+  return system( @_ );
+}#endsub System
+
+################################################################################
 sub reduce {
     # Reduces a list to its unique entries without reordering by dropping duplicates.
     my (@old) = @_;
@@ -870,6 +978,8 @@ sub reduce {
     return wantarray ? @new : join(':',@new);
 }#endsub reduce
 
+################################################################################
+# Read command-line arguments from one or more files
 our %file_seen;
 sub read_args {
   my @results = ();
@@ -891,6 +1001,8 @@ sub read_args {
   return @results;
 }#endsub read_args
 
+################################################################################
+# Return a list based on separator ":" as used in PATH, MANPATH, LD_LIBRARY_PATH, et al
 sub List($) {
   my ($str) = @_;
   my @list = split(':',"A:$str:Z");
@@ -899,6 +1011,8 @@ sub List($) {
   return @list;
 }#endsub List
 
+################################################################################
+# Search for substring within string.
 sub IndexPath($$) {
   my ($str,$sub) = @_;
   my @str = &List($str);
@@ -935,6 +1049,8 @@ sub IndexPath($$) {
   return wantarray ? ($stridx,$pos) : $pos;
 }#endsub IndexPath
 
+################################################################################
+# Used for debugging
 sub TestIndexPath($$$$$) {
   my ($tno,$arg1,$arg2,$exp1,$exp2) = @_;
   my ($got1,$got2);
@@ -945,6 +1061,6 @@ sub TestIndexPath($$$$$) {
   } else {
     printf "got %d %d %s\n", $got1, $got2, 'FAIL';
   }#endif
-}#end TestIndexPath
+}#endsub TestIndexPath
 
 # The end
