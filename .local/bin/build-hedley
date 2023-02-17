@@ -3,9 +3,9 @@
 # Install CRC++ under current project.
 # IMPORTANT; Must be run inside project git repository.
 
-LIBNAME="CRC++"
-GIT_URL="https://github.com/d-bahr/CRCpp.git"
-HEADERS=( "inc/CRC.h" )
+LIBNAME="hedley"
+GIT_URL="https://github.com/nemequ/hedley.git"
+HEADERS=( "hedley.h" )
 
 function Realpath() {
   if [[ $# == 0 ]]; then set - .; fi
