@@ -1,23 +1,50 @@
-#!/bin/bash
+#!/usr/bin/perl
 #
 #$Info: Winpath - Convert paths from Windows format to Linux/Mac and visa versa. $
 
-# shellcheck disable=SC2016
-PERLSCRIPT='
+require v5.6;
 use strict;
 use warnings;
+use Cwd qw(abs_path getcwd);
+use English;
+use FindBin qw($RealBin $RealScript);
+use File::Basename;
+use FileHandle;
+use FindBin qw($RealBin $RealScript);
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
-my $arg = "@ARGV";
-if( $arg =~ s{^([A-Z]):}{/mnt/$1/} ) {
-  $arg =~ s{\\}{/}g;
-  $arg =~ s{//+}{/}g;
-  print "$arg\n";
-} elsif( $arg =~ s{^/mnt/([A-Za-z])/}{$1:\\\\} ) {
+our $errors = 0;
+our $drv = 'C';
+sub Report_error {
+  printf STDERR "ERROR: %s\n", "@_";
+}
+
+while( @ARGV ) {
+  my $arg = shift @ARGV;
+  if( $arg =~ m{^-} ) { # Command-line option
+    if( $arg =~ m{^-d([a-zA-Z])} ) {
+      $drv = uc $1;
+    }
+    elsif( $ARGV[0] =~ m{A-Za-z} ) {
+      $drv = uc shift @ARGV;
+    } else{
+      Report_error( "Option -d requires a single letter argument -- ignoring" );
+    }
+  }
+  elsif( $arg =~ s{^([a-zA-Z]):}{/mnt/$1/} ) { # Windows to Linux
+    $drv = uc $1;
+    $arg =~ s{\\}{/}g;   # \ becomes /
+    $arg =~ s{//+}{/}g;  # remove //+
+    $arg =~ s{ }{\\$&}g; # protect whitespace
+    print "$arg\n";
+    next;
+  }
+  # Linux to Windows
+  if( $arg =~ s{^/mnt/([a-zA-Z])/}{/} ) {
+    $drv = uc $1;
+  }
+  $arg =~ s{^}{${drv}:};
   $arg =~ s{/}{\\}g;
   print "$arg\n";
-} else {
-  print "FATAL_Unknown_conversion\n";
 }
-';
-
-perl -e "${PERLSCRIPT}" "$*"
