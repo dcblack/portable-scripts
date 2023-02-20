@@ -311,6 +311,17 @@ function wds() # wds_func
       printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
     fi
   done
+  for p in $(find "${wd_favs}" -type l ! -name 'wd-*' | sort -n -t - -k 2)
+  do
+    n="${p//*\//}"
+    r="$(Realpath "${p}")"
+    if [[ "${r}" =~ ^${h} ]]
+    then
+      t="${r/#${h}/}"
+      # shellcheck disable=SC2154
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${h}${NONE}${t}"
+    fi
+  done
   export cwd lwd
   cwd="$(Realpath .)"
   printf "lwd '%s'\n" "${lwd}"
