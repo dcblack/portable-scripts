@@ -45,35 +45,37 @@ currently include:
 
 =over
 
-=item * B<bash>
+=item * B<bash> - Bourne Again Shell
 
-=item * B<cmake>
+=item * B<cmake> - CMake script
 
-=item * B<csh>
+=item * B<csh> - C-Shell
 
-=item * B<ksh>
+=item * B<ksh> - Korn Shell
 
-=item * B<lmod>
+=item * B<lmod> - LUA module
 
-=item * B<lua>
+=item * B<lua> - LUA script
 
-=item * B<modulecmd>
+=item * B<modulecmd> - Modules command (TCL)
 
-=item * B<perl>
+=item * B<perl> - Perl
 
-=item * B<plist>
+=item * B<plist> - Property List
 
-=item * B<sh>
+=item * B<ps1> - PowerShell
 
-=item * B<tclsh>
+=item * B<sh> - Shell
 
-=item * B<tcsh>
+=item * B<tclsh> - TCL Shell
 
-=item * B<vim>
+=item * B<tcsh> - TC-Shell
 
-=item * B<yaml>
+=item * B<vim> - Vim Script
 
-=item * B<zsh>
+=item * B<yaml> - YAML file
+
+=item * B<zsh> - Z-Shell
 
 =back
 
@@ -326,7 +328,7 @@ $_C{text} = $_C{none};
 #-------------------------------------------------------------------------------
 # Compute SHA for the script
 #-------------------------------------------------------------------------------
-our $SHA1 = q{2ba63cdb4baddc038ee0dcf00c829980668e139f}; # this is the version string
+our $SHA1 = q{04e0c4c6c4e004f69e7721f7ecf50e062c27314a}; # this is the version string
 if ($use_sha1) {
   my $sha = Digest::SHA->new(1);
   open SCRIPT,"<","$RealBin/$RealScript";
@@ -805,13 +807,22 @@ EOT
     ##########################################################################
     # Define environment variable
     ##########################################################################
-    my ($rawval,$escval,$tclval,$xmlval);
+    my ($rawval,$escval,$tclval,$xmlval,$winval);
     $rawval = $NEWENV->{$var};
     ($escval=$rawval) =~ s/'/'"'"'/g;
     ($tclval=$rawval) =~ s/[{}]/\\$&/g;
     ($xmlval = $rawval) =~ s/&/&amp;/g;
     $xmlval =~ s/</&lt;/g;
     $xmlval =~ s/>/&gt;/g;
+    $winval = $rawval;
+    if( $winval =~ m{/mnt/([a-z])/} ) {
+      my $drv = $1;
+      my $DRV = uc $drv;
+      $winval =~ s{/mnt/$drv/}{$DRV:/};
+    }
+    if( $winval =~ m{^/} ) {
+      $winval =~ s{/}{\\}g;
+    }
     if ($oshell =~ m/\bmodule(cmd|file|s)?\b/) {
       # Shorten/diff
       if (exists $OLDENV{$var} and ($OLDENV{$var} =~ m/:/ or $rawval =~ m/:/)) {
@@ -871,6 +882,8 @@ EOT
   <key>$var</key>
   <string>$xmlval</string>
 EOT
+    } elsif ($oshell =~ m/ps1/) {
+      printf OFILE qq{\$Env:%s = '%s' )\n},$var,$winval;
     } elsif ($oshell =~ m/cmake/) {
       printf OFILE qq{set( "ENV(%s)" "%s" )\n},$var,$rawval;
     } elsif ($oshell =~ m/tcl/) {
