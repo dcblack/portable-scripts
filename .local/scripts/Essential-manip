@@ -5,6 +5,8 @@
 #-------------------------------------------------------------------------------
 # Append_path # only if 2nd arg does not exist in first
 # Expand_path [-n] [-v] VAR
+# Car
+# Cdr
 # FindScript
 # Firstreal
 # Has_path
@@ -90,6 +92,20 @@ function Expand_path() # [-n] [-v] VAR # Expand paths within VAR
   if [[ ${NOEXECUTE} == 0 ]]; then
     eval "${EVAL_TEXT}"
   fi
+}
+
+#-------------------------------------------------------------------------------
+function Car()
+{
+  echo "$1"
+}
+alias Findfirst=Car
+
+#-------------------------------------------------------------------------------
+function Cdr()
+{
+  shift
+  echo "$@"
 }
 
 #-------------------------------------------------------------------------------

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+function Car()
+{
+  echo "$1"
+}

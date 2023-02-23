@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+#$Info: Firstword - Display the first argument. $
+
+function Firstword()
+{
+  echo "$1"
+}
