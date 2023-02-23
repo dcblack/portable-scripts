@@ -89,14 +89,18 @@ export TOOL_VERS
 export TOOL_URL
 export TOOL_PATCHES
 export BUILD_DIR
+export NOFETCH
+export NOCOMPILE
 export NOINSTALL
 export UNINSTALL
 export VERBOSITY
 export WARNINGS
 
-if [[ -z "${VERBOSITY}" ]]; then
-  VERBOSITY=0
-fi
+# Defaults if empty
+if [[ -z "${VERBOSITY}" ]]; then VERBOSITY=0;  fi
+if [[ -z "${NOFETCH}"   ]]; then NOFETCH=no;   fi
+if [[ -z "${NOCOMPILE}" ]]; then NOCOMPILE=no; fi
+if [[ -z "${NOINSTALL}" ]]; then NOINSTALL=no; fi
 
 function Realpath()
 {
@@ -223,6 +227,8 @@ function ShowBuildOpts()
     BUILD_DIR \
     BUILDER \
     GENERATOR \
+    NOFETCH \
+    NOCOMPILE \
     NOINSTALL \
     UNINSTALL \
     VERBOSITY \
@@ -322,6 +328,8 @@ function GetBuildOpts()
 #| - $LOGDIR
 #| - $LOGFILE
 #| - $NOTREALLY
+#| - $NOFETCH
+#| - $NOCOMPILE
 #| - $NOINSTALL
 #| - $SRC directory
 #| - $SYSTEMC_HOME
@@ -394,8 +402,16 @@ function GetBuildOpts()
       NOTREALLY="-n"
       shift
       ;;
+    -no-fetch|--no-fetch|--nofetch)
+      NOFETCH="yes"
+      shift
+      ;;
+    -no-compile|--no-compile|--nocompile)
+      NOCOMPILE="yes"
+      shift
+      ;;
     -no-install|--no-install|--noinstall)
-      NOINSTALL="-n"
+      NOINSTALL="yes"
       shift
       ;;
     -no-patch|-nopatch|--no-patch|--nopatch)
@@ -752,24 +768,29 @@ function GetSource_and_Cd() # DIR URL
   if [[ -n "${CLEAN}" && "${CLEAN}" == 1 && -d "${DIR}" ]]; then
     _do rm -fr "${DIR}"
   fi
+  if [[ "${NOFETCH}" == "-n" ]]; then
+    Report_info "Skipping fetch of ${TOOL_NAME} as requested"
+    cd "${DIR}" || Report_fatal "Unable to enter ${DIR}" || exit 1
+    Step_Next && return 0 || return 1
+  fi
   if [[ "${URL}" =~ [.]git$ ]]; then
-  if [[ -d "${DIR}/.git" ]]; then
-    _do git pull
-  else
-    if [[ -d "${DIR}/." ]]; then
-      _do mkdir -p "${DIR}-save"
-      _do rsync -a "${DIR}/" "${DIR}-save/"
-      _do rm -fr "${DIR}" 
+    if [[ -d "${DIR}/.git" ]]; then
+      _do git pull
+    else
+      if [[ -d "${DIR}/." ]]; then
+        _do mkdir -p "${DIR}-save"
+        _do rsync -a "${DIR}/" "${DIR}-save/"
+        _do rm -fr "${DIR}" 
+      fi
+      _do git clone "${URL}" "${DIR}" || Report_fatal "Unable to clone into ${DIR}" || exit 1
     fi
-    _do git clone "${URL}" "${DIR}" || Report_fatal "Unable to clone into ${DIR}" || exit 1
-  fi
-  cd "${DIR}" || Report_fatal "Unable to enter ${DIR}" || exit 1
-  if [[ -n "${TOOL_VERS}" ]]; then
-    _do git  checkout "${TOOL_VERS}"
-  fi
-  if [[ ${NOPATCH} == 0 && -n "${TOOL_PATCHES}" ]]; then
-    _do git  am --empty=drop "${TOOL_PATCHES}"
-  fi
+    cd "${DIR}" || Report_fatal "Unable to enter ${DIR}" || exit 1
+    if [[ -n "${TOOL_VERS}" ]]; then
+      _do git  checkout "${TOOL_VERS}"
+    fi
+    if [[ ${NOPATCH} == 0 && -n "${TOOL_PATCHES}" ]]; then
+      _do git  am --empty=drop "${TOOL_PATCHES}"
+    fi
   elif [[ "${URL}" =~ ^https://.+tgz$ ]]; then
     local ARCHIVE WDIR
     ARCHIVE="$(basename "${URL}")"
@@ -861,6 +882,10 @@ alias Generate=Configure_tool
 function Compile_tool()
 {
   Step_Show "Compile"
+  if [[ "${NOCOMPILE}" == "-n" ]]; then
+    Report_info "Skipping compilation of ${TOOL_NAME} as requested"
+    Step_Next && return 0 || return 1
+  fi
   Report_info -grn "Compiling ${TOOL_NAME}"
   case "${BUILDER}" in
     cmake)
@@ -883,6 +908,10 @@ function Compile_tool()
 function Install_tool()
 {
   Step_Show "Install"
+  if [[ "${NOINSTALL}" == "yes" ]]; then
+    Report_info "Skipping installation of ${TOOL_NAME} as requested"
+    Step_Next && return 0 || return 1
+  fi
   Report_info -grn "Installing ${TOOL_NAME} to final location"
   case "${BUILDER}" in
     cmake)
