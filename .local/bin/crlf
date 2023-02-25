@@ -8,6 +8,8 @@ eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
 # @(#)$License: Apache License, Version 2.0. $
 # @(#)$Email: <dcblack@hldwizard.com>. $
 
+our $VERSION=1.1;
+
 =pod
 
 =head1 NAME
@@ -17,6 +19,7 @@ crlf - carriage-return line-feed text file problem fixer
 =head1 SYNOPSIS
 
 B<crlf [-q] [-R] [-unix|-linux|-pc|-dos|-windows|-nt|-mac|-osx|-cr|-lf|-crlf] [-nbu]> I<FILELIST>
+B<crlf --version>
 
 =head1 DESCRIPTION
 
@@ -42,24 +45,25 @@ By default, this tool assumes UNIX is the target.
 
 =head1 OPTIONS
 
- -cr      same as -mac
- -crlf    same as -dos
- -dos     convert to DOS/PC/Windows format
- -f FILE  read a list of files to modify from I<FILE>
- -lf      same as -unix
- -linux   same as -unix
- -mac     convert to MacOS format
- -n       not really, just display filenames that would be affected
- -noback  no backup files (fearless & foolhardy)
- -nbu     same as -noback
- -nt      same as -dos
- -pc      same as -dos
- -osx     same as -unix
- -q       quiet (no status messages)
- -R       recursively visit all text files in/below the current directory
- -unix    convert to UNIX format
- -windows same as -dos
- -windoze same as -dos
+ -cr       same as -mac
+ -crlf     same as -dos
+ -dos      convert to DOS/PC/Windows format
+ -f FILE   read a list of files to modify from I<FILE>
+ -lf       same as -unix
+ -linux    same as -unix
+ -mac      convert to MacOS format
+ -n        not really, just display filenames that would be affected
+ -noback   no backup files (fearless & foolhardy)
+ -nbu      same as -noback
+ -nt       same as -dos
+ -pc       same as -dos
+ -osx      same as -unix
+ -q        quiet (no status messages)
+ -R        recursively visit all text files in/below the current directory
+ -unix     convert to UNIX format
+ --version display version information
+ -windows  same as -dos
+ -windoze  same as -dos
 
 =head1 EXAMPLES
 
@@ -205,12 +209,15 @@ sub ReadRc {
   unshift @ARGV,split($ENV{CRLF}) if (exists $ENV{CRLF});
   while (@ARGV) {
     $arg = shift @ARGV;
-    if ($arg eq '-h') {
+    if ($arg =~ m/^-{1,2}h(elp)?$/) {
       exec "perldoc $0";
-    } elsif ($arg =~ m/^-(cr|mac|macintosh|macos)$/) {
+    } elsif ($arg =~ m/^-{1,2}version$/) {
+      printf( "%s %s\n", $0, $VERSION );
+      exit 0;
+    } elsif ($arg =~ m/^-{1,2}(cr|mac|macintosh|macos)$/) {
       $OFS = "\r";
       $cr = 1;
-    } elsif ($arg =~ m/^-(lf|osx|unix|linux|[*]nix)$/) {
+    } elsif ($arg =~ m/^-{1,2}(lf|osx|unix|linux|[*]nix)$/) {
       $OFS = "\n";
       $lf = 1;
     } elsif ($arg =~ m/^-(crlf|pc|dos|win|windows|nt|windoze|peecee)$/) {
