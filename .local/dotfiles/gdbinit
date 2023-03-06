@@ -1,0 +1,119 @@
+# Default GDB initialization
+#------------------------------------------------------------------------------
+define exit
+  quit
+end
+document exit
+  Alias for quit
+end
+
+#------------------------------------------------------------------------------
+define which
+  shell which $arg0
+end
+document which
+  Find an executable
+end
+
+#------------------------------------------------------------------------------
+define name
+  print this->name()
+end
+document name
+  Show SystemC module name
+end
+
+#------------------------------------------------------------------------------
+define banner
+  shell header $0
+end
+document banner
+  Display a text banner
+end
+
+#------------------------------------------------------------------------------
+define ls
+  shell ls
+end
+document ls
+  execute shell ls
+end
+
+#------------------------------------------------------------------------------
+define m
+  shell less $arg0
+end
+document m
+  execute shell less on a document
+end
+
+#------------------------------------------------------------------------------
+define cls
+  shell clear
+end
+document cls
+  execute shell clear
+end
+
+#------------------------------------------------------------------------------
+define man
+  shell man $arg0
+end
+document man
+  execute shell manpage
+end
+
+#------------------------------------------------------------------------------
+define mans
+  shell man $arg0 $arg1
+end
+document mans
+  execute shell manpage for a specific section
+end
+
+#------------------------------------------------------------------------------
+define man3
+  shell man 3 $arg0
+end
+document man3
+  execute shell manpage for section 3
+end
+
+#------------------------------------------------------------------------------
+define man2
+  shell man 2 $arg0
+end
+document man2
+  execute shell manpage for section 2
+end
+
+#------------------------------------------------------------------------------
+define gvim
+  shell gvim $arg0
+end
+document gvim
+  execute shell gvim
+end
+
+define systemc
+  set args --debug --trace
+  break sc_main
+  run
+  break sc_interrupt_here
+  commands
+  backtrace
+  end
+  break sc_stop_here
+  commands
+  backtrace
+  end
+  skip -rfunction ^sc_
+  skip -rfunction ^tlm
+  list
+end
+document systemc
+  Initialization for debugging systemc
+end
+
+echo \n- DONE --------------------------------------------\n
+#END $Id: .gdbinit,v 1.0 2005/46/13 09:46:55 dcblack Exp $
