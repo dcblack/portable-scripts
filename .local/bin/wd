@@ -67,7 +67,9 @@ wds - list saved working directories
 Synopsis
 --------
 
-swd [-init] [SET] [DIR]
+source "${HOME}/.local/bin/wd" -init # at login
+wd -init
+swd [SET] [DIR]
 lwd [OPTIONS] [SET]
 wds
 
@@ -105,7 +107,7 @@ function Wd_parse() # internal
   # Defaults
   #-----------------------------------------------------------------------------
   export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers wd_print
-  wd_vers=1.0.3
+  wd_vers=1.1
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
   wd_favs="$(Realpath "${real_favs}")"
@@ -199,10 +201,12 @@ function Wd_parse() # internal
 #-------------------------------------------------------------------------------
 function swd() # swd_func
 {
+  local today wd_prev
   Wd_parse "$@" || return 1
+  wd_prev="$(readlink "${wd_favs}/wd-${wd_set}")"
   wd_dir="$(Realpath "${wd_dir}")"
-  local today
   today="$(date)"
+  Report_info "Previously wd-${wd_set} => ${wd_prev}"
   Report_info "Saved wd-${wd_set} => ${wd_dir}"
   printf "swd %2d '%s' ; # %s\n" "${wd_set}" "${wd_dir}" "${today}" >> "${HOME}/.wdhistory"
   rm -f "${wd_favs}/wd-${wd_set}"
@@ -246,7 +250,7 @@ function rwd() # rwd_func
     Report_fatal "Did not specify any set(s) to remove"
     return 1
   else
-    sets=( ${wd_sets} )
+    sets=( "${wd_sets[@]}" )
   fi
   for s in "${sets[@]}"; do
     wd_rdir="$(Realpath "${wd_favs}/wd-${s}")"
@@ -311,6 +315,8 @@ function wds() # wds_func
       printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
     fi
   done
+  # Check for other matches
+  local max=10
   for p in $(find "${wd_favs}" -type l ! -name 'wd-*' | sort -n -t - -k 2)
   do
     n="${p//*\//}"
@@ -320,6 +326,8 @@ function wds() # wds_func
       t="${r/#${h}/}"
       # shellcheck disable=SC2154
       printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${h}${NONE}${t}"
+      (( --max ))
+      if [[ ${max} -le 0 ]]; then break; fi
     fi
   done
   export cwd lwd
