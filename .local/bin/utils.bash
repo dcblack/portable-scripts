@@ -84,6 +84,7 @@ export SUFFIX
 export TOOL_NAME
 # shellcheck disable=SC2090
 export TOOL_INFO
+export TOOL_CHECKOUT
 export TOOL_SRC
 export TOOL_VERS
 export TOOL_URL
@@ -223,6 +224,7 @@ function ShowBuildOpts()
     TOOL_INFO \
     TOOL_VERS \
     TOOL_URL \
+    TOOL_CHECKOUT \
     TOOL_PATCHES \
     BUILD_DIR \
     BUILDER \
@@ -334,6 +336,7 @@ function GetBuildOpts()
 #| - $SRC directory
 #| - $SYSTEMC_HOME
 #| - $SUFFIX
+#| - $TOOL_CHECKOUT
 #| - $TOOL_NAME
 #| - $TOOL_INFO
 #| - $TOOL_PATCHES
@@ -447,6 +450,10 @@ function GetBuildOpts()
       elif [[ "${CC}" =~ .*clang++ ]]; then
         CXX=clang++
       fi
+      shift
+      ;;
+    --checkout=*)
+      TOOL_CHECKOUT="${1//*=}"
       shift
       ;;
     --clang)
@@ -785,8 +792,8 @@ function GetSource_and_Cd() # DIR URL
       _do git clone "${URL}" "${DIR}" || Report_fatal "Unable to clone into ${DIR}" || exit 1
     fi
     cd "${DIR}" || Report_fatal "Unable to enter ${DIR}" || exit 1
-    if [[ -n "${TOOL_VERS}" ]]; then
-      _do git  checkout "${TOOL_VERS}"
+    if [[ -n "${TOOL_CHECKOUT}" ]]; then
+      _do git checkout "${TOOL_CHECKOUT}"
     fi
     if [[ ${NOPATCH} == 0 && -n "${TOOL_PATCHES}" ]]; then
       _do git  am --empty=drop "${TOOL_PATCHES}"
