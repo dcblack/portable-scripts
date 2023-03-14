@@ -31,8 +31,10 @@
 #|
 
 function Realpath()
-{ 
+{
+  # shellcheck disable=SC2317
   if [[ $# == 0 ]]; then set - .; fi
+  # shellcheck disable=SC2317
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
@@ -59,7 +61,7 @@ function Update-local()
     SCRIPTS_DIR="${HOME}/.local/scripts"
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
-    Die "Unable to find Essential-IO in ${SCRIPTS_DIR}"
+    Report_fatal "Unable to find Essential-IO in ${SCRIPTS_DIR}"
   fi
   # shellcheck disable=SC1091
   source "${SCRIPTS_DIR}/Essential-IO"
@@ -100,11 +102,15 @@ function Update-local()
   #-----------------------------------------------------------------------------
   # Collect the source and target information
   #-----------------------------------------------------------------------------
-  local Dir SourceDir SourceFile TargetFile
+  local Dir SourceDir TargetFile
   Sources=()
   Targets=()
   local errors=0
   for Dir in "$@"; do
+    if [[ "${Dir}" =~ ^- ]]; then
+      Report_fatal "Options must precede directory specifications"
+      return 1
+    fi
     if [[ -d "${Dir}" ]]; then
       if [[ "${Dir}" =~ ^/ ]]; then
         Sources+=("${Dir}")
@@ -128,11 +134,11 @@ function Update-local()
   if [[ ${D} == 1 ]]; then
     Report_debug "Sources=${Sources[*]}"
     Report_debug "Targets=${Targets[*]}"
-    exit 0
+    return 0
   fi
 
   #-----------------------------------------------------------------------------
-  # Check for collisions
+  # Check for collisions (no duplicates allowed)
   #-----------------------------------------------------------------------------
   local CandidateFiles=()
   local errors=0
@@ -153,23 +159,25 @@ function Update-local()
   done
   if [[ ${errors} != 0 ]]; then
     Report_info "Please fix errors."
-    exit 1
+    return 1
   fi
 
   #-----------------------------------------------------------------------------
   # Do the update
   #-----------------------------------------------------------------------------
   for SourceDir in "${Sources[@]}"; do
+    local SourcePath
     for TargetDir in "${Targets[@]}"; do
       for TargetFile in "${TargetDir}"/*; do
         if Excluded "${TargetFile}" "${Excludes[@]}"; then continue; fi
-        SourceFile="${SourceDir}/${TargetFile}"
-        if [[ -e "${SourceFile}" ]]; then
+        SourcePath="${SourceDir}/${TargetFile}"
+        if [[ -e "${SourcePath}" ]]; then
+          if cmp -s "${SourcePath}" "${TargetFile}"; then continue; fi # Skip if identical
           Report_info "Updating ${TargetFile}" 
           if [[ "${N}" == "" && "${Q}" == "" ]]; then
-            _do rsync -a "${V}" "${SourceFile}" "${TargetDir}/"
+            _do rsync -a "${V}" "${SourcePath}" "${TargetDir}/"
           else
-            _do "${N}" "${Q}" rsync -aq "${V}" "${SourceFile}" "${TargetDir}/"
+            _do "${N}" "${Q}" rsync -aq "${V}" "${SourcePath}" "${TargetDir}/"
           fi
         fi
       done
