@@ -15,9 +15,9 @@
 # Unload
 # Reload
 # Prepend_path # only if 2nd arg does not exist in first
-# Realpath
+# Realpath expands a file specification to it's full pathname
 # Remove_missing
-# Remove_path
+# Remove_path Removes a directory path from a variable (e.g., PATH)
 # Unique_path
 
 #-------------------------------------------------------------------------------
