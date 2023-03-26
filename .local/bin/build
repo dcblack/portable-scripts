@@ -59,6 +59,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -run     | When done building, run the executable
 | -S DIR   | Name of source directory -- defaults to \".\"
 | -std=NN  | Specify C++ standard version
+| -t TGT   | Passed to cmake to specify the target (TGT)
 | -test    | When done building, run the tests verbosely unless -q supplied
 | -install | When done building, install
 | -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
@@ -432,7 +433,7 @@ function Build()
     if [[ -n "${TARGETS}" ]]; then
       for EXECUTABLE in ${TARGETS}; do
         # shellcheck disable=SC2086,SC2312
-        ( _do gdb "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" )
+        ( _do gdb "${BLD_DIR}/${EXECUTABLE}" )
       done
     else
       Report_fatal "Not sure what to debug!" 
