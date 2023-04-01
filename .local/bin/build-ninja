@@ -1,5 +1,27 @@
 #!/usr/bin/env bash
 #
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-ninja - Install the ninja build system, an alternative to `make`
+
+Synopsis
+--------
+build-ninja --help|-h # produces this text
+build-ninja
+
+Description
+-----------
+Installs the [ninja build system](https://ninja-build.org)
+
+HELPTEXT
+  exit 0;
+fi
+
+GIT_URL="https://github.com/ninja-build/ninja.git"
+
+#
 # shellcheck disable=SC2312
 
 #-------------------------------------------------------------------------------
@@ -11,7 +33,7 @@ function Ruler() {
 
 # Ensure that error messages are clearly seen
 function Die() {
-  local CRED CGRN CBLU CNONE
+  local CRED CGRN CBLU NONE
   CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
 
   Ruler '!'
@@ -20,7 +42,7 @@ function Die() {
 }
 
 function Report_info() {
-  local CRED CGRN CBLU CNONE
+  local CRED CGRN CBLU NONE
   CRED="[31m" CGRN="[32m" CBLU="[34m" NONE="[00m"
 
   Ruler '-'
@@ -32,11 +54,12 @@ SRC="${HOME}/.local/src"
 mkdir -p "${SRC}"
 cd "${SRC}" || Die "Unable to enter source directory ${SRC}"
 echo "Fetching ninja"
-git clone https://github.com/ninja-build/ninja.git || Die "Unable to clone"
+git clone "${GIT_URL}" || Die "Unable to clone"
 cd ninja || Die "Unable to enter repo"
 echo "Configuring ninja"
+git checkout release
 cmake
-cmake -Bbuild-cmake -H.
+cmake -B build-cmake -H.
 cmake --build build-cmake
 build-cmake/ninja_test
 rsync -av build-cmake/ninja "${HOME}/.local/bin/"

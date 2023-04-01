@@ -1,6 +1,30 @@
 #!/usr/bin/env bash
 #
-# Script to build/install modules, the fastest file searching tool on the planet!
+# Script to build/install modules, an aid to managing environment variables.
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-modules - Install the modules package.
+
+Synopsis
+--------
+build-modules --help|-h # produces this text
+build-modules
+
+Description
+-----------
+Installs the [modules package](https://github.com/cea-hpc/modules#readme), a utitilty for dynamic modification of environment variables.
+
+IMPORTANT
+---------
+Must be run inside project git repository.
+
+HELPTEXT
+  exit 0;
+fi
+
+
 TOOL_NAME="Modules"
 # shellcheck disable=SC2089
 TOOL_INFO="Use 'module --help' for more information."

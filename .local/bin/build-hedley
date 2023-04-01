@@ -1,7 +1,28 @@
 #!/usr/bin/env bash
 #
-# Install CRC++ under current project.
-# IMPORTANT; Must be run inside project git repository.
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-hedley - Install the header-only Hedley library for portability.
+
+Synopsis
+--------
+build-hedley --help|-h # produces this text
+build-hedley
+
+Description
+-----------
+Installs the [Hedley macro library](https://nemequ.github.io/hedley/) in `extern/include`, which is located based on the top-level git repository's location.
+
+IMPORTANT
+---------
+Must be run inside project git repository.
+
+HELPTEXT
+  exit 0;
+fi
+
 
 LIBNAME="hedley"
 GIT_URL="https://github.com/nemequ/hedley.git"

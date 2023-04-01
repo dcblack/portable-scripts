@@ -1,10 +1,47 @@
 #!/usr/bin/env bash
+#
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-safec - Install safec library for C11 under current project.
 
-cd "${LOCAL}/src" || exit
-git clone https://github.com/rurban/safeclib.git
-autoreconf -i
-./configure --prefix="${LOCAL}/apps" \
-  CC="gcc -arch arm64" \
-  CXX="g++ -arch arm64" \
-  CPP="gcc -E" CXXCPP="g++ -E"
+Synopsis
+--------
+build-safec --help|-h # produces this text
+build-safec
+
+Description
+-----------
+Installs the [safec library](https://github.com/rurban/safeclib) under `extern/`, which is located based on the top-level git repository's location.
+
+IMPORTANT
+---------
+Must be run inside project git repository.
+
+HELPTEXT
+  exit 0;
+fi
+
+GIT_URL="https://github.com/rurban/safeclib.git"
+LOCAL="${HOME}/.local"
+OS="$(uname -a)"
+ARCH="$(uname -m)"
+OPTS=(--prefix="${LOCAL}/apps")
+case "${OS}-${ARCH}" in
+  Darwin-arm64)
+    OPTS+=( CC="gcc -arch arm64" CXX="g++ -arch arm64" CPP="gcc -E" CXXCPP="g++ -E" )
+    ;;
+  *)
+    ;;
+esac
+
+cd "${LOCAL}/src" || exit 1
+git clone "${GIT_URL}"
+cd safeclib || exit 1
+./build-aux/autogen.sh
+./configure "${OPTS[@]}" 
 make
+make install
+
+# vim:nospell

@@ -1,7 +1,27 @@
 #!/usr/bin/env bash
 #
-# Install CRC++ under current project.
-# IMPORTANT; Must be run inside project git repository.
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-crc - Install CRC++ under current project.
+
+Synopsis
+--------
+build-crc --help|-h # produces this text
+build-crc
+
+Description
+-----------
+Installs the header-only CRC++ code under the directory `extern/include`, which is located based on the top-level git repository's location.
+
+IMPORTANT
+---------
+Must be run inside project git repository.
+
+HELPTEXT
+  exit 0;
+fi
 
 LIBNAME="CRC++"
 GIT_URL="https://github.com/d-bahr/CRCpp.git"
