@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+dontcache - prevent zfs snapshots in specified directories
+
+Synopsis
+--------
+dontcache --help|-h # produces this text
+dontcache [-R][-(add|rm|ls)] [DIRECTORY_LIST]
+
+Description
+-----------
+Prevents zfs from creating snapshots of files in specified directories.
+
+Without any directories specified, it will use the current directory where invoked.
+
+Options
+-------
+
+| OPTION | DESCRIPTION                                   |
+| ------ | --------------------------------------------- |
+| -R     | Recursive                                     |
+| -add   | Add the file .nocache to matching directories |
+| -rm    | Remove .nocache entries                       |
+| -ls    | List existing .nocache files                  |
+
+HELPTEXT
+  exit 0;
+fi
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+#-------------------------------------------------------------------------------
+
+function Dontcache()
+{
+  local RECURSIVE=0
+  local CMND
+  CMND='touch'
+  while [[ "$1" =~ ^- ]]; do
+    if [[ "$1" =~ ^-R$ ]]; then
+      RECURSIVE=1
+    elif [[ "$1" =~ ^-{1,2}(a|add)$ ]]; then
+      CMND='add'
+    elif [[ "$1" =~ ^-{1,2}(rm|remove)$ ]]; then
+      CMND='rm'
+    elif [[ "$1" =~ ^-{1,2}(l|ls|list)$ ]]; then
+      CMND='ls'
+    elif [[ "$1" =~ ^-{1,2}(Rm|lrm|lRm|RM)$ ]]; then
+      CMND='rm'
+      RECURSIVE=1
+    elif [[ "$1" =~ ^-{1,2}(Rl|lR|rl)$ ]]; then
+      CMND='ls'
+      RECURSIVE=1
+    else
+      Report_error "Unknown option '$1'"
+      return 1
+    fi
+    shift
+  done
+  local -a DIRS
+  if [[ $# -gt 0 ]]; then
+    DIRS=("$@")
+  else
+    DIRS=( . )
+  fi
+  #echo "Debug: DIRS=${DIRS[*]}"
+  local dir orig
+  for orig in "${DIRS[@]}"; do
+    dir="${orig}"
+    if [[ ! -d "${dir}" ]]; then
+      dir="$(dirname "${dir}")"
+      if [[ "${dir}" == . ]]; then
+        dir=""
+      fi
+    fi
+    if [[ ! -d "${dir}" ]]; then
+      printf 1>&2 "\033[1m\033[91mError: Bad directory name '%s' -- skipping\033[0m" "${orig}"
+      continue
+    fi
+    if [[ "${CMND}" == 'ls' ]]; then
+      find "${dir}" -type d -path '**/.snapshots' -prune -false -o -name .nocache
+    elif [[ ${RECURSIVE} == 1 ]]; then
+      if [[ "${CMND}" == 'rm' ]]; then
+        # shellcheck disable=SC2312
+        find "${dir}" -type d -path '**/.snapshots' -prune -false -o -type f -name .nocache -print0 | xargs -0 -t -I % -n 1 rm "%"
+      else
+        # shellcheck disable=SC2312
+        find "${dir}" -type d -path '**/.snapshots' -prune -false -o -type d -print0 | xargs -0 -t -I % -n 1 touch "%/.nocache"
+      fi
+    else
+      if [[ "${CMND}" == 'rm' && -f "${dir}/.nocache" ]]; then
+        _do rm "${dir}/.nocache"
+      else
+        _do touch "${dir}/.nocache"
+      fi
+    fi
+  done
+}
+
+Dontcache "$@"
+
+# vim:nospell
