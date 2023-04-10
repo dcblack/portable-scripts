@@ -8,14 +8,14 @@ function Realpath() {
 # l=last c=current n=next wd=working_directory ws=working_script
 export ACTION lwd nwd lws cws nws
 function j() {
-  export j_VERSION=1.4 FAVS
+  export j_VERSION=1.5 FAVS
   # Synopsis
   #   j - more powerful alternative to cd (aka jump)
   # Syntax
   #   j DIR(S)
   # Begin parsing options
   #-----------------------------------------------------------------------------
-  export ACTION PATH lwd nwd lws cws nws
+  export ACTION lwd nwd lws cws nws
   local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK
   #local FAV FAV1
   J_VERBOSE=0
@@ -273,8 +273,12 @@ EOT
       test "${J_VERBOSE}" = 1 && Report_info "Removing ${nws}"
       export ACTION='rm'
       if [[ ${J_NOSCRIPT} == 0 ]]; then
+        # shellcheck disable=SC2164
+        cd - 2>/dev/null 1>/dev/null
         # shellcheck disable=SC1090
         source "${lws}" --rm
+        # shellcheck disable=SC2164
+        cd - 2>/dev/null 1>/dev/null
       fi
     fi
     # Source new working script
