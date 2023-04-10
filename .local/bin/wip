@@ -1,5 +1,6 @@
 #!/bin/bash
 echo "WARNING: Unfinished script"
+#
 
 function SimpleName() {
   if [[ "$1" =~ ^[A-Za-z][-A-Za-z0-9_]+$ ]]; then
@@ -32,21 +33,21 @@ function Main() {
     shift
   done
   if [[ $# != 1 || "$1" =~ ^-+h(elp)?$ ]]; then
-    cat <<"EOT"
+    cat <<"HELPTEXT"
 ================================================================================
 SYNOPSIS
 
-  $0 indicates work-in-progress
+  wip indicates work-in-progress
 
 SYNTAX
 ------
 
-  $0 [-rm] [-tag TAGNAME] USERNAME
+  wip [-rm] [-tag TAGNAME] USERNAME
 
 DESCRIPTION
 -----------
 
-  $0 creates/removes an empty file in the current directory and the $HOME directory
+  wip creates/removes an empty file in the current directory and the $HOME directory
   with the name "${WIP}-${NAME}"
 
 PARAMETERS
@@ -59,13 +60,13 @@ EXAMPLES
 --------
 
 ```bash
-$0 joe
-$0 -rm joe
-$0 -tag WORKING eve
+wip joe
+wip -rm joe
+wip -tag WORKING eve
 ```
 
 ================================================================================
-EOT
+HELPTEXT
   else
     if SimpleName "$1"; then
       NAME="$1"
