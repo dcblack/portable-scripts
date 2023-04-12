@@ -883,7 +883,7 @@ EOT
   <string>$xmlval</string>
 EOT
     } elsif ($oshell =~ m/ps1/) {
-      printf OFILE qq{\$Env:%s = '%s' )\n},$var,$winval;
+      printf OFILE qq{\$Env:%s = '%s'\n},$var,$winval;
     } elsif ($oshell =~ m/cmake/) {
       printf OFILE qq{set( "ENV(%s)" "%s" )\n},$var,$rawval;
     } elsif ($oshell =~ m/tcl/) {
