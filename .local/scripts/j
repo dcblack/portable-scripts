@@ -270,7 +270,7 @@ EOT
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
-      test "${J_VERBOSE}" = 1 && Report_info "Removing ${nws}"
+      test "${J_VERBOSE}" = 1 && Report_info "Removing ${lws}"
       export ACTION='rm'
       if [[ ${J_NOSCRIPT} == 0 ]]; then
         # shellcheck disable=SC2164
