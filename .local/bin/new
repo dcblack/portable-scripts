@@ -23,6 +23,8 @@ package NewScript; #MAGIC42
 require 5.0; #<<<1
 use warnings;
 use strict;
+use Time::Piece;
+use Time::Seconds;
 use File::Find ();
 #use File::Path qw(make_path remove_tree);
 use File::Path qw(mkpath rmtree);
@@ -34,7 +36,7 @@ our @if;
 our @for; # LIFO stack for current for-loop list-name
 our %for; # contains for-loop contents indexed by list-name
 our $optional;
-our $revn = '1.10'; #< manually update
+our $revn = '1.11.0'; #< manually update
 
 # Setup package for export #{{{
 use Exporter   ();
@@ -1536,21 +1538,20 @@ NAMES: for my $name (@name) {
       $install_dir = $OPT{-dir}.'/'.$install_dir;
     }#endif
   }#endif
-  my @date = localtime time;
-  our $year = $date[5] + 1900;
-  our $mm = sprintf("%02d",$date[4]+1);
-  our $dd = sprintf("%02d",$date[3]);
-  our @das = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
-  our $weekday = $das[$date[6]];
-  our $wd = sprintf("%2.2s",$das[$date[6]]);
-  our $yda = sprintf("%03d",$date[7]);
-  our $yw = sprintf("%02d",int($date[7]/7)+1);
-  our $mdy2 = sprintf("%02d/%02d/%02d",$date[4]+1,$date[3],$date[5]%100);
-  our $mdy4 = sprintf("%02d/%02d/%04d",$date[4]+1,$date[3],$year);
-  our $yymmdd = sprintf("%02d%02d%02d",$year%100,$date[4]+1,$date[3]);
-  our $y4mmdd = sprintf("%04d%02d%02d",$year,$date[4]+1,$date[3]);
-  our @mos = qw(January February March April May June July August September October November December);
-  my ($hour,$minute,$second) = ($date[2],$date[1],$date[0]);
+  my $now = localtime;
+  our $year = $now->year;
+  our $mm = $now->mon;
+  our $dd = $now->mday;
+  our $weekday = $now->fullday;
+  our $wd = sprintf("%2.2s",$weekday);
+  our $yda = $now->yday;
+  our $yw = $now->week;
+  our $mdy4 = $now->mdy("-");
+  our $y4mmdd = $now->ymd("");
+  our $yymmdd = substr($y4mmdd,2); 
+  our $hour = $now->hour;
+  our $minute = $now->min;
+  our $second = $now->sec;
   my $pm = ($hour > 11)?"PM":"AM";
   our $mh = sprintf("%02d",$hour); # military hour
   our $mn = sprintf("%02d",$minute);
@@ -1558,11 +1559,50 @@ NAMES: for my $name (@name) {
   $hour = $hour % 12;
   $hour = 12 if $hour == 0;
   our $hh = sprintf("%02d",$hour);
-  our $month = $mos[$date[4]];
+  our $month = $now->monname;
   our $mmm = substr($month,0,3);
-  our $ymdhm = sprintf("%04d %3.3s %02d %d:%02d %s",$year,$mmm,$date[3],$hour,$minute,$pm);
-  our $date = sprintf("%s %d, %d",$month,$date[3],$year);
-  our $time = sprintf("%d:%02d %s",$hour,$minute,$pm);
+  our $ymdhm = sprintf("%04d %3.3s %02d %d:%02d %s",$year,$mmm,$dd,$hour,$minute,$pm);
+  our $date = $now->cdate;
+  our $time = $now->strftime("%I:%M %p");
+
+  # Special event calculations
+  our $yr  = (exists $REPL{'YR'})  ? $REPL{'YR'}   : $year;
+  our $week  = (exists $REPL{'WEEK'})  ? $REPL{'WEEK'}   : 0;
+  $week = $yw + 1 if $week == 0;
+  our $days  = (exists $REPL{'DAYS'})  ? $REPL{'DAYS'}   : 5;
+  our $start = (exists $REPL{'START'}) ? $REPL{'START'}  : 1;
+  my  $first_day = sprintf("%d-01-01",$yr);
+  my  $first = Time::Piece->strptime( $first_day, "%Y-%m-%d" );
+  my  $wday = $first->wday;
+  $first -= ($wday + 1) * ONE_DAY;
+  $first += (7*$week + $start - 5) * ONE_DAY;
+  my  $last  = $first + ($days-1) * ONE_DAY;
+  our $bmm = $first->mon;
+  our $bdd = $first->mday;
+  our $emm = $last->mon;
+  our $edd = $last->mday;
+  our $bmon = $first->monname;
+  our $bday = $first->fullday;
+  our $emon = $last->monname;
+  our $eday = $last->fullday;
+  our $dates = sprintf("%04d-%02d%02dto%02d%02d",$yr,$bmm,$bdd,$emm,$edd);
+  $dates = sprintf("%04d-%02d-%02dto%02d",$yr,$bmm,$bdd,$edd) if $bmm == $emm;
+  $REPL{'WEEK' } = $week  if not exists $REPL{'WEEK' };
+  $REPL{'DAYS' } = $days  if not exists $REPL{'DAYS' };
+  $REPL{'START'} = $start if not exists $REPL{'START'};
+  $REPL{'DATES'} = $dates if not exists $REPL{'DATES'};
+  $REPL{'BMM'  } = sprintf("%02d",$bmm) if not exists $REPL{'BMM'  };
+  $REPL{'BDD'  } = sprintf("%02d",$bdd) if not exists $REPL{'BDD'  };
+  $REPL{'EMM'  } = sprintf("%02d",$emm) if not exists $REPL{'EMM'  };
+  $REPL{'EDD'  } = sprintf("%02d",$edd) if not exists $REPL{'EDD'  };
+  $REPL{'BMON' } = $bmon                if not exists $REPL{'BMON' };
+  $REPL{'BDAY' } = $bday                if not exists $REPL{'BDAY' };
+  $REPL{'EMON' } = $emon                if not exists $REPL{'EMON' };
+  $REPL{'EDAY' } = $eday                if not exists $REPL{'EDAY' };
+  $REPL{'YR'   } = sprintf("%04d",$yr ) if not exists $REPL{'YR'   };
+  for my $t ( qw{WEEK DAYS START DATES BMM BDD EMM EDD} ) {
+    &incr_USED($t);
+  }
 
   # Predefined
   $REPL{'NAME'}        = $name;
@@ -1572,7 +1612,6 @@ NAMES: for my $name (@name) {
   $REPL{'TIME'}        = $time;
   $REPL{'LX'}          = 'lx';
   $REPL{'XR'}          = 'xr';
-  $REPL{'MDY2'}        = $mdy2;
   $REPL{'MMDDY4'}      = $mdy4;
   $REPL{'YYMMDD'}      = $yymmdd;
   $REPL{'Y4MMDD'}      = $y4mmdd;
@@ -1587,7 +1626,7 @@ NAMES: for my $name (@name) {
   $REPL{'YD'}          = $yda;
   $REPL{'YW'}          = $yw;
   $REPL{'DD'}          = $dd;
-  $REPL{'DAY'}         = $date[3];
+  $REPL{'DAY'}         = $weekday;
   $REPL{'MH'}          = $mh;
   $REPL{'HH'}          = $hh;
   $REPL{'MN'}          = $mn;
@@ -2163,6 +2202,50 @@ Template's root directory (where the template is stored).
 
 =back
 
+=head2 Special date placeholder variables
+
+There are several very specialized predefined but overrideable
+placeholders. These are useful to create dates for a special
+event.
+
+=over
+
+=item YR is a year (defaults to the current year)
+
+=item WEEK is a week number in the current year (default next week)
+
+=item START is the starting day relative to the WEEK (1 => Monday, 2 => Tuesday, etc.)
+
+=item DAYS is the number of days the event will last (default 5)
+
+=item BMM is the start month (1-12) and BMON is the full month name
+
+=item BDD is the start day (1-31)   and BDAY is the full weekday name
+
+=item EMM is the end   month (1-12) and EMON is the full month name
+
+=item EDD is the end   day (1-31)   and EDAY is the full weekday name
+
+=item DATES combines these to produce either: YYYY-DDtoDD or YYYY-MMDDtoMMDD
+
+=back
+
+Any or all can be overridden.
+
+The default produces a 5-day event starting next Monday.
+
+For example using YR=2020 WEEK=18 START=2 DAYS=9 produces:
+
+    - BMM   => 04
+    - BMON  => Apr
+    - BDD   => 28
+    - BDAY  => Tuesday
+    - EMM   => 05
+    - EMON  => May
+    - EDD   => 06
+    - EDAY  => Wednesday
+    - DATES => 2020-0428to0506
+
 =head2 Symbolic links
 
 Symbolic links are treated as symbolic links unless the B<--hard> option
@@ -2531,7 +2614,7 @@ Results in two new files created as follows:
 
 =head1 COPYRIGHT/LICENSE
 
-Copyright (C) 2020 David C Black. All rights reserved.
+Copyright (C) 2023 David C Black. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
