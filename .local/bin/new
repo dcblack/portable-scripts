@@ -174,6 +174,8 @@ push @template_list,split(':',$ENV{TEMPLATEPATH}) if exists $ENV{TEMPLATEPATH};
   Source
   State
   TDIR
+  TEMPLATE_NAME
+  TEMPLATE_PATH
   TIME
   TIMESTAMP
   KIND
@@ -1669,6 +1671,8 @@ NAMES: for my $name (@name) {
     }#endfor
     die "FATAL: Unable to locate template $kind!?\n" unless $template_dir ne '';
     $ENV{'TEMPLATE_ROOT_DIRECTORY'} = $template_dir;
+    $REPL{'TEMPLATE_PATH'} = $template_dir;
+    $REPL{'TEMPLATE_NAME'} = $kind;
     if (-r "$template_dir/$rc") {
       &readargs("$template_dir/$rc");
     }#endif
