@@ -165,7 +165,7 @@ function Mkbin()
       HASHBANG="/usr/bin/env lua"
     elif [[ "${OPTION}" =~ ^-{1,2}perl[45]?$ ]]; then
       KIND="perl"
-      HASHBANG="/usr/bin/env perl5"
+      HASHBANG="/usr/bin/env perl"
     elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?2$ ]]; then
       KIND="python"
       HASHBANG="/usr/bin/env python2"
