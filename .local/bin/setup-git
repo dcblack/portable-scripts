@@ -119,18 +119,37 @@ function Git_setup()
   YOURNAME=""
   YOURMAIL=""
   FORCE=0
+  TEMP=""
   while [[ $# -gt 0 ]]; do
     if [[ "$1" =~ ^-{1,2}n(ame)?$  && $# -gt 1 ]]; then
-      if Valid_name "$2"; then
-        YOURNAME="$2";
+      if [[ -z "${1/*=/}" ]]; then
+        if [[ $# -gt 1 ]]; then
+          TEMP="$2";
+        else
+          Report_error "Missing value for $1"
+        fi
+      else
+        TEMP="${1/*=/}"
+      fi
+      if Valid_name "${TEMP}"; then
+        YOURNAME="${TEMP}";
         shift;
       else
-        Report_error "Name is not valid. Use 'First Last'"
+        Report_error "Name (${TEMP}) is not valid. Use 'First Last'"
       fi
     fi
     if [[ "$1" =~ ^-{1,2}e(mail)?$ && $# -gt 1 ]]; then
-      if Valid_email "$2"; then
-        YOURMAIL="$2";
+      if [[ -z "${1/*=/}" ]]; then
+        if [[ $# -gt 1 ]]; then
+          TEMP="$2";
+        else
+          Report_error "Missing value for $1"
+        fi
+      else
+        TEMP="${1/*=/}"
+      fi
+      if Valid_email "${TEMP}"; then
+        YOURMAIL="${TEMP}";
         shift;
       else
         Report_error "Email address is not valid. Use 'first@domain'"
@@ -173,18 +192,23 @@ function Git_setup()
 
   # Useful aliases
   # shellcheck disable=SC2016
-  git config --global alias.added    '!git ls-files -s | perl -lane '\''print(pop@F)'\'
-  git config --global alias.changes  'status -s -uno'
-  git config --global alias.changed  'ls-files -m'
-  git config --global alias.missed   'ls-files -o --exclude-standard'
-  git config --global alias.tags     "!git for-each-ref --count=30 --sort='-*authordate' --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' refs/tags/* | perl -pe 's-refs/tags/--;s{... }{  };'"
-  git config --global alias.unstage  'reset HEAD'
-  git config --global alias.untrack  'rm --cached'
-  git config --global alias.hash     'hash-object'
-  git config --global alias.history  'log --pretty=format:"%h %cs %s" --graph'
-  git config --global alias.ignored  'ls-files -o'
-  git config --global alias.br       'branch'
-  git config --global alias.co       'checkout'
+  git config --global alias.added     '!git ls-files -s | perl -lane '\''print(pop@F)'\'
+  git config --global alias.alias     '!git config --get-regexp 'alias.*' | colrm 1 6 | sed -e 's/[ ]/ = /' | grep'
+  git config --global alias.aliases   '!git config --get-regexp 'alias.*' | colrm 1 6 | sed -e 's/ .*//' | fmt | table'
+  git config --global alias.br        'branch'
+  git config --global alias.branches  'branch -v'
+  git config --global alias.cached    'ls-files -c'
+  git config --global alias.changed   'ls-files -m'
+  git config --global alias.changes   'status -s -uno'
+  git config --global alias.co        'checkout'
+  git config --global alias.conflicts 'diff --name-only --diff-filter=U'
+  git config --global alias.hash      'hash-object'
+  git config --global alias.history   'log --pretty=format:"%h %cs %s" --graph'
+  git config --global alias.ignored   'ls-files -o'
+  git config --global alias.missed    'ls-files -o --exclude-standard'
+  git config --global alias.tags      "!git for-each-ref --count=30 --sort='-*authordate' --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' refs/tags/* | perl -pe 's-refs/tags/--;s{... }{  };'"
+  git config --global alias.unstage   'reset HEAD'
+  git config --global alias.untrack   'rm --cached'
   # shellcheck disable=SC2016
   git config --global alias.diffs    '!git diff $(git ls-files -m)'
   git config --global alias.remotes  'remote -v'
