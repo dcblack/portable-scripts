@@ -104,7 +104,7 @@ function _C()
   if [[ -z "${COLOR_FG}" ]]; then # default
     COLOR_FG=1
   fi
-  ESC=""
+  ESC="\033"
   for arg in "$@"; do
     test -z "${arg}" && continue
     arg="$(echo "${arg}" | tr '[:upper:]' '[:lower:]')"

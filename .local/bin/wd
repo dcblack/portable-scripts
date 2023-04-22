@@ -273,6 +273,7 @@ function rwd() # rwd_func
       if [[ "${REPLY}" == "y" ]]; then
         if rm "${wd_favs}/wd-${s}"; then
           Report_info  "Removed ${wd_favs}/wd-${s}"
+          printf "rwd %2d # '%s' %s\n" "${wd_set}" "${wd_dir}" "${today}" >> "${HOME}/.wdhistory"
         else
           Report_error "Unable to remove ${wd_favs}/wd-${s}"
         fi
