@@ -341,7 +341,7 @@ function Mkbin()
           ---> 
           ---> Description
           ---> -----------
-          ---> {:DESCRIPTION}
+          ---> {:DESCRIPTION:}
           ---> 
           ---> HELPTEXT
           --->   exit 0;
