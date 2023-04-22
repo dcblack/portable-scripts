@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+#
+#$Info: git-local-repo - Copy .git to repo directory $
+
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+git-local-repo - Copy .git to repo directory
+
+Synopsis
+--------
+git-local-repo --help|-h # produces this text
+git-local-repo [BASE] GITDIR
+
+Description
+-----------
+{:DESCRIPTION}
+
+HELPTEXT
+  exit 0;
+fi
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+function Copy_to_local_repo()
+{
+  local gitdir gitroot desired_bare base branch dirty=0
+  base=""
+  case $# in
+    1) gitdir="$1" ;;
+    2) base="$1" gitdir="$2" ;;
+    *) Report_fatal "Wrong number of arguments" && return 1 ;;
+  esac
+
+  if [[ ! -d "${gitdir}" ]]; then
+    local parent
+    parent="$(dirname "${gitdir}")"
+    if [[ ! -d "${parent}" ]]; then
+      Report_fatal "Bad git repo directory specification"
+      return 1
+    fi
+    _do mkdir -p "${gitdir}" || Report_fatal "Unable to create '${gitdir}'" && return 1
+    gitdir="$(Realpath "${gitdir}")"
+  fi
+
+  if git rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
+    gitroot="$(git rev-parse --show-toplevel)"
+  else
+    Report_fatal "Not inside a git controlled area"
+    return 1
+  fi
+
+  if [[ -z "${base}" ]]; then
+    base="$(basename "${gitroot}")"
+  elif [[ "${base}" =~ / ]]; then
+    Report_fatal "Bad base specification"
+    return 1
+  fi
+
+  # Clean up repo
+  dirty="$(git status -s -uno)"
+  if [[ -n "${dirty}" ]]; then
+    dirty=1
+    _do git stash push
+  fi
+
+  # Clean up branch information
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+  if [[ "${branch}" == "master" ]]; then
+    _do git branch -m master main
+    branch="main"
+  fi
+
+  desired_bare="${gitdir}/${base}"
+  _do mkdir -p "${desired_bare}.git" || Report_fatal "Unable to create '${desired_bare}.git'" && return 1
+  _do rsync -a "${gitroot}/.git/" "${desired_bare}.git"
+  _do git remote add origin "${desired_bare}.git"
+  _do git branch --set-upstream-to="origin/${branch}" "${branch}"
+
+  if [[ ${dirty} == 1 ]]; then
+    _do git stash pop
+  fi
+}
+
+Copy_to_local_repo "$@"
