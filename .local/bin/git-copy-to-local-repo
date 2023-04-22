@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 #$Info: git-local-repo - Copy .git to repo directory $
 
@@ -47,7 +47,7 @@ function Copy_to_local_repo()
   case $# in
     1) gitdir="$1" ;;
     2) base="$1" gitdir="$2" ;;
-    *) Report_fatal "Wrong number of arguments" && return 1 ;;
+    *) Report_fatal "Wrong number of arguments"; return 1 ;;
   esac
 
   if [[ ! -d "${gitdir}" ]]; then
@@ -57,7 +57,7 @@ function Copy_to_local_repo()
       Report_fatal "Bad git repo directory specification"
       return 1
     fi
-    _do mkdir -p "${gitdir}" || Report_fatal "Unable to create '${gitdir}'" && return 1
+    _do mkdir -p "${gitdir}" || ( Report_fatal "Unable to create '${gitdir}'" ; return 1 )
     gitdir="$(Realpath "${gitdir}")"
   fi
 
@@ -90,9 +90,11 @@ function Copy_to_local_repo()
   fi
 
   desired_bare="${gitdir}/${base}"
-  _do mkdir -p "${desired_bare}.git" || Report_fatal "Unable to create '${desired_bare}.git'" && return 1
+  _do mkdir -p "${desired_bare}.git" || ( Report_fatal "Unable to create '${desired_bare}.git'" ; return 1 )
   _do rsync -a "${gitroot}/.git/" "${desired_bare}.git"
+  _do git -C "${desired_bare}.git" config --bool core.bare true
   _do git remote add origin "${desired_bare}.git"
+  _do git pull origin main
   _do git branch --set-upstream-to="origin/${branch}" "${branch}"
 
   if [[ ${dirty} == 1 ]]; then
