@@ -15,7 +15,7 @@ git-local-repo [BASE] GITDIR
 
 Description
 -----------
-{:DESCRIPTION}
+Creates a local bare repository (i.e., on the same machine) from the current repository.
 
 HELPTEXT
   exit 0;
