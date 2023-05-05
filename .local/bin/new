@@ -36,7 +36,7 @@ our @if;
 our @for; # LIFO stack for current for-loop list-name
 our %for; # contains for-loop contents indexed by list-name
 our $optional;
-our $revn = '1.11.0'; #< manually update
+our $revn = '1.12.0'; #< manually update
 
 # Setup package for export #{{{
 use Exporter   ();
@@ -1550,7 +1550,7 @@ NAMES: for my $name (@name) {
   our $yw = $now->week;
   our $mdy4 = $now->mdy("-");
   our $y4mmdd = $now->ymd("");
-  our $yymmdd = substr($y4mmdd,2); 
+  our $yymmdd = substr($y4mmdd,2);
   our $hour = $now->hour;
   our $minute = $now->min;
   our $second = $now->sec;
@@ -1619,15 +1619,15 @@ NAMES: for my $name (@name) {
   $REPL{'Y4MMDD'}      = $y4mmdd;
   $REPL{'YMDHM'}       = $ymdhm;
   $REPL{'YEAR'}        = $year;
-  $REPL{'YY'}          = $year % 100;
-  $REPL{'MM'}          = $mm;
+  $REPL{'YY'}          = sprintf("%02d",$year % 100);
+  $REPL{'MM'}          = sprintf("%02d",$mm);
   $REPL{'MMM'}         = $mmm;
   $REPL{'MONTH'}       = $month;
   $REPL{'WD'}          = $wd;
   $REPL{'WEEKDAY'}     = $weekday;
-  $REPL{'YD'}          = $yda;
+  $REPL{'YD'}          = sprintf("%03d",$yda);
   $REPL{'YW'}          = $yw;
-  $REPL{'DD'}          = $dd;
+  $REPL{'DD'}          = sprintf("%02d",$dd);
   $REPL{'DAY'}         = $weekday;
   $REPL{'MH'}          = $mh;
   $REPL{'HH'}          = $hh;
@@ -1889,7 +1889,7 @@ NAMES: for my $name (@name) {
 
 # Warn of unused templates
 for my $un (sort keys %USED) {
-  printf "WARNING: Never used provided replacement $un defined $DFND{$un}\n" 
+  printf "WARNING: Never used provided replacement $un defined $DFND{$un}\n"
      unless $USED{$un} > 0 or $OPT{-quiet} or exists $OPTIONAL{$un} or $DFND{$un} =~ m{$rc};
 }#endfor
 
