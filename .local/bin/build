@@ -407,7 +407,7 @@ function Build()
     _do rm -fr "${BLD_DIR}"
   fi
 
-  if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
+  if [[ -n "${CMAKE_PREFIX_PATH}" ]]; then
     CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
   fi
   CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
