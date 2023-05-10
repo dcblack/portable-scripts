@@ -341,7 +341,8 @@ function Build()
   mkdir -p "${BLD_DIR}"
 
   Logfile "${BLD_DIR}/${BUILD_LOG}"
-  Log "% $0 $*"
+  Log "# Executing $0 $*"
+  _do pwd
 
 
   #-------------------------------------------------------------------------------
