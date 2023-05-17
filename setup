@@ -24,6 +24,7 @@
 #|      |-- .agignore
 #|      |-- .astylerc@ ------> portable-scripts/.local/dotfiles/astylerc
 #|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
+#|      |-- .zsh_aliases@ ---> portable-scripts/.local/dotfiles/zsh_aliases
 #|      |-- .clang-format@ --> portable-scripts/.local/dotfiles/clang-format
 #|      |-- .gdbinit@ -------> portable-scripts/.local/dotfiles/gdbinit
 #|      |-- .lessfilter@ ----> portable-scripts/.local/dotfiles/lessfilter
@@ -205,7 +206,7 @@ function portable-setup() {
   
   # Add symbolic links for a minimal set of selected "dot" files
   local FROM_LINK TO_FILE
-  for DOTFILE in bash_aliases vim vimrc gdbinit lessfilter clang-format astylerc; do
+  for DOTFILE in bash_aliases zsh-aliases vim vimrc gdbinit lessfilter clang-format astylerc; do
     FROM_LINK="${HOME}/.${DOTFILE}"
     TO_FILE="${PORTABLE_DIR}/dotfiles/${DOTFILE}"
     if [[ -r "${TO_FILE}" ]]; then

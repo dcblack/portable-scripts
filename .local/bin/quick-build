@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+#$Info: quick-build - use cmake to quick compile and run. $
+#
+# shellcheck disable=SC2288
+
+function _do() { printf "%% %s" "$*" ; "$@" ; }
+
+_do cmake -G Ninja -S . -B build/debug -DCMAKE_BUILD_TYPE=Debug
+_do cmake --build build/debug --config Debug
+_do ctest --test-dir build/debug -C Debug -VV

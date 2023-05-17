@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+
+function Quick_SystemC()
+{
+
+  # Command-line options
+  SUFFIX=""
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" =~ ^--suffix= ]]; then
+      SUFFIX="${1/.*=/}"
+      shift; shift
+    fi
+  done
+
+  # Defaults - adjust below as needed
+  export CC=clang
+  export CXX=clang++
+  SYSTEMC_LOG="${HOME}/logs/quick-systemc${SUFFIX}.log"
+  SYSTEMC_URL="https://github.com/accellera-official/systemc.git"
+  SYSTEMC_SRC="${HOME}/.local/src/systemc${SUFFIX}"
+  SYSTEMC_BLD="${SYSTEMC_SRC}/build-cmake-clang"
+  SYSTEMC_HOME="${HOME}/.local/share/systemc${SUFFIX}"
+
+  # Clean, fetch, configure, compile, link, test & install
+  rm -fr "${SYSTEMC_SRC}" #< ensure a clean build
+  mkdir -p "${SYSTEMC_SRC}"
+  git clone "${SYSTEMC_URL}" "${SYSTEMC_SRC}"
+  cmake -S "${SYSTEMC_SRC}" -B "${SYSTEMC_BLD}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}" \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DBUILD_SOURCE_DOCUMENTATION=off
+  cmake --build    "${SYSTEMC_BLD}"
+  ctest --test-dir "${SYSTEMC_BLD}" -C Debug #< currently does nothing
+  cmake --install  "${SYSTEMC_BLD}"
+}
+
+# shellcheck disable=SC2312
+Quick_SystemC "$@" 2>&1 | tee "${SYSTEMC_LOG}"
+
+# vim:nospell

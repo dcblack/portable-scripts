@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#
+#$Info: gdbauth - Add specified directory (current) to authorized locations for `.gdbinit`. $
+
+if [[ $# == 0 ]]; then
+  GDB_DIR="$(realpath .)"
+elif [[ $# == 1 ]]; then
+  GDB_DIR="$(realpath "$1")"
+else
+  Report_fatal "Syntax: $0 [dir]"
+fi
+if [[ -n "${GDB_DIR}" && -d "${GDB_DIR}" ]]; then
+  touch "${GDB_DIR}/.gdbinit" &&\
+  echo "add-auto-load-safe-path ${GDB_DIR}" >>"${HOME}/.gdbinit"
+else
+  Report_fatal "Bad directory"
+fi

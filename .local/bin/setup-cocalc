@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+function Setup_cocalc()
+{
+  local dir
+  GIT_URL="https://github.com/dcblack/portable-scripts.git"
+  #HOME="/home/user"
+  cd || return 1
+  git clone "${GIT_URL}" # creates ${HOME}/portable-scripts
+  portable-scripts/setup
+  REQD_DIRS=(
+    "EXERCISES" # course files go under here (e.g., esscpp/, syscfund/)
+    "Documents" # miscellaneous handouts added by instructor during delivery
+    "REPO"      # bare git repos used by some courses
+    "logs"      # log files created by build-$UTIL scripts
+  )
+  EXTRA_DIRS=(
+    "ARCHIVES" # a place to hide download/uploaded archives (files ending in .zip, .tgz, .tar, .tbz)
+    "COURSES" # create CoCalc course files under ${HOME}/COURSES/$YYYY/$YYYY-$MM-$DD-$COURSE
+    "Favorites" # contains symbolic links to directory used with $CDPATH
+    "INSTRUCTORS" # when sharing courses, each instructor can have their own ${HOME}/INSTRUCTORS/$INSTRUCTOR home for personal stuff
+    "LOST_N_FOUND" # place to put things you find that dont seem to be in their right location
+    "TEMPLATES"
+    "TRAINING-INFO" # documents about training for instructors
+    "WORK" # a location to try out ideas or fix bugs in course materials (clone from $HOME/REPO
+  )
+  for dir in "${REQD_DIRS[@]}"; do
+    mkdir -p "${dir}"
+  done
+  for dir in "${EXTRA_DIRS[@]}"; do
+    mkdir -p "${dir}"
+  done
+  #-----------------------------------------------------------------------------
+  # Add some key files
+  #-----------------------------------------------------------------------------
+  cat >setup.profile <<'EOT'
+#!/usr/bin/env bash
+#
+#$Info: setup.profile - Home. $
+
+export ACTION
+EOT
+  cat >TRAINING-INFO/ABOUT_TOP_LEVEL.md <<'EOT'
+# About this project
+
+If you are an instructor, you should have or create your own personal folder
+underneath the INSTRUCTORS directory.
+
+Course exercises are located in their respective top-level folder underneath
+the EXERCISES directory.
+
+Information on how this project is to be used may be found under the
+TRAINING-INFO directory.
+
+The next section is a slightly more detailed explanation of the directory
+and file layout of this project.
+
+## Top-level Directories and Files
+
+```
+/home/user/
+├── .bash_aliases@ -> /home/$USER/.local/dotfiles/bash_aliases
+├── .bash_profile@ -> /home/$USER/.bashrc
+├── .lessfilter@ -> /home/$USER/.local/dotfiles/lessfilter
+├── .local/@ -> /home/$USER/portable-scripts/.local/
+├── .vim/@ -> /home/$USER/.local/dotfiles/vim/
+├── .vimrc@ -> /home/$USER/.local/dotfiles/vimrc
+├── ABOUT.md@ -> /home/$USER/TRAINING-INFO/ABOUT-TOP-LEVEL.md
+├── ARCHIVES/ -- archived files
+│   ├── ZIP/
+│   └── TGZ/
+├── Favorites/ -- used with CDPATH
+├── COURSES/
+│   └── $YYYY/ ----- files ending with .course delivered in year $YYYY
+├── Documents/ -- various directories for handouts if needed
+│     Extras_escpp/
+├── EXERCISES/
+│   ├── esscpp/ --- Essential C++ exercise files
+│   ├── syscfund/ - SystemC Fundamentals exercise files
+│   └── tlm-2/ ---- SystemC Modeling with TLM-2.0 exercise files
+├── INSTRUCTORS/ -- personal directories
+│   ├── dave_l/ --- David Long's
+│   ├── dcblack/ -- David Black's
+│   ├── eileen/ --- Eileen Hickey's
+│   └── >ADD_YOUR_NAME_HERE<
+├── LOST_N_FOUND/
+│   └── mystery_file -- unclassified stuff found lying around from instructor mistake
+│     ...
+├── TEMPLATES/ -- for use with `new` script (explanation to come later)
+├── TRAINING-INFO/ -- documents you probably should read
+│   ├── ABOUT-TOP-LEVEL.md -- *THIS* file
+│   ├── cocalc_for_delegates.md -- guidelines for how delegates should use this
+│   └── cocalc_sample_email.md -- sample e-mail template to send delegates before the course starts
+└── portable-scripts/ -- dotfiles, scripts and tools
+```
+
+## Instructors Code
+
+Note: The Instructors' Code is similar to the Pirates Code. They are
+      guidelines really, but don't take them too lightly.
+
+1. Do not place anything personal in the $HOME directory.
+   1. This includes course files, terminals, x11 files
+   2. Personal files go under your personal folder under INSTRUCTORS/$INSTRUCTOR
+   3. Course files go under ${HOME}/COURSES/$YYYY/$YYYY-$MM-$DD-$COURSE.course
+   4. Terminals go under your personal folder
+   5. If you forget, move them as soon as you remember
+   6. If you leave files around, somebody else might move them under
+      the LOST_N_FOUND directory.
+2. If you edit the bashrc and other configuration files,
+   you are setting it up for all your colleagues.
+   1. Dotfiles (including vim) are located under ${HOME}/.local/dotfiles
+   2. Dotfiles are revision controlled under Vim
+   3. You may create your own branch and then modify them to your liking
+   4. If it appears confused, you can get back to the basics by checking
+      out the `main` branch.
+   5. If you don't know how to use Git, ask and learn!
+   6. If you don't check in your changes, somebody else may remove or stash them.
+   7. If you find junk blocking your way when changing branches, you have every
+      right to stash or trash them. See previous item.
+   8. Try to follow good Linux directory/file naming rules =~ m/^[[:alpha:]][-_[:alnum:]]+/ (i.e., no whitespace)
+
+#### The end
+EOT
+}
+
+Setup_cocalc "$@"
