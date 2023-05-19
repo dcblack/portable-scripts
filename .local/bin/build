@@ -109,6 +109,7 @@ function Build()
     if command -v "build-$1" 1>/dev/null; then
       UTILITY="build-$1"
       shift
+      # shellcheck disable=SC2093
       exec "${UTILITY}" "$@"
       return 0
     else
@@ -135,7 +136,7 @@ function Build()
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     Die "Unable to find Essential-IO in ${SCRIPTS_DIR}"
   fi
-  # shellcheck disable=SC1091
+  # shellcheck disable=SC1090,SC1091
   source "${SCRIPTS_DIR}/Essential-IO"
 
   # Add .buildrc if present
@@ -461,8 +462,12 @@ function Build()
     fi
   elif [[ "${ACTION}" == test ]]; then
     Report_info "Testing ${SUBPROJ_DIR}"
+    local HIGHLIGHT_FILTER
+    # shellcheck disable=SC2016
+    HIGHLIGHT_FILTER='$_="[1m[96m".$_."[0m" if m/% tests passed, .* tests failed out of/;'
     # shellcheck disable=SC2086,SC2312
-    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" ) 2>&1 | tee "${BLD_DIR}/${TEST_LOG}"
+    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" ) 2>&1 \
+    | perl -pe "${HIGHLIGHT_FILTER}" | tee "${BLD_DIR}/${TEST_LOG}"
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
