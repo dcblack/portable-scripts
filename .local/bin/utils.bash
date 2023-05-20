@@ -815,6 +815,7 @@ function GetSource_and_Cd() # DIR URL
 # shellcheck disable=SC2120
 function Configure_tool() # [TYPE]
 {
+  export NOLOG=1
   Step_Show "Configure $1"
   Report_info -grn "Configuring ${TOOL_NAME}"
   if [[ $# == 1 ]]; then # option generator
@@ -881,6 +882,7 @@ function Configure_tool() # [TYPE]
       ;;
   esac
   Step_Next || return 1
+  NOLOG=0
 }
 alias Generate=Configure_tool
  
@@ -888,6 +890,7 @@ alias Generate=Configure_tool
 # shellcheck disable=SC2120
 function Compile_tool()
 {
+  export NOLOG=1
   Step_Show "Compile"
   if [[ "${NOCOMPILE}" == "-n" ]]; then
     Report_info "Skipping compilation of ${TOOL_NAME} as requested"
@@ -910,10 +913,12 @@ function Compile_tool()
       ;;
   esac
   Step_Next || return 1
+  NOLOG=0
 }
 
 function Install_tool()
 {
+  export NOLOG=1
   Step_Show "Install"
   if [[ "${NOINSTALL}" == "yes" ]]; then
     Report_info "Skipping installation of ${TOOL_NAME} as requested"
@@ -935,10 +940,12 @@ function Install_tool()
       ;;
   esac
   Step_Next || return 1
+  NOLOG=0
 }
 
 function Cleanup()
 {
+  export NOLOG=1
   if [[ $# = 1 ]]; then return 1; fi # Assert
   Step_Show "Clean up"
   if [[ -n "${CLEANUP}" && "${CLEANUP}" == 1 ]]; then
@@ -946,6 +953,7 @@ function Cleanup()
     rm -fr "${1}"
   fi
   Step_Next || return 1
+  NOLOG=0
 }
 
 function Main()
