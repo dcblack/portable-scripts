@@ -70,7 +70,7 @@ function Os_main()
   _do uname -a
   case "${OS}" in
     Darwin)
-      _do /usr/bin/sw_vers
+      _do sw_vers
       ;;
     *)
       if [[ -r /etc/os-release ]]; then
