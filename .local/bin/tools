@@ -1,23 +1,49 @@
 #!/usr/bin/env bash
 #
 #$Info: tool-versions - displays version information for selected development tools. $
-# SYNTAX: tool-versions [-a]
 
-TOOLS=(
-  systemc-version
-  g++
-  clang++
-  cmake
-  autoconf
-  make
-  gmake
-  ninja
-  gdb
-  lldb
-  bash
-  zsh
-)
-EXTRA=(
+EXTRA=0
+TOOLS=()
+while [[ $# != 0 ]]; do
+  case "$1" in
+    -h|--help)
+      cat <<EOT
+NAME
+  Display the versions of tools
+SYNOPSIS
+  tools -h|--help
+  tools --version
+  tools
+  tools [-x]
+  tools TOOL...
+EOT
+      exit
+      ;;
+    -x) EXTRA=1 ;;
+    --version) echo "version 1.0" ; exit ;;
+    -*) echo "Error: Uknown option: $1"; exit 1 ;;
+    *) TOOLS+=("$1") ;;
+  esac
+  shift
+done
+
+if [[ "${#TOOLS[@]}" == 0 ]]; then
+  TOOLS=(
+    systemc-version
+    g++
+    clang++
+    cmake
+    autoconf
+    make
+    gmake
+    ninja
+    gdb
+    lldb
+    bash
+    zsh
+  )
+fi
+EXTRAS=(
   ag 
   clang-format
   clang-tidy
@@ -38,8 +64,8 @@ if [[ -n "$(command -v guname )" ]]; then
   UNAME="guname"
 fi
 
-if [[ "$1" == "-a" ]]; then
-  TOOLS=("${TOOLS[@]}" "${EXTRA[@]}")
+if [[ ${EXTRA} == 1 ]]; then
+  TOOLS=("${TOOLS[@]}" "${EXTRAS[@]}")
 fi
 
 echo "----------------------------------------"
@@ -87,7 +113,7 @@ for TOOL in "${TOOLS[@]}"; do
     case "${TOOL}" in
       g[+][+]|clang|bash|zsh) PATT="${TOOL}" ;;
       make|gmake) PATT="Make" ;;
-      git|rsync|shellcheck) PATT="version" ;;
+      clang-tidy|git|rsync|shellcheck) PATT="version" ;;
       *)   PATT+="" ;;
     esac
     echo -n "${TOOL} - "
