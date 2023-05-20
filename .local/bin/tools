@@ -13,12 +13,17 @@ TOOLS=(
   gmake
   ninja
   gdb
+  lldb
   bash
   zsh
 )
 EXTRA=(
   ag 
+  clang-format
+  clang-tidy
+  git
   grep
+  rsync
   shellcheck
 )
 
@@ -41,19 +46,26 @@ echo "----------------------------------------"
 
 # shellcheck disable=SC2034,SC2016
 PERLSCRIPT='$car=shift @F;$cdr=qq{@F};'
-FILTER='Copyright'
+FILTER=''
+FILTER+='Capabilities'
+FILTER+='|Copyright'
 FILTER+='|Features'
+FILTER+='|internal'
 FILTER+='|Install'
 FILTER+='|License'
+FILTER+='|Licence'
 FILTER+='|licenses'
 FILTER+='|lzma'
 FILTER+='|maintained'
+FILTER+='|rsync.samba'
 FILTER+='|ShellCheck'
+FILTER+='|Swift'
 FILTER+='|There'
 FILTER+='|This'
 FILTER+='|Thread'
 FILTER+='|Target'
 FILTER+='|website'
+FILTER+='|welcome'
 FILTER+='|Written'
 HOSTOS="$("${UNAME}" -s)"
 case "${HOSTOS}" in
@@ -85,7 +97,7 @@ for TOOL in "${TOOLS[@]}"; do
     | "${GREP}" -v -E "(${FILTER})" \
     ;
   else
-    echo -n "${TOOL} - MISSING"
+    echo "${TOOL} - MISSING"
   fi
 done
 
