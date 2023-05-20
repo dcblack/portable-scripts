@@ -1,9 +1,26 @@
 #!/usr/bin/env bash
 #
 #$Info: tool-versions - displays version information for selected development tools. $
+# SYNTAX: tool-versions [-a]
 
-TOOLS=(systemc-version g++ clang++ cmake autoconf make gmake ninja gdb bash zsh)
-EXTRA=(ag grep shellcheck)
+TOOLS=(
+  systemc-version
+  g++
+  clang++
+  cmake
+  autoconf
+  make
+  gmake
+  ninja
+  gdb
+  bash
+  zsh
+)
+EXTRA=(
+  ag 
+  grep
+  shellcheck
+)
 
 GREP="grep"
 # shellcheck disable=SC2312
@@ -67,6 +84,8 @@ for TOOL in "${TOOLS[@]}"; do
     | "${GREP}" -E "${PATT}" \
     | "${GREP}" -v -E "(${FILTER})" \
     ;
+  else
+    echo -n "${TOOL} - MISSING"
   fi
 done
 
