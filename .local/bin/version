@@ -14,12 +14,12 @@ SYNOPSIS
   tools -h|--help
   tools --version
   tools
-  tools [-x]
+  tools [-a|--extra]
   tools TOOL...
 EOT
       exit
       ;;
-    -x) EXTRA=1 ;;
+    -a|--extra[s]?) EXTRA=1 ;;
     --version) echo "version 1.0" ; exit ;;
     -*) echo "Error: Uknown option: $1"; exit 1 ;;
     *) TOOLS+=("$1") ;;
@@ -105,6 +105,8 @@ case "${HOSTOS}" in
     ;;
   *) "${UNAME}" -smoprv ;;
 esac
+
+echo "........................................"
 
 for TOOL in "${TOOLS[@]}"; do
   EXISTS="$(command -v "${TOOL}")"
