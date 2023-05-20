@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+#$Info: tool-versions - displays version information for selected development tools. $
+
+TOOLS=(g++ clang++ cmake autoconf make ninja gdb bash zsh)
+EXTRA=(ag)
+
+if [[ "$1" == "-a" ]]; then
+  TOOLS=("${TOOLS[@]}" "${EXTRA[@]}")
+fi
+
+os
+FILTER='(Copyright|Features|Install|License|licenses|lzma|maintained|There|This|Thread|Target|Written)'
+for TOOL in "${TOOLS[@]}"; do
+  EXISTS="$(command -v "${TOOL}")"
+  PATT=""
+  PREFIX=""
+  if [[ -n "${EXISTS}" ]]; then
+    case "${TOOL}" in
+      g[+][+]|clang|bash|zsh) PATT="${TOOL}" ;;
+      make|gmake) PATT="Make" ;;
+      ninja) PREFIX="${TOOL}" ;;
+      *)   PATT="." ;;
+    esac
+    if [[ -n "${PREFIX}" ]]; then
+      echo -n "${PREFIX} "
+    fi
+    # shellcheck disable=SC2312
+    "${TOOL}" --version 2>/dev/null \
+    | grep -E "${PATT}" \
+    | grep -v -E "${FILTER}"
+  fi
+done
