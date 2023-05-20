@@ -2,32 +2,74 @@
 #
 #$Info: tool-versions - displays version information for selected development tools. $
 
-TOOLS=(g++ clang++ cmake autoconf make ninja gdb bash zsh)
-EXTRA=(ag)
+TOOLS=(systemc-version g++ clang++ cmake autoconf make gmake ninja gdb bash zsh)
+EXTRA=(ag grep shellcheck)
+
+GREP="grep"
+# shellcheck disable=SC2312
+if [[ -n "$(command -v ggrep )" ]]; then
+  GREP="ggrep"
+fi
+UNAME="uname"
+# shellcheck disable=SC2312
+if [[ -n "$(command -v guname )" ]]; then
+  UNAME="guname"
+fi
 
 if [[ "$1" == "-a" ]]; then
   TOOLS=("${TOOLS[@]}" "${EXTRA[@]}")
 fi
 
-os
-FILTER='(Copyright|Features|Install|License|licenses|lzma|maintained|There|This|Thread|Target|Written)'
+echo "----------------------------------------"
+
+# shellcheck disable=SC2034,SC2016
+PERLSCRIPT='$car=shift @F;$cdr=qq{@F};'
+FILTER='Copyright'
+FILTER+='|Features'
+FILTER+='|Install'
+FILTER+='|License'
+FILTER+='|licenses'
+FILTER+='|lzma'
+FILTER+='|maintained'
+FILTER+='|ShellCheck'
+FILTER+='|There'
+FILTER+='|This'
+FILTER+='|Thread'
+FILTER+='|Target'
+FILTER+='|website'
+FILTER+='|Written'
+HOSTOS="$("${UNAME}" -s)"
+case "${HOSTOS}" in
+  Darwin) 
+    "${UNAME}" -moprv
+    OS="$(sw_vers --productName) "
+    OS+="$(sw_vers --productVersion)"
+    OS+="$(sw_vers --productVersionExtra) "
+    OS+="$(sw_vers --buildVersion) "
+    echo "${OS}"
+    ;;
+  *) "${UNAME}" -smoprv ;;
+esac
+
 for TOOL in "${TOOLS[@]}"; do
   EXISTS="$(command -v "${TOOL}")"
   PATT=""
-  PREFIX=""
   if [[ -n "${EXISTS}" ]]; then
     case "${TOOL}" in
       g[+][+]|clang|bash|zsh) PATT="${TOOL}" ;;
       make|gmake) PATT="Make" ;;
-      ninja) PREFIX="${TOOL}" ;;
+      shellcheck) PATT="version" ;;
       *)   PATT="." ;;
     esac
-    if [[ -n "${PREFIX}" ]]; then
-      echo -n "${PREFIX} "
-    fi
+    echo -n "${TOOL} - "
     # shellcheck disable=SC2312
     "${TOOL}" --version 2>/dev/null \
-    | grep -E "${PATT}" \
-    | grep -v -E "${FILTER}"
+    | "${GREP}" -E "${PATT}" \
+    | "${GREP}" -v -E "(${FILTER})" \
+    ;
   fi
 done
+
+echo "----------------------------------------"
+
+# vim:nospell
