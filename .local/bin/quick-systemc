@@ -5,31 +5,50 @@ function Quick_SystemC()
 {
 
   # Command-line options
-  SUFFIX=""
+  local  SUFFIX=""
+  local  BUILD_TYPE="Release"
+  local  CPPSTD=17
+  export CXX
+  export CC 
+  local  CTYPE=""
   while [[ $# -gt 0 ]]; do
-    if [[ "$1" =~ ^--suffix= ]]; then
+    if [[ "$1" =~ ^--cxx= ]]; then
+      ARG="${1/.*=/}"
+      if [[ "${ARG}" =~ clang[+][+] ]]; then
+        CXX="${ARG}" CC="${ARG/++/}"
+      elif [[ "${ARG}" =~ g[+][+] ]]; then
+        CXX="${ARG}" CC="${ARG/++/cc}"
+      fi
+    elif [[ "$1" =~ ^--suffix= ]]; then
       SUFFIX="${1/.*=/}"
-      shift; shift
+    elif [[ "$1" =~ ^--cppstd= ]]; then
+      CPPSTD="${1/.*=/}"
+    elif [[ "$1" =~ ^--type= ]]; then
+      BUILD_TYPE="${1/.*=/}"
     fi
+    shift
   done
+  if [[ "${CC}" =~ clang ]]; then
+    CTYPE=-clang
+  elif [[ "${CC}" =~ gcc ]]; then
+    CTYPE=-gcc
+  fi
 
   # Defaults - adjust below as needed
-  export CC=clang
-  export CXX=clang++
-  SYSTEMC_LOG="${HOME}/logs/quick-systemc${SUFFIX}.log"
-  SYSTEMC_URL="https://github.com/accellera-official/systemc.git"
-  SYSTEMC_SRC="${HOME}/.local/src/systemc${SUFFIX}"
-  SYSTEMC_BLD="${SYSTEMC_SRC}/build-cmake-clang"
-  SYSTEMC_HOME="${HOME}/.local/share/systemc${SUFFIX}"
+  local  SYSTEMC_LOG="${HOME}/logs/quick-systemc${SUFFIX}.log"
+  local  SYSTEMC_URL="https://github.com/accellera-official/systemc.git"
+  local  SYSTEMC_SRC="${HOME}/.local/src/systemc${SUFFIX}"
+  local  SYSTEMC_BLD="${SYSTEMC_SRC}/build-cmake${CTYPE}"
+  export SYSTEMC_HOME="${HOME}/.local/share/systemc${SUFFIX}"
 
   # Clean, fetch, configure, compile, link, test & install
   rm -fr "${SYSTEMC_SRC}" #< ensure a clean build
   mkdir -p "${SYSTEMC_SRC}"
   git clone "${SYSTEMC_URL}" "${SYSTEMC_SRC}"
   cmake -S "${SYSTEMC_SRC}" -B "${SYSTEMC_BLD}" \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
     -DCMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}" \
-    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD="${CPPSTD}" \
     -DBUILD_SOURCE_DOCUMENTATION=off
   cmake --build    "${SYSTEMC_BLD}"
   ctest --test-dir "${SYSTEMC_BLD}" -C Debug #< currently does nothing
