@@ -46,8 +46,8 @@ echo "----------------------------------------"
 
 # shellcheck disable=SC2034,SC2016
 PERLSCRIPT='$car=shift @F;$cdr=qq{@F};'
-FILTER=''
-FILTER+='Capabilities'
+FILTER='AUTHORS'
+FILTER+='|Capabilities'
 FILTER+='|Copyright'
 FILTER+='|Features'
 FILTER+='|internal'
@@ -87,14 +87,15 @@ for TOOL in "${TOOLS[@]}"; do
     case "${TOOL}" in
       g[+][+]|clang|bash|zsh) PATT="${TOOL}" ;;
       make|gmake) PATT="Make" ;;
-      shellcheck) PATT="version" ;;
-      *)   PATT="." ;;
+      git|rsync|shellcheck) PATT="version" ;;
+      *)   PATT+="" ;;
     esac
     echo -n "${TOOL} - "
     # shellcheck disable=SC2312
     "${TOOL}" --version 2>/dev/null \
     | "${GREP}" -E "${PATT}" \
     | "${GREP}" -v -E "(${FILTER})" \
+    | "${GREP}" -v '^$' \
     ;
   else
     echo "${TOOL} - MISSING"
