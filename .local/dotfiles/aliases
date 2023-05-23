@@ -9,7 +9,7 @@
 #  #     # #      #  #     # #    # #     #    #                                 
 #  #     # ##### ### #     #  ####  #####  ####                                  
 #-------------------------------------------------------------------------------
-alias ls='ls -ABCF --color=always'
+alias ls='ls -BCF --color=always'
 alias la='ls -A'
 alias ll='ls -l'
 alias dir='dir --color=auto'
