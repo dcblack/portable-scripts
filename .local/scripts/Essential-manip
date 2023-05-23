@@ -99,7 +99,7 @@ function Car()
 {
   echo "$1"
 }
-alias Findfirst=Car
+alias Firstword=Car
 
 #-------------------------------------------------------------------------------
 function Cdr()
