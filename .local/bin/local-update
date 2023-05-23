@@ -174,10 +174,10 @@ function Update-local()
         if [[ -e "${SourcePath}" ]]; then
           if cmp -s "${SourcePath}" "${TargetFile}"; then continue; fi # Skip if identical
           Report_info "Updating ${TargetFile}" 
-          if [[ "${N}" == "" && "${Q}" == "" ]]; then
-            _do rsync -a "${V}" "${SourcePath}" "${TargetDir}/"
+          if [[ -z "${N}" && -z "${Q}" ]]; then
+            _do rsync -au "${V}" "${SourcePath}" "${TargetDir}/"
           else
-            _do "${N}" "${Q}" rsync -aq "${V}" "${SourcePath}" "${TargetDir}/"
+            _do "${N}" "${Q}" rsync -auq "${V}" "${SourcePath}" "${TargetDir}/"
           fi
         fi
       done
