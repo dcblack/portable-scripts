@@ -205,7 +205,7 @@ function portable-setup() {
   
   # Add symbolic links for a minimal set of selected "dot" files
   local FROM_LINK TO_FILE
-  for DOTFILE in bash_aliases zsh-aliases vim vimrc lessfilter clang-format astylerc; do
+  for DOTFILE in bash_aliases zsh_aliases vim vimrc lessfilter clang-format astylerc; do
     FROM_LINK="${HOME}/.${DOTFILE}"
     TO_FILE="${PORTABLE_DIR}/dotfiles/${DOTFILE}"
     if [[ -r "${TO_FILE}" ]]; then
