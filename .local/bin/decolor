@@ -1,0 +1,21 @@
+#!/usr/bin/env perl
+#
+#$Info: decolor - Filter to remove xterm escape sequences from text. $
+
+require v5.6;
+use strict;
+use warnings;
+use Cwd qw(abs_path getcwd);
+use English;
+use File::Basename;
+use FileHandle;
+use FindBin qw($RealBin $RealScript);
+use Getopt::Long;
+use Pod::Usage;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+while(<>) {
+  s/\033\[[^m]+m//g;
+  print $_;
+}

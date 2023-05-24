@@ -1,0 +1,22 @@
+#!/usr/bin/env perl
+#
+#$Info: dedup - Filter to remove adjacent duplicate lines. $
+
+require v5.6;
+use strict;
+use warnings;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+my $prevBuf = '';
+my $prevNum = -1;
+while(<>) {
+  if( $_ eq $prevBuf and $prevNum+1 == $. ) {
+    $_ = '';
+    $prevBuf = '';
+  } else {
+    $prevBuf = $_;
+    print $_;
+  }
+  $prevNum = $.;
+}
