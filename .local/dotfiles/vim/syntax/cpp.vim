@@ -195,7 +195,7 @@ if b:has_systemc
   syntax keyword scConstant    SC_STOP_IMMEDIATE SC_STOP_FINISH_DELTA
   syntax keyword scReports     SC_REPORT_INFO SC_REPORT_INFO_VERB SC_REPORT_WARNING
   syntax keyword scReports     SC_REPORT_ERROR SC_REPORT_FATAL sc_assert
-  syntax keyword scReports     sc_report
+  syntax keyword scReports     sc_report sc_report_handler
   syntax keyword scReports     sc_exception sc_unwind_exception
 endif
 if b:has_my
