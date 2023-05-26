@@ -1,0 +1,216 @@
+#!/usr/bin/perl
+eval 'exec perl -S $0 ${1+"$@"}'
+  if 0;#running_under_some_shell;
+# -*- perl -*- vim:syntax=perl:sw=2:tw=0:fdm=marker
+
+# @(#)$Info: perms - displays permissions and links leading to a file or directory $
+#
+# @(#)$Email: <dcblack@hldwizard.com>. $
+BEGIN {
+require 5.0;
+use strict;
+use English;
+use FindBin qw($RealBin $RealScript);
+use Cwd;
+use vars qw($exe);
+
+###############################################################################
+## BEGIN DOCUMENTATION #####################################################{{{
+###############################################################################
+$exe = "$RealBin/$RealScript";
+exec "perldoc $exe" if "@ARGV" =~ m/^--help$/;
+=pod
+
+=head1 NAME
+
+B<perms> - displays permissions leading to a file
+
+=head1 SYNOPSIS
+
+B<perms> FILENAME
+
+=head1 DESCRIPTION
+
+For each file specified, displays the permissions of directories leading to
+it and their permissions.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-f>
+
+Display full path
+
+=item B<-h>
+
+Help (this text).
+
+=item B<-i>
+
+Display each level indented from preceding
+
+=item B<-v>
+
+Verbose mode.
+
+=back
+
+=head1 DEPENDENCIES
+
+=head1 EXAMPLES
+
+TBS
+
+=head1 ABOUT
+
+ $Version$
+ $Author$
+ $Copyright: 2006 All rights reserved. $
+ $Creator: David C. Black <dcblack@eslx.com> $
+
+=cut
+
+###############################################################################
+## END DOCUMENTATION ##########################################################
+############################################################################}}}
+
+use vars qw($auth $tool $Tool $TOOL $vers $state $revn $user $date);
+$auth = 'David C Black <dcblack@hldwizard.com>';
+$vers = '@(#)$Id: perms,v 1.1 2014/04/28 07:09:34 dcblack Exp $';
+$vers =~ m{\$Id: (\w+),v (\d+)\.(\d+) [^\$]+ (\w+) \$};
+($tool,$revn,$state) = ($1,"$2.$3",$4);
+$TOOL = uc($tool);
+($Tool = $tool) =~ s/^./\u$&/;
+map($state =~ s/${$_}[0]/${$_}[1]/,(['exp'=>'proto'],['rlsd'=>'released']));
+$revn .= lc " ($state)";
+$user = getlogin || (getpwuid($<))[0] || "Intruder!";
+$date = localtime;
+
+#------------------------------------------------------------------------------
+# Initialization/Defaults
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Process command line arguments
+#------------------------------------------------------------------------------
+use vars qw(@HOLD @ORIG %OPT);
+ARGV: {
+   my (@HOLD,$arg);
+   @ORIG = @ARGV;
+   while (@ARGV) {
+      $arg = shift(@ARGV);
+      if ($arg eq '-h' or $arg eq '--help') {
+         exec "perldoc $exe";
+      } elsif ($arg eq '--version') {
+         printf "INFO: Tool %s Version %s\n",$exe,$revn;
+         exit 0;
+      } elsif ($arg eq '-f') {
+         $OPT{-f} = $arg;
+      } elsif ($arg eq '-i') {
+         $OPT{-i} = $arg;
+      } elsif ($arg eq '-v') {
+         $OPT{-v} = $arg;
+      } elsif ($arg =~ m/^-/) {
+         die "Unknown option $arg!?";
+         system "pod2usage $exe";
+         exit 1;
+      } else {
+         push @HOLD,$arg;
+      }#endif
+   }#endwhile
+   @ARGV = @HOLD;
+}#end ARGV
+}#endsub BEGIN
+
+###############################################################################
+## BEGIN MAIN CODE#############################################################
+###############################################################################
+my ($HERE,$HOME,$homes,%printed);
+$HERE = &getcwd();
+$HERE =~ s{/$}{};
+$HOME = $ENV{'HOME'};
+$HOME =~ s{/$}{};
+($homes = $HOME) =~ s{/[^/]+$}{};
+@ARGV = ('.') unless @ARGV;
+foreach my $path (@ARGV) {
+  $HOME =~ s{/+$}{};
+  $path =~ s{/[.]/$}{/};
+  $path =~ s{^[.]/}{$HERE/};
+  $path =~ s{^[~]/}{$HOME/};
+  $path =~ s{^[~]}{$homes/};
+  if (substr($path,0,1) ne '/') {
+    $path = $HERE.'/'.$path;
+  }#endif
+  $path =~ s{/([.]?)/+}{/}g;
+  $path =~ s{/[^/]+/[.][.]/+}{/}g;
+  my @path = split(m{/},$path);
+  pop @path if $path eq '.';
+  for my $i (0..$#path) {
+    my $subpath = '/'.join('/',@path[0..$i]);
+    $subpath =~ s{//}{/}g;
+    my $component = '';
+    if (defined $OPT{-f}) {
+      $component = $subpath;
+    } else {
+      $component .= ('   'x($i-1)) if $i > 1 and defined $OPT{-i};
+      $component .= '+- ' if $i > 0 and defined $OPT{-i};
+      $component .= $path[$i];
+      $component .= '/' if $i ne $#path;
+    }#endif
+    print &Info($component,$subpath) unless defined $printed{$subpath};
+    $printed{$subpath}=1;
+  }#endpath
+}#endforeach
+
+###############################################################################
+# FUNCTIONS
+###############################################################################
+sub Info { #{{{
+   my ($result
+   , $dev,$ino,$mode,$nlink,$uid,$gid,$rdev
+   , $size,$atim,$mtim,$ctim,$blksize,$blocks
+   , $onam, $gnam, $perm, $link
+   );
+   $link = '';
+   my ($component,$path) = @_;
+   ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,
+    $size,$atim,$mtim,$ctim,$blksize,$blocks
+   ) = lstat($path);
+   $onam = sprintf("%-8.8s",getpwuid($uid));
+   $gnam = getgrgid($gid);
+   $perm = &Modename($mode);
+   $perm =~ s/^./f/ if -f $path;
+   $perm =~ s/^./T/ if -T $path;
+   $perm =~ s/^./l/ if -l $path;
+   $link = ' -> '.readlink $path if -l $path;
+   $result = sprintf("%s %8.8s %8.8s %s%s\n", $perm, $onam, $gnam, $component, $link);
+   return $result;
+}#endsub Modename
+
+############################################################################}}}
+sub Modename { #{{{
+   my ($mode) = @_;
+   my $result = '';
+   $result .= ($mode & 040000) ? 'd' : '-';
+   $result .= ($mode & 000400) ? 'r' : '-';
+   $result .= ($mode & 000200) ? 'w' : '-';
+   $result .= ($mode & 000100) ? 'x' : '-';
+   $result .= ($mode & 000040) ? 'r' : '-';
+   $result .= ($mode & 000020) ? 'w' : '-';
+   $result .= ($mode & 002010) ? 's' : ($mode & 002000) ? 'S' : ($mode & 002010) ? 'x' : '-';
+   $result .= ($mode & 000004) ? 'r' : '-';
+   $result .= ($mode & 000002) ? 'w' : '-';
+   $result .= ($mode & 000001) ? 'x' : '-';
+   return $result;
+}#endsub Modename
+
+############################################################################}}}
+###############################################################################
+## SUBROUTINES ################################################################
+###############################################################################
+
+###############################################################################
+# End $Id: .pl,v 1.0 2004/11/13 09:11:33 dcblack Exp $
+###############################################################################
+__END__
