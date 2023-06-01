@@ -195,7 +195,7 @@ if b:has_systemc
   syntax keyword scConstant    SC_STOP_IMMEDIATE SC_STOP_FINISH_DELTA
   syntax keyword scReports     SC_REPORT_INFO SC_REPORT_INFO_VERB SC_REPORT_WARNING
   syntax keyword scReports     SC_REPORT_ERROR SC_REPORT_FATAL sc_assert
-  syntax keyword scReports     sc_report sc_report_handler
+  syntax keyword scReports     sc_report
   syntax keyword scReports     sc_exception sc_unwind_exception
 endif
 if b:has_my
@@ -246,8 +246,8 @@ if b:has_tlm
 endif
 
 if b:has_systemc
-  syntax match   scReports     /sc_report_handler::\w\+/ contains=scRptCfg
-  syntax keyword scRptCfg      release intialize report contained
+  syntax match   scReports     /sc_report_handler::\w\+/
+  syntax keyword scRptCfg      release intialize report contained=scRptCfg
   syntax keyword scRptCfg      stop_after set_actions contained
   syntax keyword scRptCfg      get_cached_report clear_cached_report contained
   syntax keyword scRptCfg      set_log_file_name get_log_file_name
