@@ -166,12 +166,15 @@ function Wd_parse() # internal
       -debug|--debug|-D) wd_debug=true ;;
       -N|-notreally|--notreally) wd_notreally=true ;;
       -f|-force|--force) wd_force=true ;;
-          -[1-9][0-9]) Wd_set $(( -"${arg}" )) ;;
-       [ci][1-9][0-9]) Wd_set "${arg}" ;;
-           [1-9][0-9]) Wd_set "${arg}" ;;
-               -[0-9]) Wd_set $(( -"${arg}" )) ;;
-            [ci][0-9]) Wd_set "${arg}" ;;
-                [0-9]) Wd_set "${arg}" ;;
+      [a-z][1-9][0-9][0-9]) Wd_set "${arg}" ;;
+          -[1-9][0-9][0-9]) Wd_set "${arg/-}" ;;
+           [1-9][0-9][0-9]) Wd_set "${arg}" ;;
+           [a-z][1-9][0-9]) Wd_set "${arg}" ;;
+               -[1-9][0-9]) Wd_set "${arg/-}" ;;
+                [1-9][0-9]) Wd_set "${arg}" ;;
+                [a-z][0-9]) Wd_set "${arg}" ;;
+                    -[0-9]) Wd_set "${arg/-}" ;;
+                     [0-9]) Wd_set "${arg}" ;;
       -P|-print|--print) wd_print=true ;;
       -*) Report_error "Unknown option: '${arg}'" || return 1 ;;
       *)
@@ -298,7 +301,7 @@ function wds() # wds_func
   wd_favs="$(Realpath "${real_favs}")"
   local p n r h t
   h="$(Realpath .)"
-  for p in $(find "${wd_favs}" -name 'wd-*' | sort -n -t - -k 2)
+  for p in $(find "${wd_favs}" -name 'wd-*' | sort -t- -k 2n,3n)
   do
     n="${p//*\//}"
     r="$(Realpath "${p}")"
