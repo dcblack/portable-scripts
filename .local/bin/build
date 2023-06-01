@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.2
+BUILD_TOOL_VERSION=1.5
 BUILD_TOOL_NAME="$(basename "$0")"
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
