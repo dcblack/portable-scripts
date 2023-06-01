@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
+#
+# Determine if any executables have been made
 
 find ~/* -name '*.x' -exec ls -l '{}' ';' | cut -c 31-
