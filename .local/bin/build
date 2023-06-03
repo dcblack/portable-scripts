@@ -62,7 +62,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -t TGT   | Passed to cmake to specify the target (TGT)
 | -test    | When done building, run the tests verbosely unless -q supplied
 | -install | When done building, install
-| -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release
+| -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
 | -verbose | Adds more information to output. Opposite of quiet.
 | -version | Display version information
 | VAR=VAL  | Specify an environment variable
@@ -298,11 +298,11 @@ function Build()
     elif [[ "$1" =~ ^-std= ]]; then
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DUSE_CXX_VERSION=${1/-std=/}")
     elif [[ "$1" =~ ^-type$ ]]; then
-      if [[ "$2" =~ ^(Debug|Release|RelWithDebInfo)$ ]]; then
+      if [[ "$2" =~ ^(Debug|Release|RelWithDebInfo|MinSizeRel)$ ]]; then
         CMAKE_BUILD_TYPE="$2"
         shift
       elif [[ "$2" =~ ^- ]]; then
-        Report_fatal "Missing -type build specification (Debug, Release or RelWithDebInfo)" ; exit 1
+        Report_fatal "Missing -type build specification (Debug, Release, RelWithDebInfo, or MinSizeRel)" ; exit 1
       else
         Report_warning "Ignoring unknown build type $2"
         shift
