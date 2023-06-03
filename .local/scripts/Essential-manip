@@ -19,6 +19,22 @@
 # Remove_missing
 # Remove_path Removes a directory path from a variable (e.g., PATH)
 # Unique_path
+# Unsafe VAR - tests for dangerous variable names (e.g., path)
+
+#-------------------------------------------------------------------------------
+function Unsafe()
+{
+  declare -A unsafe
+  unsafe=(
+    ["path"]=1
+    ["manpath"]=1
+    )
+  if [[ -z "${unsafe[$1]+exists}" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
 
 #-------------------------------------------------------------------------------
 function Append_path() # only if 2nd arg does not exist in first
@@ -39,6 +55,7 @@ function Append_path() # only if 2nd arg does not exist in first
     fi
     if [[ $# != 2 ]]; then Report_error "Append_path requires two arguments"; return 1; fi
     VAR="$1"
+    if Unsafe "$1"; then Report_error "Unsafe variable name passed to Append_path"; return 1; fi
     ARG="$(Realpath "$2")"; shift
     if ! Has_path "${VAR}" "${ARG}"; then 
       EVAL="VAL=\$${VAR}"
@@ -331,6 +348,7 @@ function Prepend_path() # only if 2nd arg does not exist in first
       shift; shift
     fi
     if [[ $# != 2 ]]; then Report_error "Prepend_path requires two arguments"; return 1; fi
+    if Unsafe "$1"; then Report_error "Unsafe variable name passed to Prepend_path"; return 1; fi
     VAR="$1"
     ARG="$(Realpath "$2")"; shift
     EVAL="VAL=\$${VAR}"
@@ -371,6 +389,7 @@ function Remove_missing()
     esac
     shift
   done
+  if Unsafe "$1"; then Report_error "Unsafe variable name passed to Remove_missing"; return 1; fi
   VAR="$1"
   eval "VAL=\$${VAR}"
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
@@ -413,6 +432,7 @@ function Remove_path()
       fi
     fi
     if [[ $# != 2 ]]; then Report_error "Remove_path requires two arguments"; return 1; fi
+    if Unsafe "$1"; then Report_error "Unsafe variable name passed to Remove_path"; return 1; fi
     VAR="$1"
     REMOVE="$2"
     eval "VAL=\$${VAR}"
@@ -454,6 +474,7 @@ function Unique_path()
     esac
     shift
   done
+  if Unsafe "$1"; then Report_error "Unsafe variable name passed to Unique_path"; return 1; fi
   VAR="$1"
   eval "VAL=\$${VAR}"
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
