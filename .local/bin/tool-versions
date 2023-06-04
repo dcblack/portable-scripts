@@ -112,7 +112,10 @@ EOT
   FILTER+='|Written'
 
   echo "----------------------------------------"
-  date
+  export NODATE
+  if [[ -z "${NODATE}" ]]; then
+    date
+  fi
 
   #-------------------------------------------------------------------------------
   # Announce the Host information

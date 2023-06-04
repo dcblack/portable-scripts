@@ -163,6 +163,7 @@
 :set guifont=Monospace\ 16
 :colorscheme murphy
 "colorscheme elflord
+:set termguicolors
 
 "#######################################
 " Keystroke mappings for vim

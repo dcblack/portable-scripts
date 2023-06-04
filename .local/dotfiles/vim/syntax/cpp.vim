@@ -203,7 +203,7 @@ if b:has_my
   syntax keyword myReports     MESSAGE MEND
   syntax match   myReports     /\<REPORT((\(INFO\|WARNING\|ERROR\|FATAL\)>/
   syntax match   myReports     /\<INFO((\(ALWAYS\|LOW\|MEDIUM\|HIGH\|DEBUG\)>/
-  syntax keyword myReports     REPORT_VERB REPORT_INFO REPORT_INFO_VERB REPORT_DEBUG REPORT_LOGONLY
+  syntax keyword myReports     REPORT_VERB REPORT_INFO REPORT_INFO_VERB REPORT_ALWAYS REPORT_WARNING REPORT_ERROR REPORT_DEBUG REPORT_FATAL REPORT_LOGONLY
 endif
 
 if b:has_tlm
@@ -246,12 +246,13 @@ if b:has_tlm
 endif
 
 if b:has_systemc
-  syntax match   scReports     /sc_report_handler::\w\+/
+" syntax match   scReports     /sc_report_handler::\w\+/ contains=scRptCfg
+  syntax keyword scRptCfg      sc_report_handler
   syntax keyword scRptCfg      release intialize report contained=scRptCfg
-  syntax keyword scRptCfg      stop_after set_actions contained
-  syntax keyword scRptCfg      get_cached_report clear_cached_report contained
-  syntax keyword scRptCfg      set_log_file_name get_log_file_name
-  syntax keyword scRptCfg      set_verbosity_level get_verbosity_level
+  syntax keyword scRptCfg      stop_after set_actions contained=scRptCfg
+  syntax keyword scRptCfg      get_cached_report clear_cached_report contained=scRptCfg
+  syntax keyword scRptCfg      set_log_file_name get_log_file_name contained=scRptCfg
+  syntax keyword scRptCfg      set_verbosity_level get_verbosity_level contained=scRptCfg
   syntax match   scDirective   /\<CYN_\w\+/
   syntax keyword scType        sc_object ncsc_foreign_module sc_foreign_module sc_core sc_dt SC_MODULE_EXPORT
   syntax keyword scType        sc_module sc_channel sc_prim_channel sc_attribute
@@ -351,17 +352,17 @@ syntax match   disabled      /\/\/!.*/
 "   LightBlue DarkBlue SlateBlue Cyan LightCyan DarkCyan Magenta
 "   LightMagenta DarkMagenta Yellow LightYellow Brown DarkYellow Gray
 "   LightGray DarkGray Black White Orange Purple Violet
-highlight dkred   ctermfg=DarkRed   ctermbg=none      guifg=DarkRed               gui=bold
-highlight dkgreen ctermfg=DarkGreen                   guifg=DarkGreen             gui=bold
-highlight Green   ctermfg=DarkGreen ctermbg=none      guifg=Green                 gui=bold
-highlight Blue    ctermfg=Blue      ctermbg=none      guifg=Blue                  gui=bold
-highlight brown   ctermfg=DarkRed   ctermbg=none      guifg=#8b0000               gui=italic,bold term=underline,bold
-highlight sky     ctermfg=DarkBlue  ctermbg=none      guifg=#00bfff               gui=bold        term=bold
-highlight gold    ctermfg=Yellow     ctermbg=none      guifg=#d09000 guibg=Black   gui=bold        term=bold
-highlight grey    ctermfg=Gray      ctermbg=none      guifg=#808080               gui=bold        term=bold
-highlight Red     ctermfg=Red       ctermbg=none      guifg=Red                   gui=bold
-highlight boost   ctermfg=Blue      ctermbg=none      guifg=Blue                  gui=bold
-highlight purple  ctermfg=Magenta   ctermbg=none      guifg=Magenta               gui=bold
+highlight dkred   ctermfg=DarkRed   ctermbg=none    guifg=DarkRed gui=bold                                      
+highlight dkgreen ctermfg=DarkGreen guifg=DarkGreen gui=bold                                                    
+highlight Green   ctermfg=DarkGreen ctermbg=none    guifg=Green   gui=bold                                      
+highlight Blue    ctermfg=Blue      ctermbg=none    guifg=Blue    gui=bold                                      
+highlight brown   ctermfg=DarkRed   ctermbg=none    guifg=#8b0000 gui=italic,bold term=underline,bold           
+highlight sky     ctermfg=DarkBlue  ctermbg=none    guifg=#00bfff gui=bold        term=bold                     
+highlight gold    ctermfg=Yellow    ctermbg=none    guifg=#d09000 guibg=Black     gui=bold            term=bold 
+highlight grey    ctermfg=Gray      ctermbg=none    guifg=#808080 gui=bold        term=bold                     
+highlight Red     ctermfg=Red       ctermbg=none    guifg=Red     gui=bold                                      
+highlight boost   ctermfg=Blue      ctermbg=none    guifg=Blue    gui=bold                                      
+highlight purple  ctermfg=Magenta   ctermbg=none    guifg=Magenta gui=bold                                      
 
 " Search for next template /*{ABC}*/
 nmap gn /\/[*]{[^}]\+}[*]\/<CR>f/,
