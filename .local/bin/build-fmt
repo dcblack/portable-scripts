@@ -46,23 +46,6 @@ fi
 # shellcheck disable=SC2250,SC1091
 source "$SCRIPTDIR/Essential-IO"
 
-# Documentation - minimal
-if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
-  shift
-  echo "
-  NAME
-  ----
-
-  $0 - sets up the {fmtlib} library as a pre-C++20 alternative for std::format and std::print
-
-  ## SYNOPSIS
-
-    $0 -h|--help
-    $0 [--clean]
-"
-  exit
-fi
-
 TOOL_PATH="$(Realpath "$0")"
 Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
 HERE="$(pwd)"
