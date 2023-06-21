@@ -12,11 +12,11 @@ function Build_help()
   if command -v "glow" 1>/dev/null; then
     pager=("glow" "-p")
   elif command -v "less" 1>/dev/null; then
-    pagen=("less")
+    pager=("less")
   elif command -v "more" 1>/dev/null; then
-    PAGER=("more")
+    pager=("more")
   else
-    PAGER=("cat")
+    pager=("cat")
   fi
   # shellcheck disable=SC2312
   "${pager[@]}" <<'END_HELP'
@@ -345,6 +345,7 @@ function Build()
       TEST_EXCLUDE="$2"
       shift
     elif [[ "$1" == "-L" ]]; then
+      TEST_EXCLUDE="${TEST_EXCLUDE/$2}"
       TEST_LABELS="$2"
       shift
     elif [[ "$1" == "-R" ]]; then
