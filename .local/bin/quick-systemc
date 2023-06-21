@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 #
+# quick-systemc [clange++|g++] [--suffix SUF] [--cppstd=c++17] [--type=Debug|RelWithDebInfo|Release]
 
 function Quick_SystemC()
 {
 
   # Command-line options
   local  SUFFIX=""
+  local  UPDATE=0
   local  BUILD_TYPE="Release"
   local  CPPSTD=17
   export CXX
@@ -19,6 +21,8 @@ function Quick_SystemC()
       elif [[ "${ARG}" =~ g[+][+] ]]; then
         CXX="${ARG}" CC="${ARG/++/cc}"
       fi
+    elif [[ "$1" =~ ^--update ]]; then
+      UPDATE=1
     elif [[ "$1" =~ ^--suffix= ]]; then
       SUFFIX="${1/.*=/}"
     elif [[ "$1" =~ ^--cppstd= ]]; then
@@ -42,9 +46,11 @@ function Quick_SystemC()
   export SYSTEMC_HOME="${HOME}/.local/share/systemc${SUFFIX}"
 
   # Clean, fetch, configure, compile, link, test & install
-  rm -fr "${SYSTEMC_SRC}" #< ensure a clean build
-  mkdir -p "${SYSTEMC_SRC}"
-  git clone "${SYSTEMC_URL}" "${SYSTEMC_SRC}"
+  if [[ ${UPDATE} == 0 ]]; then
+    rm -fr "${SYSTEMC_SRC}" #< ensure a clean build
+    mkdir -p "${SYSTEMC_SRC}"
+    git clone "${SYSTEMC_URL}" "${SYSTEMC_SRC}"
+  fi
   cmake -S "${SYSTEMC_SRC}" -B "${SYSTEMC_BLD}" \
     -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
     -DCMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}" \
