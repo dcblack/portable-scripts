@@ -1,5 +1,12 @@
 #!/usr/bin/env zsh
-#
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+  echo "Don't run $0, source it" >&2
+  exit 1
+fi
+SHELLNAME=zsh
+
 #-------------------------------------------------------------------------------
 # Documentation
 #-------------------------------------------------------------------------------
@@ -8,13 +15,14 @@ cat <<'EOD' >/dev/null
 There's more than aliases here and we invoke some other files under found under
 $HOME/.local/dotfiles in the following order:
 
-1. bash_debug -- if executable
+1. ${SHELLNAME}_debug -- if executable
 2. functions -- sets functions for use in scripting
 3. env -- sets environment variables
 4. -- body of aliases happens after the above
-5. bash_paths -- sets additional environment variables (usually with dependencies)
+5. ${SHELLNAME}_paths -- sets additional environment variables (usually with dependencies)
 
 EOD
+
 #-------------------------------------------------------------------------------
 #  #####  #####  ##### #     #    # ####   #####                                 
 #  #    # #    # #     #     #    # #   #  #                                     
@@ -31,18 +39,18 @@ fi
 
 export SCRIPT_NAME SCRIPT_PATH
 source "${HOME}/.local/scripts/Essential-IO"
-for SCRIPT_NAME in "bash_debug" "functions" "env"; do
+for SCRIPT_NAME in "${SHELLNAME}_debug" "functions" "env"; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
-    if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
+    if [[ "${DO_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
   SCRIPT_PATH="${HOME}/.${SCRIPT_NAME}-local"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
-    if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
+    if [[ "${DO_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
@@ -66,10 +74,10 @@ source "${HOME}/.local/dotfiles/aliases"
 #  #       ####   ####     #    #     # #     # #####  ##### #####               
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2043
-for SCRIPT_NAME in bash_paths; do
+for SCRIPT_NAME in zsh_paths; do
   SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
-    if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
+    if [[ "${DO_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
