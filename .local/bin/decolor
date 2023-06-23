@@ -1,21 +1,50 @@
-#!/usr/bin/env perl
+#!/usr/bin/env bash
 #
 #$Info: decolor - Filter to remove xterm escape sequences from text. $
 
-require v5.6;
-use strict;
-use warnings;
-use Cwd qw(abs_path getcwd);
-use English;
-use File::Basename;
-use FileHandle;
-use FindBin qw($RealBin $RealScript);
-use Getopt::Long;
-use Pod::Usage;
-STDOUT->autoflush(1);
-STDERR->autoflush(1);
+PERLSCRIPT='s/\033\[[^m]+m//g';
+INPLACE=0
 
-while(<>) {
-  s/\033\[[^m]+m//g;
-  print $_;
-}
+while [[ "$1" =~ ^- ]]; do
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    cat <<'EOT'
+Name
+----
+
+decolor - Filter to remove xterm escape sequences from text.
+
+Synopsis
+--------
+
+```sh
+decolor --help
+decolor [FILES]
+decolor -i FILES
+```
+
+Description
+-----------
+
+Removes ANSI escape sequences used to provide color or other text effects.
+
+Examples
+--------
+
+```sh
+decolor <fancy.log >plain.log
+decolor -i fancy.log # in-place edit
+```
+
+EOT
+    exit
+  elif [[ "$1" == '-i' ]]; then
+    INPLACE=1
+  fi
+  shift
+done
+
+if [[ ${INPLACE} == 1 ]]; then
+  perl -pi -e "${PERLSCRIPT}" "$@"
+else
+  perl -pe "${PERLSCRIPT}" "$@"
+fi
