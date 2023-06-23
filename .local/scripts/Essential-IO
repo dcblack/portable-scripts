@@ -291,7 +291,11 @@ function Log()
   local OPT
   if [[ "$1" == "-n" ]]; then OPT="$1"; shift; fi
   if [[ $# == 0 ]]; then # pipe
-    if [[ -f "${LOGFILE}" ]]; then tee -a "${LOGFILE}"; else cat >"${LOGFILE}"; fi
+    if [[ -f "${LOGFILE}" ]]; then
+      tee -a "${LOGFILE}";
+    else
+      cat >"${LOGFILE}";
+    fi
   else
     if [[ -f "${LOGFILE}" ]]; then
       if [[ "${OPT}" == "-n" ]]; then

@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 #
 #$Info: tool-versions - displays version information for selected development tools. $
+#
+# Requirements for this script:
+# - bash
+# - uname
+# - perl
+# - grep
+# - sed
 
 function Tool_versions()
 {
@@ -57,6 +64,8 @@ EOT
       lldb
       bash
       zsh
+      perl
+      python
     )
   fi
   EXTRAS=(
@@ -65,15 +74,17 @@ EOT
     clang-tidy
     git
     grep
+    sed
+    uname
     rsync
     shellcheck
   )
 
-  local GREP UNAME
-  GREP="grep"
+  local PERL5 UNAME
+  PERL5="perl"
   # shellcheck disable=SC2312
-  if [[ -n "$(command -v ggrep )" ]]; then
-    GREP="ggrep"
+  if [[ -n "$(command -v perl5 )" ]]; then
+    PERL5="perl5"
   fi
   UNAME="uname"
   # shellcheck disable=SC2312
@@ -140,7 +151,7 @@ EOT
       if [[ -r /etc/os-release ]]; then
         # shellcheck disable=SC2034,SC2016
         PERLSCRIPT='if(m{PRETTY_NAME="([^"]+)"}){$os=$1;$os=~s{Oracle}{CentOS};print $os;}'
-        perl -lne "${PERLSCRIPT}" /etc/os-release
+        "${PERL5}" -lne "${PERLSCRIPT}" /etc/os-release
       fi
       ;;
   esac
@@ -154,19 +165,18 @@ EOT
   for TOOL in "${TOOLS[@]}"; do
     EXISTS="$(command -v "${TOOL}")"
     PATTERN=""
+    SUBST="s/This is perl/Perl/"
     if [[ -n "${EXISTS}" ]]; then
       case "${TOOL}" in
         g[+][+]|clang|bash|zsh) PATTERN="${TOOL}" ;;
         make|gmake) PATTERN="Make" ;;
-        clang-tidy|git|rsync|shellcheck) PATTERN="version" ;;
+        clang-tidy|git|perl|rsync|shellcheck) PATTERN="version" ;;
         *)   PATTERN+="" ;;
       esac
       echo -n "${TOOL} - "
       # shellcheck disable=SC2312
       "${TOOL}" --version 2>/dev/null \
-      | "${GREP}" -E "${PATTERN}" \
-      | "${GREP}" -v -E "(${FILTER})" \
-      | "${GREP}" -v '^$' \
+      | "${PERL5}" -ne "${SUBST}; print if m/${PATTERN}/ and not m/(${FILTER})/ and not m/^$/" \
       ;
     else
       echo "${TOOL} - MISSING"
@@ -178,4 +188,4 @@ EOT
 
 Tool_versions "$@"
 
-  # vim:nospell
+# vim:nospell

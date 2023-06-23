@@ -18,7 +18,7 @@ use vars qw($exe);
 ## BEGIN DOCUMENTATION #####################################################{{{
 ###############################################################################
 $exe = "$RealBin/$RealScript";
-exec "perldoc $exe" if "@ARGV" =~ m{^-{1,2}h(elp)?};
+exec "perldoc $exe" if "@ARGV" =~ m{^-{1,2}h(elp)?$};
 =pod
 
 =head1 NAME
@@ -42,6 +42,8 @@ OPTIONS:
  -cpp ----------- suitable for inclusion in C++ code
  -fit ----------- minimum box or vbar width
  -hbar[=CHAR] --- draw a horizontal bar above and below
+ -tbar[=CHAR] --- draw a horizontal bar above (top)
+ -bbar[=CHAR] --- draw a horizontal bar below
  -help ---------- display this help
  -hx=MULT ------- horizontal width factor (fatter characters)
  -lsep[=CHAR] --- draw a horizontal line between rows if multiline
@@ -220,6 +222,14 @@ while ($ARGV[0] =~ /^-/) {
   #---------------------------------------------------------------------------
   } elsif ($opt =~ m{^-{1,2}b(old)?$}) {
     $OPT{-bold} = 1;
+  #---------------------------------------------------------------------------
+  } elsif ($opt =~ m{^-{1,2}bbar(?:=)?}) {
+    $OPT{-bbar} = $OPT{-char};
+    $OPT{-bbar} = $' if $opt =~ m{=};
+  #---------------------------------------------------------------------------
+  } elsif ($opt =~ m{^-{1,2}tbar(?:=)?}) {
+    $OPT{-tbar} = $OPT{-char};
+    $OPT{-tbar} = $' if $opt =~ m{=};
   #---------------------------------------------------------------------------
   } elsif ($opt =~ m{^-{1,2}hbar(?:=)?}) {
     $OPT{-hbar} = $OPT{-char};
@@ -527,7 +537,7 @@ sub Box {
     substr($msg,-length($lc)-$box_pad,length($lc)+$box_pad,''); # Remove last one
     $msg .= $lc."\n";
   }#endif
-  if (exists $OPT{-hbar} or exists $OPT{-box}) {
+  if (exists $OPT{-hbar} or exists $OPT{-tbar} or exists $OPT{-bbar} or exists $OPT{-box}) {
     $len = $OPT{-cols};
     $len = $box_width if exists $OPT{-box} or $len < $box_width;
     $len = $OPT{-ce} if exists $OPT{-ce} and $len < $OPT{-ce};
@@ -536,12 +546,14 @@ sub Box {
     $len += 2+length($OPT{-vbar}) if exists $OPT{-vbar};
     # Top edge
     substr($msg,0,0) = ($OPT{-hbar} x ($len-2))."\n" if $beg;
+    substr($msg,0,0) = ($OPT{-tbar} x ($len-2))."\n" if $beg;
     # Remove trailing whitespace
     $msg =~ s/ +$//;
     # Bottom or separating edge
     if (not exists $OPT{-hsep}) {
       if ($end ) {
-        $msg .= ($OPT{-hbar} x ($len-2))."\n";
+        $msg .= ($OPT{-hbar} x ($len-2))."\n" if exists $OPT{-hbar};
+        $msg .= ($OPT{-bbar} x ($len-2))."\n" if exists $OPT{-bbar};
       } elsif (exists $OPT{-lsep}) {
         $msg .= $OPT{-hbar}.($OPT{-lsep} x ($len-4)).$OPT{-hbar}."\n";
       }#endif

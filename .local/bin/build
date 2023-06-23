@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.5
+BUILD_TOOL_VERSION=1.6
 BUILD_TOOL_NAME="$(basename "$0")"
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
 function Build_help()
 {
-  cat <<'END_HELP'
-NAME
-----
+  declare -a pager
+  if command -v "glow" 1>/dev/null; then
+    pager=("glow" "-p")
+  elif command -v "less" 1>/dev/null; then
+    pager=("less")
+  elif command -v "more" 1>/dev/null; then
+    pager=("more")
+  else
+    pager=("cat")
+  fi
+  # shellcheck disable=SC2312
+  "${pager[@]}" <<'END_HELP'
+## NAME
 
 build - use cmake to build and optionally run, test, or install
 
@@ -19,53 +29,60 @@ build - use cmake to build and optionally run, test, or install
 ```sh
 build -h|--help
 build --version
-build [-n] [-C DIR] [-verbose][-quiet][-clean][-run|-test|-install] [BUILD_OPTIONS] [ -- TEST_OPTIONS -- RUNTIME_ARGS]
+build [-n] [-C DIR] [OPTIONS]
 build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
 ```
 
 ## DESCRIPTION
 
-This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects.  It assumes a proper CMakeLists.txt has been set up. Basically, all this does is:
+This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects.  It assumes a proper CMakeLists.txt has been set up. Basically, all this does (roughly):
 
-+ clean -a # OPTIONAL
-+ cmake -B build -DCMAKE_BUILD_TYPE=Debug
-+ cmake --build build --config Debug
-+ ctest --test-dir build -C Debug -VV # OPTIONAL -OR- run
+```bash
+clean -a # OPTIONAL
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug
+ctest --test-dir build -C Debug -VV # OPTIONAL -OR- run
+```
+If you're skeptical, just run with the `-n` option.
 
 IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
 
 ## OPTIONS
 
-| OPTION   | DESCRIPTION
-| ------   | -----------
-| -help    | Display this text
-| -n       | Don not actually do anything except show commands that would have been done
-| -B DIR   | Name of build directory -- defaults to \"build\"
-| -C DIR   | Change to specified directory before doing anything else
-| -clean   | Remove all build files and other output bits
-| -DVAR=VAL| Specify a configuration definition (i.e., passed to cmake -B)
-| -G "GEN" | Specify generator (defaults to Ninja if available)
-| -clean   | Remove all build files and other output bits
-| -gdb     | Run under gdb
-| -info    | Output information to help debug CMakeLists.txt etc.
+| OPTION    | DESCRIPTION
+| ------    | -----------
+| -help     | Display this text (or -h)
+| -n        | Don not actually do anything except show commands that would have been done
+| -B DIR    | Name of build directory -- defaults to \"build\"
+| -C DIR    | Change to specified directory before doing anything else
+| -clean    | Remove all build files and other output bits
+| -DVAR=VAL | Specify a configuration definition (i.e., passed to cmake -B)
+| -G "GEN"  | Specify generator (defaults to Ninja if available)
+| -clean    | Remove all build files and other output bits
+| -gdb      | Run under gdb
+| -info     | Output information to help debug CMakeLists.txt etc.
 | -list-extensions | See EXTENSIONS description following.
-| -lldb    | Run under lldb
-| -noisy   | Some extra info is displayed
-| -norc    | Ignore .buildrc
-| -norun   | Revert -run
-| -notest  | Revert -test
-| -quiet   | Remove verbosity when -test invoked
-| -P DIR   | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
-| -run     | When done building, run the executable
-| -S DIR   | Name of source directory -- defaults to \".\"
-| -std=NN  | Specify C++ standard version
-| -t TGT   | Passed to cmake to specify the target (TGT)
-| -test    | When done building, run the tests verbosely unless -q supplied
-| -install | When done building, install
-| -type BT | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
-| -verbose | Adds more information to output. Opposite of quiet.
-| -version | Display version information
-| VAR=VAL  | Specify an environment variable
+| -lldb     | Run under lldb
+| -noisy    | Some extra info is displayed
+| -norc     | Ignore .buildrc
+| -norun    | Revert -run
+| -notest   | Revert -test
+| -quiet    | Remove verbosity when -test invoked
+| -quick    | Run only tests labeled as "quick"
+| -LE REGEX | Skip tests with labels matching regular expression REGEX
+| -L REGEX  | Include only tests with labels matching regular expression REGEX
+| -P DIR    | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
+| -R REGEX  | Include only tests with names matching regular expression REGEX
+| -run      | When done building, run the executable
+| -S DIR    | Name of source directory -- defaults to \".\"
+| -std=NN   | Specify C++ standard version
+| -t TGT    | Passed to cmake to specify the target (TGT)
+| -test     | When done building, run the tests verbosely unless -q supplied
+| -install  | When done building, install
+| -type BT  | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
+| -verbose  | Adds more information to output. Opposite of quiet.
+| -version  | Display version information
+| VAR=VAL   | Specify an environment variable
 
 ## CONFIGURATION
 
@@ -81,13 +98,13 @@ For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
 If a the file ${HOME}/.buildrc or ./.buildrc exists, their contents will be used for initial command-line options. It will be as if invoked with:
 
-```sh
+```bash
 build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 ```
 
 ## EXAMPLES
 
-```sh
+```bash
 % build
 % build -clean -test
 % build -run
@@ -96,8 +113,8 @@ build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 % build fmt
 ```
 
+-----
 END_HELP
-  echo "exiting help"
 }
 
 function Build()
@@ -178,6 +195,9 @@ function Build()
   PREFIX=
   ACTION=
   OPTS_SEP=0
+  TEST_MATCHES="" # implies all
+  TEST_LABELS=""
+  TEST_EXCLUDE="long"
   declare -a CONFIG_OPTS BUILD_OPTS TEST_OPTS
   CONFIG_OPTS=()
   BUILD_OPTS=()
@@ -192,6 +212,7 @@ function Build()
   WORKTREE_DIR="" ;#< Do not allow environment in
   while [[ $# != 0 ]]; do
     if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+      shift
       Build_help
       return 0
     elif [[ "$1" == "-B" ]]; then
@@ -315,6 +336,21 @@ function Build()
       ACTION="gdb"
     elif [[ "$1" =~ ^-{1,2}lldb$ ]]; then
       ACTION="lldb"
+    elif [[ "$1" =~ ^-{1,2}quick$ ]]; then
+      TEST_LABELS="quick"
+    elif [[ "$1" =~ ^-{1,2}long$ ]]; then
+      TEST_LABELS="long"
+      TEST_EXCLUDE="${TEST_EXCLUDE/long}"
+    elif [[ "$1" == "-LE" ]]; then
+      TEST_EXCLUDE="$2"
+      shift
+    elif [[ "$1" == "-L" ]]; then
+      TEST_EXCLUDE="${TEST_EXCLUDE/$2}"
+      TEST_LABELS="$2"
+      shift
+    elif [[ "$1" == "-R" ]]; then
+      TEST_MATCHES="$2"
+      shift
     elif [[ "$1" =~ ^-{1,2}run$ ]]; then
       ACTION="run"
     elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
@@ -330,12 +366,22 @@ function Build()
     fi
     shift
   done
+
   if [[ -z "${WORKTREE_DIR}" ]]; then
     WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
   fi
 
   if [[ ${QUIET} == 0 ]]; then
     TEST_OPTS=(-VV "${TEST_OPTS[@]}")
+  fi
+  if [[ -n "${TEST_MATCHES}" ]]; then
+    TEST_OPTS+=(-R "${TEST_MATCHES}")
+  fi
+  if [[ -n "${TEST_LABELS}" ]]; then
+    TEST_OPTS+=(-L "${TEST_LABELS}")
+  fi
+  if [[ -n "${TEST_EXCLUDE}" ]]; then
+    TEST_OPTS+=(-LE "${TEST_EXCLUDE}")
   fi
 
   BLD_DIR="${BLD_DIR}/$(perl -le 'print lc(qq{@ARGV})' "${CMAKE_BUILD_TYPE}")"
