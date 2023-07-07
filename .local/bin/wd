@@ -209,6 +209,10 @@ function swd() # swd_func
   wd_prev="$(readlink "${wd_favs}/wd-${wd_set}")"
   wd_dir="$(Realpath "${wd_dir}")"
   today="$(date)"
+  if [[ "${wd_dir}" == "${wd_prev}" ]]; then
+    Report_info "Unchanged wd-${wd_set}"
+    return
+  fi
   Report_info "Previously wd-${wd_set} => ${wd_prev}"
   Report_info "Saved wd-${wd_set} => ${wd_dir}"
   printf "swd %2d '%s' ; # %s\n" "${wd_set}" "${wd_dir}" "${today}" >> "${HOME}/.wdhistory"
