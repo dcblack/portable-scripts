@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Install C++ Core Guidelines Support Library under current project.
+#$Info: build-gsl - Install C++ Core Guidelines Support Library under the current project. $
 # IMPORTANT; Must be run inside project git repository.
 if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
   cat <<'HELPTEXT'
 Name
 ----
-build-gsl - Install GSL, the C++ Core Guidelines Support Library under current project.
+build-gsl - Install GSL, the C++ Core Guidelines Support Library under the current project.
 
 Synopsis
 --------
@@ -15,7 +15,7 @@ build-gsl [--clean]
 
 Description
 -----------
-Installs the [C++ Core Guidelines library]() under `extern/`, which is located based on the top-level git repository's location.
+Installs the [C++ Core Guidelines library]() under `extern/include/`, which is located based on the top-level git repository's location.
 
 IMPORTANT
 ---------
