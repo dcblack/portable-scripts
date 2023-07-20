@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#
+#$Info: git-branch-info - Display branch description. $
+
+BRANCH="$(git branch --show-current)"
+git config "branch.${BRANCH}.description"
