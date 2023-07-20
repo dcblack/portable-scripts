@@ -27,16 +27,18 @@ Creates a new executable script with a bare minimum template. The result contain
 OPTION                | DESCRIPTION
 ------                | -----------
 -/_HASHBANG_          | Specify an alternate hashbang line
--LANGUAGE             | Select a language: bash (default), csh, lua, perl, python2, python3, zsh
+-LANGUAGE             | Select a language: bash (default), csh, lua, make, perl, python2, python3, zsh
 --bin\-b              | Place in $HOME/bin
 --edit[=_editor_\|-e  | Enter the specified editor after creation
---extern             | Place in $WORKTREE_DIR/extern/bin, where WORKTREE_DIR is the git working directory
+--extern              | Place in $WORKTREE_DIR/extern/bin, where WORKTREE_DIR is the git working directory
 --help\|-h            | Display this text
 --local\-l            | Place in $HOME/.local/bin
 --notreally|-n        | Show what would be done
 --quiet|-q            | Quiet
 --raw|-r              | Raw (without more than hashbang line)
 --script\|-s          | Place in scripts
+--tail\|-t            | Add tail text
+--TEXT TEXT\|-T TEXT  | Place text into script -- may be repeated
 --utils|-u            | Add utils.bash
 --verbose|-v          | Verbose
 -dir=_DIRECTORY_      | Place EXECUTABLE under DIRECTORY
@@ -54,10 +56,10 @@ function _C()
   if [[ $# == 0 ]]; then set none; fi
   export COLOR_SET COLOR_FG
   local ESC PRF
-  if [[ -z "${COLOR_SET}" ]]; then # default
+  if [[ -z "${COLOR_SET}" ]]; then
     COLOR_SET=10
   fi
-  if [[ -z "${COLOR_FG}" ]]; then # default
+  if [[ -z "${COLOR_FG}" ]]; then
     COLOR_FG=1
   fi
   ESC=""
@@ -123,6 +125,14 @@ function Report_error()
   echo "$(_C bold bright red)Error:$(_C none) $*" 1>&2
 }
 
+function Debug()
+{
+  if [[ "${DEBUG}" == 0 ]]; then return; fi
+  local NONE
+  NONE="$(_C none)"
+  echo "$(_C bold bright magenta)Debug:${NONE} $*"
+}
+
 function Verbose_info()
 {
   if [[ "$1" != 1 ]]; then return; fi
@@ -141,7 +151,8 @@ function Mkbin()
   CBLU="$(_C bright blue)"
   NONE="$(_C none)"
   local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH
-  local OPTION CMNT KIND IS_NEW ADD_TAIL ADD_UTILS FIRST_LINE V N
+  local OPTION CMNT KIND IS_NEW ADD_TAIL ADD_UTILS FIRST_LINE V N DEBUG
+  local -a T
   ADD_TAIL=0
   ADD_UTILS=0
   KIND="bash"
@@ -149,20 +160,29 @@ function Mkbin()
   DIRECTORY=""
   EDIT=""
   CMNT="#"
+  DEBUG=0
   N=0
   R=0
   V=1
+  T=()
+
   while [[ "$1" =~ ^- ]]; do
     OPTION="$1"
+    Debug "Parsing $1"
     shift
     if [[ "${OPTION}" =~ ^-{1,2}h(elp)?$ ]]; then
       mkbin_help
       exit 1
+    elif [[ "${OPTION}" =~ ^-{2}DEBUG?$ ]]; then
+      DEBUG=1
     elif Regex "${OPTION}" "^/" ; then
       HASHBANG="${OPTION}"
     elif [[ "${OPTION}" =~ ^-{1,2}lua$ ]]; then
       KIND="lua"
       HASHBANG="/usr/bin/env lua"
+    elif [[ "${OPTION}" =~ ^-{1,2}make$ ]]; then
+      KIND="make"
+      HASHBANG="/usr/bin/env make -f"
     elif [[ "${OPTION}" =~ ^-{1,2}perl[45]?$ ]]; then
       KIND="perl"
       HASHBANG="/usr/bin/env perl"
@@ -175,19 +195,23 @@ function Mkbin()
     elif [[ "${OPTION}" =~ ^-{1,2}zsh$ ]]; then
       KIND="zsh"
       HASHBANG="/usr/bin/env zsh"
-    elif [[ "${OPTION}" =~ ^-{1,2}t?csh$ ]]; then # --csh|--tcsh
+    elif [[ "${OPTION}" =~ ^-{1,2}t?csh$ ]]; then
+      # --csh|--tcsh
       KIND="csh"
       HASHBANG="/usr/bin/env csh"
-    elif [[ "${OPTION}" =~ ^-{1,2}(ba)?sh$ ]]; then # --bash|--sh
+    elif [[ "${OPTION}" =~ ^-{1,2}(ba)?sh$ ]]; then
+      # --bash|--sh
       KIND="bash"
       HASHBANG="/usr/bin/env bash"
-    elif [[ "${OPTION}" =~ ^-{1,2}e(dit)?$ ]]; then # --edit
+    elif [[ "${OPTION}" =~ ^-{1,2}e(dit)?$ ]]; then
+      # --edit
       if [[ -n "${VISUAL}" ]]; then
         EDIT="${VISUAL}"
       else
         EDIT="gvim"
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}b(in)?$ ]]; then # --bin
+    elif [[ "${OPTION}" =~ ^-{1,2}b(in)?$ ]]; then
+      # --bin
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d ${HOME}/bin ]]; then
           DIRECTORY="${HOME}/bin"
@@ -199,7 +223,8 @@ function Mkbin()
       else
         Report_error "Missing ${DIRECTORY}/bin ?!"; return 1
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}extern$ ]]; then # --extern
+    elif [[ "${OPTION}" =~ ^-{1,2}extern$ ]]; then
+      # --extern
       WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
       if [[ -z "${DIRECTORY}" ]]; then
         DIRECTORY="${WORKTREE_DIR}/extern/bin"
@@ -211,7 +236,7 @@ function Mkbin()
           DIRECTORY="${WORKTREE_DIR}/extern/${DIRECTORY}"
         fi
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)?$ ]]; then # --local
+    elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)?$ ]]; then
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d ${HOME}/.local/bin ]]; then
           DIRECTORY="${HOME}/.local/bin"
@@ -260,12 +285,17 @@ function Mkbin()
       V=0
     elif [[ "${OPTION}" =~ ^-{1,2}v(erbose)? ]]; then
       V=1
+    elif [[ "${OPTION}" =~ ^-{1,2}T(EXT)?$ ]]; then
+      Debug "Processing -text '$1'"
+      T=( "${T[@]}" "$1" )
+      shift
     else
       Report_error "Unknown option '${OPTION}'"
     fi
   done
 
   # Grab name of script
+  Debug "$# args: $*"
   if [[ $# != 1 ]]; then
     Report_error "Missing script name!"; return 1
   fi
@@ -316,6 +346,33 @@ function Mkbin()
   # Add essentials
   if [[ ${IS_NEW} == 1 && ${R} == 0 ]]; then
     case "${KIND}" in
+
+      ###############################################################################
+      #  #     #    #    #    #  #####                                                 
+      #  ##   ##   # #   #   #   #                                                     
+      #  # # # #  #   #  #  #    #                                                     
+      #  #  #  # #     # ###     #####                                                 
+      #  #     # ####### #  #    #                                                     
+      #  #     # #     # #   #   #                                                     
+      #  #     # #     # #    #  #####                                                 
+      ###############################################################################
+      make)
+        Verbose_info "${V}" "Added essentials"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> 
+          ---> # Find path to THIS file
+          ---> THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
+          ---> PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
+          ---> .DEFAULT_GOAL := help
+          ---> .PHONY: $(PHONIES)
+          ---> 
+          ---> 
+          ---> #| * help - display documentation
+          ---> help:
+          ---> 	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
+EOT
+        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        ;;
       ###############################################################################
       #  #####     #     ####  #    #                                                 
       #  #    #   # #   #    # #    #                                                 
@@ -481,9 +538,29 @@ EOT
     esac
   fi
 
+  if [[ ${#T[@]} -gt 0 ]]; then
+    case "${KIND}" in
+      bash|csh|make|perl|zsh)
+        Verbose_info "${V}" "Added ${#T[@]} text lines"
+        for TEXT in "${T[@]}"; do
+          echo >> "${SCRIPT}" "${TEXT}"
+        done
+      ;;
+    *)
+      ;;
+    esac
+  fi
+
   # Add tail
   if [[ ${ADD_TAIL} == 1 && ${R} == 0 ]]; then
     case "${KIND}" in
+      make)
+        Verbose_info "${V}" "Added tail"
+        cat >> "${SCRIPT}" <<'EOT'
+          ---> 
+          ---> # vim:nospell:syntax=make
+EOT
+        ;;
       perl)
         Verbose_info "${V}" "Added tail"
         cat >> "${SCRIPT}" <<'EOT'

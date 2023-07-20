@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+#
+#$Info: build-wcs - install WorstCaseStack (C utility). $
+
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-wcs - install WorstCaseStack (C utility).
+
+Synopsis
+--------
+build-wcs --help|-h # produces this text
+build-wcs
+
+Description
+-----------
+Simply clones the WorseCaseStack GitHub repo from https://github.com/PeterMcKinnis/WorstCaseStack into extern/WorstCaseStack.
+
+HELPTEXT
+  exit 0;
+fi
+
+#-------------------------------------------------------------------------------
+# Configure
+#...............................................................................
+LIBNAME="C Worst Case Stack analysis"
+GIT_URL="https://github.com/PeterMcKinnis/WorstCaseStack.git"
+
+#-------------------------------------------------------------------------------
+# Essential
+#...............................................................................
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+#-------------------------------------------------------------------------------
+# Main
+#...............................................................................
+function Build_wcs()
+{
+  TOOL_PATH="$(Realpath "$0")"
+  Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
+  HERE="$(Realpath ".")"
+  if [[ "${HERE}" =~ .*/extern ]]; then
+    cd "${HERE/extern*/}" || Report_error "Trying to escape extern sub-directory failed"
+  fi
+  WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_error "Not in git repo"
+  INSTALL_DIR="${WORKTREE_DIR}/extern"
+  REPO_NAME="$(basename "${GIT_URL}" .git)"
+  REPO_DIR="${INSTALL_DIR}/${REPO_NAME}"
+
+  if [[ -d "${WORKTREE_DIR}/.local" ]]; then
+    Report_warning "Installation not under project"
+  fi
+
+  _do mkdir -p "${INSTALL_DIR}/bin"
+  cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
+  Report_info "Building under ${INSTALL_DIR}"
+  if [[ "$1" =~ ^-{1,2}clean$ ]]; then
+    shift
+    rm -fr "${REPO_DIR}"
+  fi
+  if [[ -d "${REPO_DIR}/.git" ]]; then
+    _do git -C "${REPO_DIR}" pull
+    Report_info "Successfully updated ${LIBNAME}"
+  else
+    rm -fr "${REPO_DIR}"
+    _do git clone "${GIT_URL}" "${REPO_DIR}" || Report_error "Unable to clone"
+  fi
+  if [[ ! -L "${INSTALL_DIR}/bin" ]]; then
+    _do ln -s "${REPO_DIR}/WCS.py" "${INSTALL_DIR}/bin/wcs"
+    Report_info "Successfully installed ${LIBNAME}"
+  fi
+}
+
+Build_wcs "$@"
+
+# vim:nospell
