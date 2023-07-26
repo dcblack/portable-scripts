@@ -1,0 +1,6 @@
+#!new # vim:syntax=sh:tw=72
+
+# REQUIREMENTS & DEFAULTS
+
+# BRIEF
+#! Creates .vcode/launch.json
