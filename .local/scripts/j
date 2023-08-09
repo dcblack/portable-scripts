@@ -277,6 +277,8 @@ EOT
         cd - 2>/dev/null 1>/dev/null
         # shellcheck disable=SC1090
         source "${lws}" --rm
+        # shellcheck disable=SC1090
+        test -r "${lws/setup./.setup.}" && source "${lws/setup./.setup.}" --rm
         # shellcheck disable=SC2164
         cd - 2>/dev/null 1>/dev/null
       fi
@@ -289,9 +291,13 @@ EOT
         if [[ ${J_SHOW} == 0 ]]; then
           # shellcheck disable=SC1090
           source "${nws}" --add
+          # shellcheck disable=SC1090
+          test -r "${nws/setup./.setup.}" && source "${nws/setup./.setup.}" --add
         else
           # shellcheck disable=SC1090
           source "${nws}" --add --show
+          # shellcheck disable=SC1090
+          test -r "${nws/setup./.setup.}" && source "${nws/setup./.setup.}" --add --show
         fi
       fi
       cws="${nws}"
@@ -302,6 +308,8 @@ EOT
         if [[ ${J_NOSCRIPT} == 0 ]]; then
           # shellcheck disable=SC1090
           source "${nws}" --repeat
+          # shellcheck disable=SC1090
+          test -r "${nws/setup./.setup.}" && source "${nws/setup./.setup.}" --repeat
         fi
         cws="${nws}"
       else
@@ -319,4 +327,4 @@ EOT
   fi
 
 }
-
+# vim:nospell
