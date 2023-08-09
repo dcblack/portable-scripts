@@ -84,6 +84,9 @@ function Build_gsl()
   fi
   TARGET_DIR="$(Realpath "${REPO_DIR}")"
   if [[ ! -L "${INSTALL_DIR}/include/gsl" ]]; then
+    if [[ -e "${INSTALL_DIR}/include/gsl" ]]; then
+      _do rm "${INSTALL_DIR}/include/gsl"
+    fi
     _do ln -s "${TARGET_DIR}/include/gsl" "${INSTALL_DIR}/include/gsl"
     Report_info "Successfully installed ${LIBNAME}"
   fi

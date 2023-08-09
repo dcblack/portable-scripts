@@ -85,7 +85,10 @@ function Build_wcs()
     _do git clone "${GIT_URL}" "${REPO_DIR}" || Report_error "Unable to clone"
   fi
   if [[ ! -L "${INSTALL_DIR}/bin" ]]; then
-    _do ln -s "${REPO_DIR}/WCS.py" "${INSTALL_DIR}/bin/wcs"
+    if [[ -e "${INSTALL_DIR}/bin/wcs" ]]; then
+      _do rm "${INSTALL_DIR}/bin/wcs"
+    fi
+    _do ln -s "${REPO_DIR}/WCS.py" "${INSTALL_DIR}/bin/wcs" || Report_error "Failed to install ${REPO_NAME}"
     Report_info "Successfully installed ${LIBNAME}"
   fi
 }
