@@ -32,16 +32,17 @@ while( @ARGV ) {
       Report_error( "Option -d requires a single letter argument -- ignoring" );
     }
   }
-  elsif( $arg =~ s{^([a-zA-Z]):}{/mnt/$1/} ) { # Windows to Linux
-    $drv = uc $1;
+  elsif( $arg =~ m{^([a-zA-Z]):} ) { # Windows to Linux
+    $drv = lc $1;
+    $arg =~ s{^[a-zA-Z]:}{/mnt/${drv}/};
     $arg =~ s{\\}{/}g;   # \ becomes /
     $arg =~ s{//+}{/}g;  # remove //+
-    $arg =~ s{ }{\\$&}g; # protect whitespace
+#   $arg =~ s{ }{\\$&}g; # protect whitespace
     print "$arg\n";
     next;
   }
   # Linux to Windows
-  if( $arg =~ s{^/mnt/([a-zA-Z])/}{/} ) {
+  elsif( $arg =~ s{^/mnt/([a-zA-Z])/}{/} ) {
     $drv = uc $1;
   }
   $arg =~ s{^}{${drv}:};
