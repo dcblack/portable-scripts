@@ -40,8 +40,8 @@ This script is useful to produce a quick list of tools in your environment. You 
 EOT
         exit
         ;;
-      -a|--extra[s]?) EXTRA=1 ;;
-      --version) echo "version 1.0" ; exit ;;
+      -a|-all|--extra[s]?) EXTRA=1 ;;
+      -v|--version) echo "version 1.0" ; exit ;;
       -*) echo "Error: Uknown option: $1"; exit 1 ;;
       *) TOOLS+=("$1") ;;
     esac
