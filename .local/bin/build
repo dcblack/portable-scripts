@@ -49,40 +49,41 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 
 ## OPTIONS
 
-| OPTION    | DESCRIPTION
-| ------    | -----------
-| -help     | Display this text (or -h)
-| -n        | Don not actually do anything except show commands that would have been done
-| -B DIR    | Name of build directory -- defaults to \"build\"
-| -C DIR    | Change to specified directory before doing anything else
-| -clean    | Remove all build files and other output bits
-| -DVAR=VAL | Specify a configuration definition (i.e., passed to cmake -B)
-| -G "GEN"  | Specify generator (defaults to Ninja if available)
-| -clean    | Remove all build files and other output bits
-| -gdb      | Run under gdb
-| -info     | Output information to help debug CMakeLists.txt etc.
+| OPTION           | DESCRIPTION
+| ------           | -----------
+| -help            | Display this text (or -h)
+| -n               | Don not actually do anything except show commands that would have been done
+| -B DIR           | Name of build directory -- defaults to \"build\"
+| -C DIR           | Change to specified directory before doing anything else
+| -clean           | Remove all build files and other output bits
+| -DVAR=VAL        | Specify a configuration definition (i.e., passed to cmake -B)
+| -G "GEN"         | Specify generator (defaults to Ninja if available)
+| -clean           | Remove all build files and other output bits
+| -gdb             | Run under gdb
+| -info            | Output information to help debug CMakeLists.txt etc.
+| -install [DIR]   | When done building, install in DIR or PREFIX directory
 | -list-extensions | See EXTENSIONS description following.
-| -lldb     | Run under lldb
-| -noisy    | Some extra info is displayed
-| -norc     | Ignore .buildrc
-| -norun    | Revert -run
-| -notest   | Revert -test
-| -quiet    | Remove verbosity when -test invoked
-| -quick    | Run only tests labeled as "quick"
-| -LE REGEX | Skip tests with labels matching regular expression REGEX
-| -L REGEX  | Include only tests with labels matching regular expression REGEX
-| -P DIR    | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
-| -R REGEX  | Include only tests with names matching regular expression REGEX
-| -run      | When done building, run the executable
-| -S DIR    | Name of source directory -- defaults to \".\"
-| -std=NN   | Specify C++ standard version
-| -t TGT    | Passed to cmake to specify the target (TGT)
-| -test     | When done building, run the tests verbosely unless -q supplied
-| -install  | When done building, install
-| -type BT  | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
-| -verbose  | Adds more information to output. Opposite of quiet.
-| -version  | Display version information
-| VAR=VAL   | Specify an environment variable
+| -lldb            | Run under lldb
+| -noisy           | Some extra info is displayed
+| -norc            | Ignore .buildrc
+| -norun           | Revert -run
+| -notest          | Revert -test
+| --prefix=DIR     | Specify installation directory
+| -quiet           | Remove verbosity when -test invoked
+| -quick           | Run only tests labeled as "quick"
+| -LE REGEX        | Skip tests with labels matching regular expression REGEX
+| -L REGEX         | Include only tests with labels matching regular expression REGEX
+| -P DIR           | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
+| -R REGEX         | Include only tests with names matching regular expression REGEX
+| -run             | When done building, run the executable
+| -S DIR           | Name of source directory -- defaults to \".\"
+| -std=NN          | Specify C++ standard version
+| -t TGT           | Passed to cmake to specify the target (TGT)
+| -test            | When done building, run the tests verbosely unless -q supplied
+| -type BT         | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
+| -verbose         | Adds more information to output. Opposite of quiet.
+| -version         | Display version information
+| VAR=VAL          | Specify an environment variable
 
 ## CONFIGURATION
 
@@ -308,11 +309,15 @@ function Build()
       exit 0
     elif [[ "$1" =~ ^-{1,2}install$ ]]; then
       INSTALL=1
-    elif [[ "$1" =~ ^--prefix$ ]]; then
+      if [[ -d "$2" ]]; then
+        PREFIX="$2"
+        shift
+      fi
+    elif [[ "$1" =~ ^-{1,2}prefix$ ]]; then
       PREFIX="$2"
       if [[ ! -d "${PREFIX}" ]]; then
         PREFIX=""
-        Report_fatal "--prefix must be followed by a valid installation directory" ; exit 1
+        Report_fatal "$1 must be followed by a valid installation directory" ; exit 1
       else
         shift
       fi
