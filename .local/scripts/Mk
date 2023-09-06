@@ -39,5 +39,5 @@ function Mk()
       fi
     done
   fi
-  env DEVELOPER="${GIT_COMMITTER_EMAIL}" make -f "${GITROOT_DIR}/GNUmakefile" "$@"
+  _do env DEVELOPER="${GIT_COMMITTER_EMAIL}" make -f "${GITROOT_DIR}/GNUmakefile" "$@"
 }
