@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+#$Info: update-student - Update student github managed projects. $
+
+# Defaults
+TRACK_BRANCH="chandler"
+SAVE_HOME="${HOME}/EXERCISES/ModernCpp-labs"
+REPO_HOME="${HOME}/REPO/ModernCpp-labs.git"
+SAVE_LIST=(exercises/ex*)
+TARBALL="saved-$(date +%Y%W%w%H%M%S).tgz"
+
+
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+update-student - Update student github managed projects
+
+Synopsis
+--------
+update-student --help|-h # produces this text
+update-student
+
+Description
+-----------
+Performs the following actions:
+- Backs up student exercise files in a tarball.
+- Updates the remote origin to point at the REPO
+- Sets tracking to the appropriate branch
+- Pulls in updated files
+
+HELPTEXT
+  exit 0;
+fi
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+case $# in
+  0)
+    ;;
+  1)
+    TRACK_BRANCH="$1"
+    shift
+    ;;
+  *)
+    Report_fatal "Only one argument allowed"
+    exit 1
+    ;;
+esac
+
+cd "${SAVE_HOME}" || Report_fatal "Unable to locate home"
+_do tar -czf "${TARBALL}" "${SAVE_LIST[@]}"
+_do git remote remove origin
+_do git remote add origin "${REPO_HOME}"
+_do git branch --track
+_do git branch -u "origin/${TRACK_BRANCH}"
+_do git pull
