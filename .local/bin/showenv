@@ -45,7 +45,7 @@ B<showenv -h>
  -e use envv format
  -h help (this text)
  -n show names only
- -# number list items
+ -N number list items
  -q quiet
  -Q Use quotes (optionally specify what they are)
  -s sensitive to case
@@ -114,7 +114,7 @@ while (@ARGV) {
   my $arg = shift @ARGV;
   if ($arg eq '-1') {
     $opts{-cols} = 1;
-  } elsif ($arg eq '-#') {
+  } elsif ($arg eq '-N') {
     $opts{-number} = 1;
   } elsif ($arg eq '-a') {
     $opts{-name_only} = 1;
@@ -247,9 +247,15 @@ while (@VARS) {
         my $half = int(scalar(@list)/2+0.5);
         my $mid = int($COLUMNS/2) - 1;
         foreach (my $idx=0;$idx<$half;$idx++) {
-          my $s=sprintf("%-${mid}s",$dent.$LQ.$list[$idx].$RQ);
+          my $s='';
+          my $idx2 = $idx + $half;
+          my $num = (exists $opts{-number}) ? sprintf("%2d: ",$idx) : "" ;
+          $s.=sprintf("%-${mid}s",$dent.$num.$LQ.$list[$idx].$RQ);
           $s =~ s{\s+$}{ } if exists $opts{-S};
-          $s.=' '.$LQ.$list[$idx+$half].$RQ if ($idx+$half)<=$#list;
+          if( ($idx2)<=$#list ) {
+            $s.=sprintf("%2d: ",$idx2) if exists $opts{-number};
+            $s.=' '.$LQ.$list[$idx2].$RQ;
+          }
           print $s;
           print " ..." if exists $opts{-S} and $idx+1<$half;
           print "\n";
