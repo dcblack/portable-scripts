@@ -342,11 +342,15 @@ function _do()
 {
   #@ Echo and then execute arguments as a command
   #| _do COMMAND [ARGS]
+
+  # Defaults
   export NOLOG
   local NX Q
   Q=0
   export NOTREALLY
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
+
+  # Process command-line
   while [[ "$1" =~ ^[^a-zA-Z] ]]; do
     if [[ "$1" == "-q" ]]; then Q=1;
     elif [[ "$1" == "-n" ]]; then NX="-";
@@ -355,6 +359,8 @@ function _do()
     fi
     shift
   done
+
+  # Display command
   if [[ ${Q} == 0 ]]; then
     if [[ "${NX}" == "-" ]]; then
       Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
@@ -364,6 +370,8 @@ function _do()
     fi
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
+
+  # Execute command
   if [[ -z "${LOGFILE}" ]]; then
     local EXIT_STATUS
     "$@"
