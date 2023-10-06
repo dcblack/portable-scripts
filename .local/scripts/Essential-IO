@@ -351,7 +351,7 @@ function _do()
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
 
   # Process command-line
-  while [[ "$1" =~ ^[^a-zA-Z] ]]; do
+  while [[ "$1" =~ ^[^_0-9a-zA-Z] ]]; do
     if [[ "$1" == "-q" ]]; then Q=1;
     elif [[ "$1" == "-n" ]]; then NX="-";
     elif [[ "$1" == "-q" ]]; then Q=1;
@@ -368,6 +368,9 @@ function _do()
     else
       Echo "$(_C cyn)${NX}%$(_C none bold blue) $*$(_C none)"
     fi
+  fi
+  if [[ "${NX}" == "-" ]]; then
+    return 0;
   fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
 
