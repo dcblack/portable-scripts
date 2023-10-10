@@ -350,7 +350,6 @@ function GetBuildOpts()
 #| - $WORKTREE_DIR
 #| - $BUILDER {cmake|autotools}
 #| - $GENERATOR {|Ninja|Unix Makefiles}
-#| - $TOOL_URL
 #| - $UNINSTALL
 #| - $VERBOSITY integer
 #| - $WARNINGS integer
@@ -654,6 +653,9 @@ function GetBuildOpts()
     --uninstall|-rm)
       CLEANUP=1;
       shift
+      ;;
+    --use-lwg)
+      TOOL_URL="https://github.com/OSCI-WG/systemc.git"
       ;;
     --url=*|-url)
       TOOL_URL="${1//*=}"
