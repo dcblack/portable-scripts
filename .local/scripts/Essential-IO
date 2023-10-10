@@ -628,14 +628,15 @@ function Expectation()
   Report_error "Failed expectation '$*' from ${FNC} in ${FIL}:${LNO}"
 }
 
+export ERRORS WARNINGS
 #-------------------------------------------------------------------------------
 function Report_error()
 {
   #@ Echo tagged error message (i.e., SC_REPORT_ERROR) - logged and counted
   #| Report_error MESSAGE
+  export ERRORS
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   (( ++ERRORS ))
-  export ERRORS
   Ruler -bld -red '!'
   Echo "$(_C bold red)Error #${ERRORS}:$(_C none red) $*$(_C none)" 1>&2
 }
@@ -645,18 +646,17 @@ function Report_warning()
 {
   #@ Echo tagged warning message (i.e., SC_REPORT_WARNING) - logged and counted
   #| Report_warning MESSAGE
+  export WARNINGS
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   (( ++WARNINGS ))
-  export WARNINGS
   Ruler -bld -ylw '?'
   Echo "$(_C ylw)$(_C bold)Warning:$(_C none) $(_C none)$*$(_C none)" 1>&2
 }
 
-export ERRORS WARNINGS
-
 #-------------------------------------------------------------------------------
 function Reset-errors()
 {
+  export ERRORS WARNINGS
   ERRORS=0
   WARNINGS=0
 }
@@ -664,8 +664,15 @@ function Reset-errors()
 #-------------------------------------------------------------------------------
 function Errors()
 {
+  export ERRORS
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   echo "${ERRORS}";
+}
+
+function Has-errors()
+{
+  export ERRORS
+  if [[ ${ERRORS} != 0 ]]; then  return 1; fi
 }
 
 #-------------------------------------------------------------------------------
