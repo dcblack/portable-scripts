@@ -11,8 +11,9 @@
 
 function Tool_versions()
 {
-  local EXTRA TOOLS
+  local EXTRA NOCOLOR TOOLS
   EXTRA=0
+  NOCOLOR=0
   TOOLS=()
   while [[ $# != 0 ]]; do
     case "$1" in
@@ -41,6 +42,7 @@ EOT
         exit
         ;;
       -a|-all|--extra[s]?) EXTRA=1 ;;
+      --nocolor) NOCOLOR=1 ;;
       -v|--version) echo "version 1.0" ; exit ;;
       -*) echo "Error: Uknown option: $1"; exit 1 ;;
       *) TOOLS+=("$1") ;;
@@ -180,7 +182,14 @@ EOT
       | "${PERL5}" -ne "${SUBST}; print if m/${PATTERN}/ and not m/(${FILTER})/ and not m/^$/" \
       ;
     else
-      echo "${TOOL} - MISSING"
+      if [[ ${NOCOLOR} == 1 ]]; then
+        echo "${TOOL} - MISSING"
+      else
+        local CRED NONE
+        CRED="[1m"
+        NONE="[0m"
+        echo "${TOOL} - ${CRED}MISSING${NONE}"
+      fi
     fi
   done
 
