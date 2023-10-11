@@ -66,6 +66,7 @@ EOT
       zsh
       perl
       python
+      python3
     )
   fi
   EXTRAS=(
