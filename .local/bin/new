@@ -2230,6 +2230,10 @@ event.
 
 =item EDD is the end   day (1-31)   and EDAY is the full weekday name
 
+=item BTIME is the start time (e.g., 9:00am CDT)
+
+=item ETIME is the end time (e.g., 15:00am CDT)
+
 =item DATES combines these to produce either: YYYY-DDtoDD or YYYY-MMDDtoMMDD
 
 =back
