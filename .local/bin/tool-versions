@@ -11,9 +11,9 @@
 
 function Tool_versions()
 {
-  local EXTRA NOCOLOR TOOLS
+  local EXTRA TOOLS
+  export NOCOLOR
   EXTRA=0
-  NOCOLOR=0
   TOOLS=()
   while [[ $# != 0 ]]; do
     case "$1" in
