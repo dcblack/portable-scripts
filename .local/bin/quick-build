@@ -2,10 +2,23 @@
 #
 #$Info: quick-build - use cmake to quick compile and run. $
 #
-# shellcheck disable=SC2288
 
-function _do() { printf "%% %s" "$*" ; "$@" ; }
+generator="Ninja"
+# You may substitute other generators as applies to your situation. For
+# example, 'UNIX Makefiles' is popular (though slower than Ninja).  To see
+# available generators available for your system try `cmake --help`.
 
-_do cmake -G Ninja -S . -B build/debug -DCMAKE_BUILD_TYPE=Debug
-_do cmake --build build/debug --config Debug
-_do ctest --test-dir build/debug -C Debug -VV
+build_dir="build/debug"
+log_file="${build_dir}/quick.log"
+
+function _do()
+{
+  # shellcheck disable=SC2288,SC2312
+  ( printf "%% %s" "$*" ; "$@" && echo '>SUCCESS<' || echo '>FAILURE<'; ) 2>&1 \
+    | tee "${log_file}" ; perl -ne 'exit 1 if m{^>FAILURE<$}' "${log_file}"
+}
+
+_do pwd
+_do cmake -G "${generator}" -S . -B "${build_dir}" -DCMAKE_BUILD_TYPE=Debug
+_do cmake --build "${build_dir}" --config Debug
+_do ctest --test-dir "${build_dir}" -C Debug -VV
