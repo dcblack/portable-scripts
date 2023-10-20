@@ -7,36 +7,46 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   message(FATAL_ERROR "In-source builds are not allowed")
 endif()
 
-set( CMAKE_FIND_PACKAGE_PREFER_CONFIG ON )
+if( NOT DEFINED WORKTREE_DIR )
+  message( FATAL_ERROR "WORKTREE_DIR variable was not defined" )
+endif()
 
-include( env2 )
-env2( setup.profile )
+set( CMAKE_FIND_PACKAGE_PREFER_CONFIG ON )
 
 #-------------------------------------------------------------------------------
 # Extend module path
 #-------------------------------------------------------------------------------
-if( DEFINED ENV{WORKTREE_DIR} )
-  set( PROJECT_DIRS "$ENV{WORKTREE_DIR}/extern;$ENV{APPS}" )
+  set( PROJECT_DIRS "${WORKTREE_DIR}/extern;${APPS}" )
   foreach( _dir ${PROJECT_DIRS} )
      if( EXISTS "${_dir}" )
        list( APPEND CMAKE_PREFIX_PATH "${_dir}" )
      endif()
   endforeach()
   list( REMOVE_DUPLICATES CMAKE_PREFIX_PATH )
-  include_directories( . "$ENV{WORKTREE_DIR}/include" "$ENV{WORKTREE_DIR}/extern/include" )
-else()
-  message( WARNING "WORKTREE_DIR environment variable was not defined" )
-endif()
+  include_directories( . "${WORKTREE_DIR}/include" "${WORKTREE_DIR}/extern/include" )
 
 #-------------------------------------------------------------------------------
 # Increase sensitivity to all warnings
 #-------------------------------------------------------------------------------
-if (MSVC)
-    # warning level 4
-    add_compile_options( /W4 )
+if( NOT DEFINED ENV{LAX} )
+  # Insist on full C++ compliance
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+  if (MSVC)
+      # warning level 4
+      add_compile_options( /W4 )
+  else()
+      # lots of warnings
+      add_compile_options( -Wall -Wextra -pedantic )
+  endif()
 else()
-    # lots of warnings
-    add_compile_options( -Wall -Wextra -pedantic )
+  if (MSVC)
+      # warning level 4
+      add_compile_options( /W4 )
+  else()
+      # lots of warnings except unused parameters (slightly permissive)
+      add_compile_options( -Wall -Wextra -pedantic -Wno-unused-parameter)
+  endif()
 endif()
 
 #------------------------------------------------------------------------------
@@ -56,5 +66,19 @@ set( CMAKE_CXX_EXTENSIONS NO )
 
 enable_testing()
 
-include( set_target )
+macro( set_target target )
+  set( Target "${target}" )
+  list( LENGTH Targets count )
+  if( ${count} EQUAL 1)
+    list( GET Targets 0 first )
+    if( "${first}" STREQUAL "${PROJECT_NAME}" )
+      list( REMOVE_AT Targets 0 )
+    endif()
+  endif()
+  list( APPEND Targets "${target}" )
+endmacro()
 
+# Default
+set_target( ${PROJECT_NAME} )
+
+# vim:nospell
