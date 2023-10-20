@@ -59,7 +59,7 @@ B<ruler -h>
 
 Draws a single horizontal line of hyphen characters.
 
-If not specified, length of the line is determined by querying the terminal using E<stty>.
+If not specified, length of the line is determined by querying the terminal using I<stty>.
 It may be overridden using the environment variable COLUMNS or specifying a value
 as an argument on the command-line.
 If all else fails, the width defaults to 80.
