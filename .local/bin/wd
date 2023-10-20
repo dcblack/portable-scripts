@@ -297,6 +297,8 @@ function wds() # wds_func
   export wd_favs
   local NONE
   NONE="$(_C none)"
+  local FILTER
+  FILTER=( "$@" )
   Comment "List saved working directories"
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   export wd_favs
@@ -307,6 +309,18 @@ function wds() # wds_func
   h="$(Realpath .)"
   for p in $(find "${wd_favs}" -name 'wd-*' | sort -t- -k 2n,3n)
   do
+    if [[ ${#FILTER[@]} != 0 ]]; then
+      local found
+      found=0
+      for f in "${FILTER[@]}"; do
+        if [[ "${p}" =~ ${f} ]]; then
+          found=1
+        fi
+      done
+      if [[ ${found} == 0 ]]; then
+        continue
+      fi
+    fi
     n="${p//*\//}"
     r="$(Realpath "${p}")"
     if [[ "${r}" =~ ^${h} ]]
