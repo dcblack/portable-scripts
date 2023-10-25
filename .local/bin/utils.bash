@@ -17,7 +17,7 @@ SYNOPSIS
 `utils.bash` - A collection of bash functions useful for scripting.
 In particular, these are intended for use in scripts to build (fetch,
 configure, compile and install) various apps and libraries (e.g., SystemC).
-Note that a number of them have been moved into the `scripts/` directory
+Note that some have been moved into the `scripts/` directory
 parallel to this directory to facilitate easier testing and maintenance.
 
 Note: Capitalizing function names reduces collisions with scripts/executables.
@@ -311,6 +311,9 @@ function GetBuildOpts()
 #|  --tool=NAME        |  -tool NAME       | set the desired tool name for tool source
 #|  --uninstall        |  -rm              | remove if possible -- not always supported
 #|  --url=URL          |  -url URL         | set the URL for the source code
+#|  --use-https        |                   | change URL to use https protocol
+#|  --use-ssh          |                   | change URL to use git ssh protocol
+#|  --use-lwg          |                   | change URL to use Accellera private repo
 #|  --verbose          |  -v               | echo more information (may be repeated)
 #|  --version=X.Y.Z    |  -vers X.Y.Z      | set the desired tool version
 #|  --quiet            |  -q               | echo less information (may be repeated)
@@ -655,7 +658,16 @@ function GetBuildOpts()
       shift
       ;;
     --use-lwg)
-      TOOL_URL="https://github.com/OSCI-WG/systemc.git"
+      TOOL_URL="git@github.com:OSCI-WG/systemc.git"
+      shift
+      ;;
+    --use-https)
+      TOOL_URL="$(perl -le 's{shift@ARGV;s{git[@]github.com:}{https:github.com/};print' "${TOOL_URL}" )"
+      shift
+      ;;
+    --use-ssh)
+      TOOL_URL="$(perl -le 's{shift@ARGV;s{https://github.com/}{git\@github.com:};print' "${TOOL_URL}" )"
+      shift
       ;;
     --url=*|-url)
       TOOL_URL="${1//*=}"
