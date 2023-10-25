@@ -11,10 +11,19 @@
 
 function Tool_versions()
 {
-  local EXTRA TOOLS
+  # Defaults
+  local EXTRA QUIET TOOLS
   export NOCOLOR
   EXTRA=0
+  QUIET=0
   TOOLS=()
+  # Color support
+  local CRED CGRN BOLD NONE
+  if [[ ${NOCOLOR} == 1 ]]; then
+    CRED=""       CGRN=""       BOLD=""      NONE=""
+  else
+    CRED="[91m" CGRN="[92m" BOLD="[1m" NONE="[0m"
+  fi
   while [[ $# != 0 ]]; do
     case "$1" in
       -h|--help)
@@ -29,27 +38,41 @@ SYNOPSIS
 
   $0 -h|--help
   $0 --version
-  $0
-  $0 [-a|--extra]
-  $0 TOOL...
+  $0 [OPTIONS] [TOOL...]
 
 DESCRIPTION
 -----------
 
 This script is useful to produce a quick list of tools in your environment. You can use when creating a bug report or when creating information about how something was tested.
 
+OPTIONS
+-------
+
+| OPTION    | SHORT | DESCRIPTION                        |
+| :-----    | :---: | :----------                        |
+| --color   |  -C   | Use color (default)                |
+| --extras  |  -x   | Show extra tools                   |
+| --help    |  -h   | Display this help                  |
+| --loud    |  -l   | Yell about missing tools (default) |
+| --nocolor |  -N   | No color                           |
+| --quiet   |  -q   | Don't complain about missing tools |
+| --version |  -v   | Show version of this script        |
+
 EOT
         exit
         ;;
-      -a|-all|--extra[s]?) EXTRA=1 ;;
-      --nocolor) NOCOLOR=1 ;;
-      -v|--version) echo "version 1.0" ; exit ;;
-      -*) echo "Error: Uknown option: $1"; exit 1 ;;
-      *) TOOLS+=("$1") ;;
+      -x|--extras)  EXTRA=1 ;;
+      -C|--color)   NOCOLOR=0 CRED="[91m" CGRN="[92m" BOLD="[1m" NONE="[0m" ;;
+      -l|--loud)    QUIET=0 ;;
+      -N|--nocolor) NOCOLOR=1 CRED=""       CGRN=""       BOLD=""      NONE="" ;;
+      -q|--quiet)   QUIET=1 ;;
+      -v|--version) echo "version 1.1" ; exit ;;
+      -*)           echo "Error: Uknown option: $1"; exit 1 ;;
+       *)           TOOLS+=("$1") ;;
     esac
     shift
   done
-
+      
   # Default tools
   local -a TOOLS EXTRAS
   if [[ "${#TOOLS[@]}" == 0 ]]; then
@@ -78,6 +101,7 @@ EOT
     git
     grep
     sed
+    tree
     uname
     rsync
     shellcheck
@@ -176,20 +200,13 @@ EOT
         clang-tidy|git|perl|rsync|shellcheck) PATTERN="version" ;;
         *)   PATTERN+="" ;;
       esac
-      echo -n "${TOOL} - "
+      echo -n "${CGRN}${TOOL}${NONE} - "
       # shellcheck disable=SC2312
       "${TOOL}" --version 2>/dev/null \
       | "${PERL5}" -ne "${SUBST}; print if m/${PATTERN}/ and not m/(${FILTER})/ and not m/^$/" \
       ;
-    else
-      if [[ ${NOCOLOR} == 1 ]]; then
-        echo "${TOOL} - MISSING"
-      else
-        local CRED NONE
-        CRED="[1m"
-        NONE="[0m"
-        echo "${TOOL} - ${CRED}MISSING${NONE}"
-      fi
+    elif [[ ${QUIET} != 1 ]]; then
+      echo "${CRED}${TOOL} - ${BOLD}MISSING${NONE}"
     fi
   done
 
