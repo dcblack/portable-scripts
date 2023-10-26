@@ -58,7 +58,6 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -clean           | Remove all build files and other output bits
 | -DVAR=VAL        | Specify a configuration definition (i.e., passed to cmake -B)
 | -G "GEN"         | Specify generator (defaults to Ninja if available)
-| -clean           | Remove all build files and other output bits
 | -gdb             | Run under gdb
 | -info            | Output information to help debug CMakeLists.txt etc.
 | -install [DIR]   | When done building, install in DIR or PREFIX directory
@@ -122,18 +121,31 @@ function Build()
 {
   # Handle extensions
   #------------------------------------------------------------------------------
-  if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
-    echo "extensions"
-    if command -v "build-$1" 1>/dev/null; then
-      UTILITY="build-$1"
+  case "$1" in
+    clean)
+      echo "Warning: Assume you meant -clean?"
       shift
-      # shellcheck disable=SC2093
-      exec "${UTILITY}" "$@"
-      return 0
-    else
-      Report_fatal "No build script found to build specified library or tool named ${UTILITY}" ; exit 1
-    fi
-  fi
+      set - -clean "$@"
+      ;;
+    -*) ;;
+    [A-Za-z]*)
+      if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
+        echo "extensions"
+        if command -v "build-$1" 1>/dev/null; then
+          UTILITY="build-$1"
+          shift
+          # shellcheck disable=SC2093
+          exec "${UTILITY}" "$@"
+          return 0
+        else
+          Die "No build script found to build specified library or tool named ${UTILITY}" 
+        fi
+      fi
+      ;;
+    *) # Unknown argument
+      Die "Unsure what to do with $1"
+      ;;
+  esac
   if [[ "$*" =~ ^-{1,2}list-extensions$ || "$*" == "-lx" ]]; then
     local bindir
     bindir="$(dirname "$0")"
@@ -456,8 +468,16 @@ function Build()
   # Optionally start with a clean slate
   #------------------------------------------------------------------------------
   if [[ ${CLEAN} == 1 ]]; then
+    # Preserve log
+    local TEMP_LOG
+    TEMP_LOG="$(mktemp -t build.XXXXXX.log)"
+    echo "TEMP_LOG=${TEMP_LOG}"
     Report_info "Cleaning ${SUBPROJ_DIR}"
-    _do rm -fr "${BLD_DIR}"
+    _do -n rm -fr "${BLD_DIR}"
+    mv "${BLD_DIR}/${BUILD_LOG}" "${TEMP_LOG}"
+    rm -fr "${BLD_DIR}"
+    mkdir -p "${BLD_DIR}"
+    mv "${TEMP_LOG}" "${BLD_DIR}/${BUILD_LOG}"
   fi
 
   if [[ -n "${CMAKE_PREFIX_PATH}" ]]; then
