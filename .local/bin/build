@@ -471,7 +471,6 @@ function Build()
     # Preserve log
     local TEMP_LOG
     TEMP_LOG="$(mktemp -t build.XXXXXX.log)"
-    echo "TEMP_LOG=${TEMP_LOG}"
     Report_info "Cleaning ${SUBPROJ_DIR}"
     _do -n rm -fr "${BLD_DIR}"
     mv "${BLD_DIR}/${BUILD_LOG}" "${TEMP_LOG}"
