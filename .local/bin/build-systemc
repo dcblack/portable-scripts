@@ -5,7 +5,8 @@ TOOL_NAME="SystemC"
 TOOL_INFO='Go to <https://accellera.org/downloads/standards/systemc> for more information.'
 TOOL_SRC="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
-TOOL_VERS=2.3.4
+#TOOL_VERS='2.3.4'
+TOOL_VERS='latest' #
 TOOL_CHECKOUT="${TOOL_VERS}"
 
 export TOOL_NAME TOOL_SRC TOOL_URL TOOL_INFO TOOL_VERS TOOL_CHECKOUT TOOL_PATCHES NOINSTALL
@@ -81,6 +82,7 @@ ConfirmBuildOpts || exit
 Create_and_Cd "${SRC}" || exit
 Report_info -grn "Obtaining ${TOOL_NAME} source"
 GetSource_and_Cd "${TOOL_SRC}" "${TOOL_URL}" || exit
+Select_version "${TOOL_VERS}"
 
 Report_info -grn "Building ${TOOL_NAME}"
 # shellcheck disable=SC2119,SC2312
