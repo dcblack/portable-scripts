@@ -30,6 +30,7 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 | Create_and_Cd DIR          | Creates directory and enters it
 | GetSource_and_Cd DIR URL   | Downloads souce and enters directory
+| Select_version VERSION     | Checks out specified or latest tagged version
 | Configure_tool [TYPE]      | Invokes cmake or autotools
 | Compile_tool               | 
 
@@ -662,11 +663,11 @@ function GetBuildOpts()
       shift
       ;;
     --use-https)
-      TOOL_URL="$(perl -le 's{shift@ARGV;s{git[@]github.com:}{https:github.com/};print' "${TOOL_URL}" )"
+      TOOL_URL="$(perl -le '$_=shift@ARGV;s{git.github.com:}{https://github.com/};print $_' "${TOOL_URL}" )"
       shift
       ;;
     --use-ssh)
-      TOOL_URL="$(perl -le 's{shift@ARGV;s{https://github.com/}{git\@github.com:};print' "${TOOL_URL}" )"
+      TOOL_URL="$(perl -le '$_=shift@ARGV;s{https://github.com/}{git\@github.com:};print $_' "${TOOL_URL}" )"
       shift
       ;;
     --url=*|-url)
@@ -841,6 +842,21 @@ function GetSource_and_Cd() # DIR URL
     Report_fatal "Unknown URL type - currently only handle *.git or *.tgz" || exit 1
   fi
   Step_Next || return 1
+}
+
+#Checks out specified or latest tagged version
+function Select_version()
+{
+  if [[ $# != 1 ]]; then return 1; fi # Assert
+  Step_Show "Selecting version $1"
+  SELECTED="$1"
+  case "${SELECTED}" in
+    latest)
+      SELECTED="$(git tag | tail -1)"
+      ;;
+    *) ;; # use specified version
+  esac
+  _do git checkout "${SELECTED}"
 }
 
 # Arguments are optional
