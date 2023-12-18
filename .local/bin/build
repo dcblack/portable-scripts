@@ -121,6 +121,7 @@ function Build()
 {
   # Handle extensions
   #------------------------------------------------------------------------------
+  if [[ $# == 1 ]]; then
   case "$1" in
     clean)
       echo "Warning: Assume you meant -clean?"
@@ -146,6 +147,7 @@ function Build()
       Die "Unsure what to do with $1"
       ;;
   esac
+  fi
   if [[ "$*" =~ ^-{1,2}list-extensions$ || "$*" == "-lx" ]]; then
     local bindir
     bindir="$(dirname "$0")"
