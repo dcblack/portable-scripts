@@ -295,6 +295,8 @@ function rwd() # rwd_func
 function wds() # wds_func
 {
   export wd_favs
+  local s=0
+  if [[ "$1" == "-s" ]]; then s=1; shift; fi
   local NONE
   NONE="$(_C none)"
   local FILTER
@@ -305,7 +307,7 @@ function wds() # wds_func
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
   wd_favs="$(Realpath "${real_favs}")"
-  local p n r h t
+  local p n r h t l
   h="$(Realpath .)"
   for p in $(find "${wd_favs}" -name 'wd-*' | sort -t- -k 2n,3n)
   do
@@ -323,6 +325,21 @@ function wds() # wds_func
     fi
     n="${p//*\//}"
     r="$(Realpath "${p}")"
+    l="${r}"
+    if [[ ${s} == 1 ]]; then
+      # Shorten
+      case "${l}" in
+        "${HOME}"*)
+          l="${l/${HOME}/~}"
+          ;;
+        "/Volumes/"*)
+          l="${l/\/Volumes\//}"
+          l="${l/\//:}"
+          ;;
+        *)
+          ;;
+      esac
+    fi
     if [[ "${r}" =~ ^${h} ]]
     then
       t="${r/#${h}/}"
@@ -334,7 +351,7 @@ function wds() # wds_func
       printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
     else
       # shellcheck disable=SC2154
-      printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${l}"
     fi
   done
   # Check for other matches
