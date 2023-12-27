@@ -171,14 +171,12 @@ function FindScript() # SCRIPT(S)
 }
 export FINDSCRIPT_COUNT SCRIPTDIRS
 
-
 #-------------------------------------------------------------------------------
 function Firstreal()
 {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }
-
 
 #-------------------------------------------------------------------------------
 function Has_path()
