@@ -2,23 +2,36 @@
 #
 # This works with SystemC versions 2.3.2 and later, which have support for
 # cmake and specify SystemC_CXX_STANDARD.
-# 
+#
 # REQUIREMENTS:
 #   Define SYSTEMC_HOME to point to install directory of SystemC (not source)
 #   that has been built with CMake.
 #
 # See $ENV{SCC_APPS}/cmake/ABOUT_CMAKE.md for more information.
 
-cmake_minimum_required( VERSION 3.11 )
+cmake_minimum_required( VERSION 3.20 )
 
 project(      {:NAME:}
   VERSION     {:VERS:} # n.n[.n[.n]]
   DESCRIPTION "{:DESCRIPTION:}"
   LANGUAGES   CXX
   )
-set( CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};$ENV{CMAKE_MODULE_PATH}" )
-include( project_defaults )
-include( systemc_defaults ) #< could move to project defaults
+#-------------------------------------------------------------------------------
+# Find project directory containing defaults
+#-------------------------------------------------------------------------------
+set( defaults "sc-project_defaults" )
+set( _dir "${CMAKE_CURRENT_SOURCE_DIR}" )
+cmake_path( GET _dir ROOT_PATH _root )
+while( NOT EXISTS "${_dir}/cmake/${defaults}.cmake" )
+  cmake_path( GET _dir PARENT_PATH _dir )
+  if( "${_dir}" STREQUAL "${_root}" )
+    message( FATAL_ERROR "Unable to find project working tree directory!" )
+  endif()
+endwhile()
+set( WORKTREE_DIR "${_dir}" CACHE PATH "Contains cmake/${defaults}.cmake" )
+list( PREPEND CMAKE_MODULE_PATH "${WORKTREE_DIR}/cmake" )
+include( "${defaults}" )
+
 
 # Packages
 find_package( fmt REQUIRED )
