@@ -59,7 +59,7 @@ function Append_path() # only if 2nd arg does not exist in first
     VAR="$1"
     if ! SafeVar "$1"; then Report_error "^-- Passed to Append_path"; return 1; fi
     ARG="$(Realpath "$2")"; shift
-    if ! Has_path "${VAR}" "${ARG}"; then 
+    if ! Has_path "${VAR}" "${ARG}"; then
       EVAL="VAL=\$${VAR}"
       eval "${EVAL}"
       if [[ -z "${VAL}" ]]; then
