@@ -3,7 +3,7 @@
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
 # shellcheck disable=SC2312
 
-export Essential_IO_VERSION=1.6
+export Essential_IO_VERSION=1.8
 
 #-------------------------------------------------------------------------------
 function Essential-IO()
@@ -14,8 +14,8 @@ function Essential-IO()
 
 A collection of useful functions for output in bash/zsh.
 
-| FUNCTION SYNTAX               | DESCRIPTION 
-| :---------------------------- | :---------- 
+| FUNCTION SYNTAX               | DESCRIPTION
+| :---------------------------- | :----------
 | _C color                      | Returns the color code (if enabled)
 | Columns                       | Display the number columns in the current terminal
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
@@ -23,7 +23,7 @@ A collection of useful functions for output in bash/zsh.
 | Echo [-n] "_MESSAGE_"         | Displays and logs message
 | Errors||true                  | Display number of errors
 | Essential-IO [--help]         | Display version or this help text
-| HelpText [-md] "_FILE_"       | Displays help for specified file
+| HelpText [-md|-:] "_FILE_"    | Displays help for specified file
 | Log [-n] "_MESSAGE_"          | Adds message to logfile
 | Logfile [--append] _FILE_     | Establishes a logfile name
 | PassFail [STAT?] "_MESSAGE_"  | Displays message with pass/fail status
@@ -203,8 +203,8 @@ function Setup-Color()
     UNDR="$(_C undr)"  UNUN="$(_C noun)"
     INVS="$(_C invs)"  UNVS="$(_C unvs)"
     COLOR_FG=1
-    CBLK="$(_C blk)"   CRED="$(_C red)"  CGRN="$(_C grn)"  CYLW="$(_C ylw)" 
-    CBLU="$(_C bold)"  CMAG="$(_C bold)" CCYN="$(_C bold)" CWHT="$(_C bold)" 
+    CBLK="$(_C blk)"   CRED="$(_C red)"  CGRN="$(_C grn)"  CYLW="$(_C ylw)"
+    CBLU="$(_C bold)"  CMAG="$(_C bold)" CCYN="$(_C bold)" CWHT="$(_C bold)"
     COLOR_FG=0
     BBLK="$(_C bold)m" BRED="$(_C bold)" BGRN="$(_C bold)" BYLW="$(_C bold)"
     BBLU="$(_C blue)m" BMAG="$(_C mag)"  BCYN="$(_C bold)" BWHT="$(_C bold)"
@@ -354,7 +354,6 @@ function _do()
   while [[ "$1" =~ ^[^_0-9a-zA-Z] ]]; do
     if [[ "$1" == "-q" ]]; then Q=1;
     elif [[ "$1" == "-n" ]]; then NX="-";
-    elif [[ "$1" == "-q" ]]; then Q=1;
     else Report_warning "Dropping '$1'"
     fi
     shift
@@ -382,15 +381,12 @@ function _do()
     if [[ ${EXIT_STATUS} != 0 ]]; then Report_error "'$*' failed"; fi
     return "${EXIT_STATUS}"
   else
-    local EXIT_STATUS STATUS_FILE
-    STATUS_FILE="/tmp/$(basename "$0")"
-    STATUS_FILE="$(mktemp "${STATUS_FILE}.XXXXXX")" || exit 1
-    ( "$@" 2>&1; echo $? >"${STATUS_FILE}" ) | Log
-    EXIT_STATUS="$(cat "${STATUS_FILE}")"
-    rm "${STATUS_FILE}"
+    local EXIT_STATUS
+    "$@"
+    EXIT_STATUS=$?
     if [[ ${EXIT_STATUS} != 0 ]]; then Report_error "'$*' failed"; fi
     # shellcheck disable=SC2086
-    return ${EXIT_STATUS}
+    return "${EXIT_STATUS}"
   fi
 }
 
@@ -409,7 +405,7 @@ SYNOPSIS
   Report_info [-n][-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
 
 "
-  if [[ -n "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
+  if [[ -z "${VERBOSITY+x}" || "${VERBOSITY}" -lt 0 ]]; then
     return 0
   fi
   local PRE TAG EOL
@@ -639,6 +635,7 @@ function Report_error()
   (( ++ERRORS ))
   Ruler -bld -red '!'
   Echo "$(_C bold red)Error #${ERRORS}:$(_C none red) $*$(_C none)" 1>&2
+  return 1
 }
 
 #-------------------------------------------------------------------------------
@@ -757,20 +754,33 @@ function Summary()
 }
 
 #-------------------------------------------------------------------------------
-function HelpText()
+function HelpText() # [-md|-:] PATH
 {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   local HELPSCRIPT
-  if [[ "$1" == "-md" ]]; then
-    shift
-    # shellcheck disable=SC2016
-    HELPSCRIPT='if (/begin_markdown/../end_markdown/){ next if m/(begin|end)_markdown/; print; }'
-  else
-    # shellcheck disable=SC2016
-    HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^ *#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
-  fi
-  Assert $# -gt 0
-  /usr/bin/perl -ne "${HELPSCRIPT}" "$@";
+  # shellcheck disable=SC2016
+  HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^ *#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
+  case "$1" in
+    -b)
+      TOOL_BRIEF="$2"
+      shift
+      shift
+      ;;
+    -md)
+      shift
+      # shellcheck disable=SC2016
+      HELPSCRIPT='if (/begin_markdown/../end_markdown/){ next if m/(begin|end)_markdown/; print; }'
+      ;;
+    -:)
+      # shellcheck disable=SC2016
+      HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^ *#:}{} ){ $_ =~ s{\$0}{$p}; print; }'
+      ;;
+    *)
+      ;;
+  esac
+# Assert $# -gt 0
+  /usr/bin/perl -ne "${HELPSCRIPT}" "$@" \
+    | /usr/bin/perl -pe 'BEGIN{$b=shift@ARGV;} s/BRIEF/$b/' "${TOOL_BRIEF}";
 }
 
 #-------------------------------------------------------------------------------
