@@ -3,13 +3,13 @@
 #| NAME
 #| ----
 #|
-#| update-local - update local files if they exist in the specified origin directories
+#| local-update - update local files if they exist in the specified origin directories
 #|
 #| SYNOPSIS
 #| --------
 #|
-#| update-local --help|-h
-#| update-local [-C TO_DIR] [DIRECTORIES]
+#| local-update --help|-h
+#| local-update [-C TO_DIR] [DIRECTORIES]
 #|
 #| DIRECTORIES a divided into two types:
 #|
@@ -21,12 +21,12 @@
 #| 
 #| ```sh
 #| # update files in bin with names that match files in ~/.local/bin
-#| cd bin && update-local
+#| cd bin && local-update
 #|
-#| cd . && update-local
+#| cd . && local-update
 #|
 #| # update corresponding files by name in specified directories
-#| update-local project/scripts project/bin $HOME/origin/scripts $HOME/origin/bin /alt/origin/bin
+#| local-update project/scripts project/bin $HOME/origin/scripts $HOME/origin/bin /alt/origin/bin
 #| ```
 #|
 
