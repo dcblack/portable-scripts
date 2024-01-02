@@ -121,32 +121,31 @@ function Build()
 {
   # Handle extensions
   #------------------------------------------------------------------------------
-  if [[ $# == 1 ]]; then
-  case "$1" in
-    clean)
-      echo "Warning: Assume you meant -clean?"
-      shift
-      set - -clean "$@"
-      ;;
-    -*) ;;
-    [A-Za-z]*)
-      if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
-        echo "extensions"
-        if command -v "build-$1" 1>/dev/null; then
-          UTILITY="build-$1"
-          shift
-          # shellcheck disable=SC2093
-          exec "${UTILITY}" "$@"
-          return 0
-        else
-          Die "No build script found to build specified library or tool named ${UTILITY}" 
+  if [[ $# -ge 1 ]]; then
+    # Check first argument for possible build-TARGET
+    case "$1" in
+      clean)
+        echo "Warning: Assume you meant -clean?"
+        shift
+        set - -clean "$@"
+        ;;
+      [A-Za-z]*)
+        if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
+          echo "extensions"
+          if command -v "build-$1" 1>/dev/null; then
+            UTILITY="build-$1"
+            shift
+            # shellcheck disable=SC2093
+            exec "${UTILITY}" "$@"
+            return 0
+          else
+            Die "No build script found to build specified library or tool named ${UTILITY}" 
+          fi
         fi
-      fi
-      ;;
-    *) # Unknown argument
-      Die "Unsure what to do with $1"
-      ;;
-  esac
+        ;;
+      *) # all others pass through
+        ;;
+    esac
   fi
   if [[ "$*" =~ ^-{1,2}list-extensions$ || "$*" == "-lx" ]]; then
     local bindir
