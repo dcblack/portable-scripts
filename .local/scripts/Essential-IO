@@ -159,6 +159,7 @@ function _C()
 #-------------------------------------------------------------------------------
 function Setup-Color()
 {
+  export NOCOLOR
   #@ Setup variables used to create color (or not)
   #| Setup-Color [off|on|bright]
   # Try to eliminate use of color vars Cxxx and Bxxx
@@ -395,6 +396,7 @@ function Report_info()
 {
 #@ Echo tagged informational message (i.e., SC_REPORT_INFO) - logged
   local SYNTAX
+  export VERBOSITY
   SYNTAX="
 NAME
 ----
