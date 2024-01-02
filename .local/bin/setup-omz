@@ -1,0 +1,43 @@
+#!/usr/bin/env zsh
+#
+#$Info: setup-omz - [Install Oh My Zsh](https://ohmyz.sh). $
+
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+setup-omz - [Install Oh My Zsh](https://ohmyz.sh).
+
+Synopsis
+--------
+setup-omz --help|-h # produces this text
+setup-omz
+
+Description
+-----------
+Installs Oh My Zsh
+
+HELPTEXT
+  exit 0;
+fi
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
