@@ -815,7 +815,7 @@ sub prefix {
 ###############################################################################
 sub recurse_placeholder { #<<<2
   my ($repl_count,$phld_count) = (0,0);
-  my ($repl_temp,$phld_temp,$previous);
+  my ($repl_temp,$phld_temp,$previous) = ('','','');
   my ($line,$lhe,$rhe,$ifs,$rfile) = @_;
   if (not exists $OPT{-raw}) {
     for my $repeat (1..$recurse) {
@@ -1132,7 +1132,7 @@ sub replace_placeholder { #<<<2
       ++$phld_c;
     }#endif
   }#endfor $i
-  SKIP:
+SKIP:
   if (wantarray) {
     return $line,$repl_c,$phld_c;
   } else {
