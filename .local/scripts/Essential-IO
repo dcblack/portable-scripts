@@ -16,6 +16,7 @@ A collection of useful functions for output in bash/zsh.
 
 | FUNCTION SYNTAX               | DESCRIPTION
 | :---------------------------- | :----------
+| Exit-unless-sourced           | Exit unless \${SOURCED}
 | _C color                      | Returns the color code (if enabled)
 | Columns                       | Display the number columns in the current terminal
 | Comment "_MESSAGE_"           | Does nothing but provide NOP comment
@@ -58,6 +59,16 @@ function Usage()
 {
   # Usage: Usage "$1" "{:SYNTAX:}" || return
   if [[ "$1" =~ ^-{1,2}h(elp)? ]]; then shift; echo "Syntax: $*"; return 1; fi
+}
+
+#-------------------------------------------------------------------------------
+function Exit-unless-sourced()
+{
+  export SOURCED
+  if [[ "${SOURCED}" == 0 ]]; then
+    exit "$1"
+  fi
+  return "$1"
 }
 
 #-------------------------------------------------------------------------------

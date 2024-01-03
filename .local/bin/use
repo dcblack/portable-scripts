@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+#
+#$Info: use - execute use-* scripts. $
+
+function Use-help()
+{
+  local TOOLNAME
+  TOOLNAME="$(basename "$0")"
+  if [[ "${TOOLNAME}" =~ .*sh ]]; then TOOLNAME='use-systemc'; fi
+  cat <<'HELPTEXT'
+Name
+----
+use - execute use-* scripts.
+
+Synopsis
+--------
+use --help|-h # produces this text
+use TOOL [OPTIONS]
+
+Description
+-----------
+Attempt to execute scripts named use-TOOL.
+
+HELPTEXT
+  Exit-unless-sourced 0;
+}
+
+if ! builtin command -v "Realpath" 1>/dev/null; then
+function Realpath()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+fi
+
+export SOURCED
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+fi
+
+#-------------------------------------------------------------------------------
+function Use-tool()
+{
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    Use-help
+  fi
+
+  if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
+    if builtin command -v "use-$1" 1>/dev/null; then
+      UTILITY="Use-$1"
+      shift
+      # shellcheck disable=SC2093
+      exec "${UTILITY}" "$@"
+      return 0
+    elif builtin command -v "use-$1" 1>/dev/null; then
+      UTILITY="use-$1"
+      shift
+      # shellcheck disable=SC2093
+      exec "${UTILITY}" "$@"
+      return 0
+    else
+      Report_fatal "No use-${UTILITY} found" 
+    fi
+  fi
+}
+
+#-------------------------------------------------------------------------------
+if [[ ${SOURCED} == 0 ]]; then
+  Use-tool "$@"
+fi

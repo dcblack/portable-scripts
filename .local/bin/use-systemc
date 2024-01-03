@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+#
+#$Info: use-systemc - Create, list, select, or verify SystemC version. $
+
+function Use-systemc-help()
+{
+  local TOOLNAME Toolname
+  TOOLNAME="$(basename "$0")"
+  if [[ "${TOOLNAME}" =~ .*sh ]]; then TOOLNAME='use-systemc'; fi
+  Toolname="$(perl -le 'BEGIN{$n=shift @ARGV;}$n=~m/^\w/;$l=$&;$u=uc $l;$n=~s/$l/$u/;print $n' "${TOOLNAME}")"
+  cat <<HELPTEXT
+Name
+----
+
+${TOOLNAME} - Create, list, select, or verify SystemC version
+
+Synopsis
+========
+
+source \$(which ${TOOLNAME})
+${Toolname} OPTION(S)
+
+${TOOLNAME} OPTION(S)
+
+Options
+-------
+
++ --help
++ --install-dir DIR
++ --list
++ --create
++ --version
++ IEEE-1666-2023|2023|3.0
++ IEEE-1666-2011|2011|2.3.4
+
+HELPTEXT
+  Exit-unless-sourced 0
+}
+
+if ! builtin command -v "Realpath" 1>/dev/null; then
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+fi
+
+export SOURCED
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+  # Using Essential-IO
+  SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+  if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+    SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+  fi
+  if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+    SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+  fi
+  if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+    printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+    crash
+  fi
+  # shellcheck disable=SC2250,SC1091
+  source "$SCRIPTDIR/Essential-IO"
+fi
+
+#-------------------------------------------------------------------------------
+function Use-systemc-install()
+{
+  if [[ ! -d "${INSTALL_DIR}" ]]; then
+    Report_error "Missing installation directory '${INSTALL_DIR}'"
+    Exit-unless-sourced 1
+  fi
+  _do cd "${INSTALL_DIR}"
+  if [[ ! -d "systemc" ]]; then
+    Report_error "Missing directory '${INSTALL_DIR}/systemc'"
+    Exit-unless-sourced 1
+  fi
+  v="$(systemc-version -full -sc systemc)"
+  _do mv "systemc" "systemc-${v}"
+  _do ln -s "systemc-${v}" "systemc"
+}
+
+#-------------------------------------------------------------------------------
+function Use-systemc-selection()
+{
+  v="$1"
+  if [[ ! -d "${INSTALL_DIR}" ]]; then
+    Report_error "Missing installation directory '${INSTALL_DIR}'"
+    Exit-unless-sourced 1
+  fi
+  _do cd "${INSTALL_DIR}" || true
+  if [[ ! -L "systemc" ]]; then
+    Report_error "${INSTALL_DIR}/systemc is not a symbolic link"
+    Exit-unless-sourced 1
+  fi
+  if [[ ! -d "systemc-${v}" ]]; then
+    Report_error "${INSTALL_DIR}/systemc-${v} is not installed"
+    Exit-unless-sourced 1
+  fi
+  _do rm systemc
+  _do ln -s "systemc-${v}" "systemc"
+}
+
+function Use-systemc-debug()
+{
+  Report_debug "INSTALL_DIR=${INSTALL_DIR}"
+}
+
+function Use-systemc()
+{
+  INSTALL_DIR="${HOME}/.local/apps"
+  export VERBOSITY=1
+
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    Use-systemc-help
+  fi
+
+  #-------------------------------------------------------------------------------
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-help|-h)
+        Use-systemc-help
+        ;;
+      --debug)
+        export DEBUG=1
+        Use-systemc-debug
+        shift
+        ;;
+      IEEE-1666-2023|2023|3.0.0|3.0)
+        Use-systemc-selection "3.0.0"
+        shift
+        ;;
+      IEEE-1666-2011|2011|2.3.4|2.3)
+        Use-systemc-selection "2.3.4"
+        shift
+        ;;
+      --select)
+        case "$2" in
+          IEEE-1666-2023|2023|3.0.0|3.0)
+            Use-systemc-selection "3.0.0"
+            shift
+            ;;
+          IEEE-1666-2011|2011|2.3.4|2.3)
+            Use-systemc-selection "2.3.4"
+            shift
+            ;;
+          *)
+            Report_error "Unknown version '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --create|-create|-mk)
+        Use-systemc-install
+        shift
+        ;;
+      --install-dir)
+        if [[ ! -d "$2" ]]; then
+          Report_error "No such directory '$2'"
+          Exit-unless-sourced 1
+        fi
+        INSTALL_DIR="$(Realpath "$2")"
+        shift
+        shift
+        ;;
+      --version|-version|version)
+        v="$(systemc-version -full -sc systemc)"
+        shift
+        ;;
+      --list|-list)
+        if [[ ! -d "${INSTALL_DIR}" ]]; then
+          Report_error "Missing installation directory '${INSTALL_DIR}'"
+          Exit-unless-sourced 1
+        fi
+        _do cd "${INSTALL_DIR}" || true
+        if [[ ! -L "systemc" ]]; then
+          Report_error "${INSTALL_DIR}/systemc is not a symbolic link"
+          Exit-unless-sourced 1
+        fi
+        Report_info "Available versions:"
+        for dir in systemc-*; do
+          vers="$(systemc-version -full -sc "${dir}")"
+          ieee="$(systemc-version -ieee -sc "${dir}")"
+          ieee="${ieee/IEEE_1666_SYSTEMC=/IEEE-1666-}"
+          ieee="${ieee/[0-9][0-9]L}"
+          echo "        ${vers} (${ieee})"
+        done
+        cdir="$(readlink systemc)"
+        vers="$(systemc-version -full -sc "${cdir}")"
+        Echo   "      Currently using ${vers}"
+        shift
+        ;;
+      *)
+        Report_error "Unknown option '$2'"
+        Exit-unless-sourced 1
+        ;;
+    esac
+  done
+  export SYSTEMC_HOME
+  SYSTEMC_HOME="${INSTALL_DIR}/systemc"
+}
+
+#-------------------------------------------------------------------------------
+if [[ ${SOURCED} == 0 ]]; then
+  Use-systemc "$@"
+fi
+
