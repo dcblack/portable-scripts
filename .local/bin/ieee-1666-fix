@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+#
+#$Info: ieee-1666-fix - Create branches for IEEE-1666 2011 & 2023. $
+
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+ieee-1666-fix - Create branches for IEEE-1666 2011 & 2023.
+
+Synopsis
+--------
+ieee-1666-fix --help|-h # produces this text
+ieee-1666-fix
+
+Description
+-----------
+Creates two branches: IEEE-1666-2011 & IEEE-1666-2023
+from code assumed to be IEEE-1666-2023 compatible.
+
+HELPTEXT
+  exit 0;
+fi
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+#-------------------------------------------------------------------------------
+# Using Essential-IO
+#-------------------------------------------------------------------------------
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  exit 1
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+export VERBOSITY=1
+
+#-------------------------------------------------------------------------------
+# Validate
+#-------------------------------------------------------------------------------
+GIT_WORK_PATH="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -z "${GIT_WORK_PATH}" ]]; then
+  Report_fatal "Must work out of git repo"
+  exit 1
+fi
+SETUP_PROFILE="${GIT_WORK_PATH}/setup.profile"
+if [[ ! -x "${SETUP_PROFILE}" ]]; then
+  Report_fatal "Must have setup.profile at top of git repo"
+  exit 1
+fi
+PROFILE_COUNT="$(ag --nocolor --silent -csw SYSTEMC_HOME "${SETUP_PROFILE}")"
+if [[ ${PROFILE_COUNT} == 0 ]]; then
+  Report_fatal "setup.profile must reference SYSTEMC_HOME"
+  exit 1
+fi
+BRANCHES="$(git branch -v)"
+if [[ "${BRANCHES}" =~ IEEE-1666 ]]; then
+  Report_fatal "Already converted."
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+# Set up
+#-------------------------------------------------------------------------------
+_do cd "${GIT_WORK_PATH}"
+_do git checkout main
+_do git checkout -b IEEE-1666-2023
+_do perl -pi -e 's{systemc}{systemc-3.0.0}' setup.profile
+_do git commit -a -m 'Lock on 3.0.0'
+_do git checkout main
+_do git checkout -b IEEE-1666-2011
+_do enable-has-process
+_do perl -pi -e 's{systemc}{systemc-2.3.4}' setup.profile
+_do git commit -a -m 'Lock on 2.3.4'
+_do git checkout main
+_do git branch -v
