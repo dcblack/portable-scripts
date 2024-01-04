@@ -7,6 +7,7 @@ our $inc = 0;
 our $ESC = "";
 our $PRF = '9';
 our $color = '';
+our $bold = "${ESC}[1m";
 our $none = '';
 while( $ARGV[0] =~ m{^-[a-z]+} ) {
   if( $ARGV[0] eq '-h' ) {
@@ -16,9 +17,38 @@ while( $ARGV[0] =~ m{^-[a-z]+} ) {
     $inc = 1;
     $sep = '-';
     shift @ARGV;
-  } elsif( $ARGV[0] eq '-red' ) {
-    $color = "${ESC}[${PRF}1m";
+  } elsif( $ARGV[0] eq '-utf8' ) {
+    $sep = '━';
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-bold' ) {
+    $color = "${bold}";
     $none = "${ESC}[0m";
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-red' ) {
+    $color = "${ESC}[${PRF}1m${bold}";
+    $none = "${ESC}[0m";
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-grn' ) {
+    $color = "${ESC}[${PRF}2m${bold}";
+    $none = "${ESC}[0m";
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-ylw' ) {
+    $color = "${ESC}[${PRF}3m${bold}";
+    $none = "${ESC}[0m";
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-blu' ) {
+    $color = "${ESC}[${PRF}4m${bold}";
+    $none = "${ESC}[0m";
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-mag' ) {
+    $color = "${ESC}[${PRF}5m${bold}";
+    $none = "${ESC}[0m";
+    shift @ARGV;
+  } elsif( $ARGV[0] eq '-cyn' ) {
+    $color = "${ESC}[${PRF}6m${bold}";
+    $none = "${ESC}[0m";
+    shift @ARGV;
+  } else {
     shift @ARGV;
   }
 }
