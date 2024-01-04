@@ -75,17 +75,17 @@ __END__
 
 =pod
 
-=head1 NAME
+=head1 ## NAME
 
 ruler - draw a horizontal line across the terminal
 
-=head1 SYNOPSIS
+=head1 ## SYNOPSIS
 
-B<ruler> [B<-n>] [CHAR [WIDTH]]
+B<ruler> [I<OPTIONS>] [CHAR [WIDTH]]
 
 B<ruler -h>
 
-=head1 DESCRIPTION
+=head1 ## DESCRIPTION
 
 Draws a single horizontal line of hyphen characters.
 
@@ -100,6 +100,24 @@ as an argument on the command-line.
 
 Finally, an B<-n> option is provided to allow insertion of column information. This makes
 it easy to determine the width of the terminal or a horizontal position visually.
+
+=head1 ## OPTIONS
+
+=over
+
+   Option | Description
+   ------ | -----------
+   -blu   | display in blue
+   -bold  | display with bold
+   -cyn   | display in cyan
+   -grn   | display in green
+   -mag   | display in magenta
+   -n     | add column numbers
+   -red   | display in red
+   -utf8  | special full width UTF-8 horizontal bar
+   -ylw   | display in yellow
+
+=back
 
 =cut
 
