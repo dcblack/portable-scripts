@@ -1,116 +1,147 @@
 #!/usr/bin/env bash
+
 (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
 if [[ ${SOURCED} == 0 ]]; then
   echo "Don't run $0, source it" >&2
   exit 1
 fi
 
-# source this file to setup project
+export SYSTEMC_HOME LD_LIBRARY_PATH DYLD_LIBRARY_PATH
 
-TITLE="{:DESCRIPTION:}"
-export ACTION
+# NOTES
+# - APPS is occasionally used to reference tools installed outside the project.
+#   It is also known as the base "installation directory".
+# - PROJECT_NAME and SETUP_PATH are for debug purposes.
+# - SYSTEMC_HOME refers to the installation location of SystemC - *NOT* the source
+#   This typically exists under $APPS.
+# - LD_LIBRARY_PATH and DLYD_LIBRARY_PATH are used for dynamically linked executables
+# - PROJECT_DIR is used to locate the extern and include directories.
+#
+# - Key directories and files include:
+# $PROJECT_DIR/
+#   ├── CMakeLists.txt -- top-level used for regression testing
+#   ├── GNUmakefile -- used by instructors for maintenance
+#   ├── INSTALLATION.md
+#   ├── LICENSE
+#   ├── Makefile.defs
+#   ├── VERSION.txt
+#   ├── cmake/ -- CMake scripts
+#   ├── extern/ -- empty, used for certain external 3rd party installs
+#   │   ├── ABOUT.md
+#   │   └── bin/ -- useful for building and running
+#   ├── include/ -- headers shared amoung exercises
+#   └── setup.profile
 
-#-------------------------------------------------------------------------------
-# Useful functions
-function Report_info()  { echo "Info: $*" ; }
-function Report_warning() { echo "Warning: $*" 1>&2; }
-function Report_error() { echo "Error: $*" 1>&2 ; return 1; }
-function Realpath() { # Determines the full Linuix pathname of a file or directory
-  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*" ;
-}
-function Has_path() { # Determines if environment variable contains a particular path
-  # Has_path VARIABLE_NAME PATH_TO_FIND
-  local arg plscript
-  arg="$(Realpath "$2")"
+function Realpath()
+{
+  if [[ $# == 0 ]]; then set - .; fi
   # shellcheck disable=SC2016
-  plscript='$v=$ARGV[0]; $p=$ARGV[1]; for $d (split(qq{:},$ENV{$v})) { next if !-d $d; exit 0 if$p eq abs_path($d); } exit 1'
-  if [[ -z "${arg}" ]]; then return 1; fi
-  perl -M'Cwd(abs_path)' -le "${plscript}" "$1" "${arg}"
+  local PERLSCRIPT='$p=abs_path(join(q( ),@ARGV));print $p if -e $p'
+  /usr/bin/env perl '-MCwd(abs_path)' -le "${PERLSCRIPT}" "$*"
 }
-function Unique_path() { # Removes duplicates from environment variables (e.g., PATH)
-  # Unique_path VARIABLE_NAME
-  local PERL_SCRIPT EVAL_TEXT
-  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
-  # shellcheck disable=SC2016
-  PERL_SCRIPT='$v=shift @ARGV;exit 1 if not exists $ENV{$v};
-    for $d(split(qr{:},$ENV{$v})){next if !-d $d;$e=abs_path($d);if(!exists $e{$e}){$e{$e}=1;push(@e,$e);}}
-    printf qq{%s="%s"\n},$v,join(":",@e);'
-  EVAL_TEXT="$(perl -M'Cwd(abs_path)' -e "${PERL_SCRIPT}" "$1")"
-  eval "${EVAL_TEXT}"
-}
-function Remove_path() { # Removes specified path from environment variables (e.g., PATH)
-  # Remove_path VARIABLE_NAME PATH_TO_REMOVE
-  export Remove_path_VERSION=1.4
-  # USAGE: remove_path VAR PATH
-  if [[ $# != 2 ]]; then Report_error "Remove_path requires two arguments"; return 1; fi
-  if [[ "$1" =~ ^[_A-Za-z][-_A-Za-z0-9]*$ ]]; then
-    local PLSCRIPT EVALSCRIPT VAR VAL REMOVE
-    VAR="$1"
-    REMOVE="$2"
-    eval "VAL=\$${VAR}"
-    # shellcheck disable=SC2016
-    PLSCRIPT='$v=$ARGV[0];$p=abs_path($ARGV[1]);@o=split(/:/,$ENV{$v});for(@o){$e=abs_path($_);push(@e,$e) if $p ne $e;} printf qq{$v="%s"\n},join(":",@e);'
-    EVALSCRIPT="$(env "${VAR}=${VAL}" perl -M'Cwd(abs_path)' -e "${PLSCRIPT}" "${VAR}" "${REMOVE}")"
-    eval "${EVALSCRIPT}"
+
+function Project_setup()
+{
+  # @brief does the real work of setup
+
+  APPS="${HOME}/.local/apps"
+  local OPT FLAG=0
+  for OPT in "$@"; do
+    case "${OPT}" in
+      --install-dir)
+        FLAG=1
+        ;;
+      -*) 
+        ;;
+      *) 
+        if [[ ${FLAG} == 1 ]]; then
+          APPS="${OPT}"
+          FLAG=0
+        fi
+        ;;
+    esac
+  done
+  export ACTION
+  if [[ "$2" =~ --rm || "${ACTION}" == "rm" ]]; then
+    ACTION="rm"
+    Remove_path PATH "${PROJECT_BIN}"
   else
-    Report_error "Remove_path requires first argument be a simple variable name"
-    return 1
+    ACTION="add"
+    SETUP_PATH="$(Realpath "$1")"
+    PROJECT_DIR="$(dirname "${SETUP_PATH}")"
+    PROJECT_NAME="$(basename "${PROJECT_DIR}")"
+    PROJECT_BIN="${PROJECT_DIR}/extern/bin"
+    # shellcheck disable=SC1091
+    source "${PROJECT_DIR}/extern/scripts/Essential-IO"
+    source "${PROJECT_DIR}/extern/scripts/Essential-manip"
+
+    SYSTEMC_HOME="${APPS}/systemc"
+    LD_LIBRARY_PATH="${HOME}/.local/apps/systemc/lib"
+    DYLD_LIBRARY_PATH="${HOME}/.local/apps/systemc/lib"
+    Prepend_path PATH "${PROJECT_BIN}"
+
+    if [[ ! -d "${SETUP_PATH}/.git" ]]; then
+      _do git init "${SETUP_PATH}/.git"
+      _do git -C "${SETUP_PATH}" add .
+      _do git -C "${SETUP_PATH}" commit -m 'initial'
+    fi
+
+    export ACTION APPS PROJECT_NAME SETUP_PATH PROJECT_DIR
+    export SYSTEMC_HOME LD_LIBRARY_PATH DYLD_LIBRARY_PATH
+    echo "$1: ${PROJECT_NAME} environment set up"
   fi
 }
-function Prepend_path() { # only if 2nd arg does not exist in first
-  # Prepend_path VARIABLE_NAME PATH_TO_INSERT
-  if [[ $# != 2 ]]; then Report_error "Prepend_path requires two arguments"; return 1; fi
-  local VAR ARG EVAL
-  VAR="$1"
-  ARG="$(Realpath "$2")"; shift
-  EVAL="${VAR}=\"${ARG}:\$${VAR}\"; export ${VAR}"
-  eval "${EVAL}"
-  Unique_path "${VAR}"
+
+function Check_version()
+{
+  # @brief return the version of tool
+  local version
+  if command -v "$1" 1>/dev/null 2>&1; then
+    echo -n "$1 "
+    version="$1 $(command "$1" --version)"
+    # shellcheck disable=SC2312
+    perl -e 'printf qq{%s\n},$& if "@ARGV" =~ m{\b[1-9]+([.][0-9]+)+}' "${version}"
+  fi
 }
 
-#-------------------------------------------------------------------------------
-# Directory where shared includes, libraries and applications are installed.
-# Using home installation when /usr/local is not possible.
-APPS="${HOME}/.local/apps"
+function Check_environment()
+{
+  # @brief test for a few critical bits
+  # - Only invoked if -v is passed when sourcing
+  export PROJECT_DIR
+  cd "${PROJECT_DIR}" 2>/dev/null || return 1
+  Reset-errors
+  local dir
+  for dir in cmake extern; do
+    if [[ ! -d "${PROJECT_DIR}/${dir}" ]]; then
+      Report_warning "Missing ${dir}/ directory -- suspicious"
+    fi
+  done
+  # What tools are available
+  local tool version
+  for tool in make ninja cmake ctest; do
+    Check_version "${tool}"
+  done
+  if [[ ! -d "${SYSTEMC_HOME}" ]]; then
+    Report_warning "SYSTEMC_HOME does not point to a directory!?"
+  else
+    if [[ ! -d "${SYSTEMC_HOME}/include" ]]; then
+      Report_warning "Missing SYSTEMC_HOME/include!?"
+    fi
+    if [[ ! -d "${SYSTEMC_HOME}/lib" ]]; then
+      Report_warning "Missing SYSTEMC_HOME/lib!?"
+    fi
+  fi
+}
 
-#-------------------------------------------------------------------------------
-# Point to the top-level of this repository
-if git rev-parse --show-toplevel 2>/dev/null 1>/dev/null; then
-  WORKTREE_DIR="$(git rev-parse --show-toplevel)"
+if [[ "$0" =~ sh$ ]]; then
+  Project_setup "setup.profile" "$@"
 else
-  Report_error "This script is intended to be run inside the exercises directory -- aborting"
-  return 1
+  Project_setup "$0" "$@"
 fi
-export APPS WORKTREE_DIR
-
-if [[ "${ACTION}" != rm ]]; then
-  Prepend_path MANPATH "${WORKTREE_DIR}/extern/share/man"
-  Prepend_path PATH "${WORKTREE_DIR}/extern/bin"
-  Prepend_path PATH "${WORKTREE_DIR}/bin"
-else
-  Remove_path  MANPATH "${WORKTREE_DIR}/extern/share/man"
-  Remove_path  PATH "${WORKTREE_DIR}/extern/bin"
-  Remove_path  PATH "${WORKTREE_DIR}/bin"
-fi
-
-#-------------------------------------------------------------------------------
-# Cmake should refer to project and group directories to find scripts
-CMAKE_PREFIX_PATH="${WORKTREE_DIR}/cmake;${APPS}/cmake;${WORKTREE_DIR}/extern/lib/cmake"
-export CMAKE_PREFIX_PATH
-
-#-------------------------------------------------------------------------------
-# Check installation
-if [[ ! -d "${APPS}/cmake" ]]; then
-  Report_warning "${APPS} missing!? Did you install portable scripts?"
-fi
-if [[ ! -d "${WORKTREE_DIR}/extern/lib/cmake" ]]; then
-  Report_warning "${WORKTREE_DIR}/extern/lib/cmake missing!? Did you build GoogleTest?"
-fi
-
-#-------------------------------------------------------------------------------
-# Display current project "title"
-if [[ "${ACTION}" == add ]]; then
-  Report_info "${TITLE}"
+if [[ "$1" == "-v" ]]; then
+  ( Check_environment )
+  Summary setup.profile
 fi
 
 # vim:nospell

@@ -11,17 +11,17 @@ Directory organization:
   ├── .git/
   ├── .gitignore
   ├── ABOUT.md
-  ├── bin/
-  │   ├── ABOUT.md
-  │   ├── build
-  │   ├── build-fmt
-  │   └── build-gtest
   ├── cmake/
   │   ├── ABOUT.md
   │   ├── project_defaults.cmake
   │   └── set_target.cmake
   ├── extern/
   │   ├── ABOUT.md
+  │   ├── bin/
+  │   │   ├── ABOUT.md
+  │   │   ├── build
+  │   │   ├── build-fmt
+  │   │   └── build-gtest
   │   ├── include/
   │   │   └── ABOUT.md
   │   └── lib/

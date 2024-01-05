@@ -1,16 +1,40 @@
 #!/usr/bin/env bash
 #
-# Install {fmt} library under current project.
+# Install GoogleTest under current project.
 # IMPORTANT; Must be run inside project git repository.
+if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+build-gtest - Install GoogleTest under the current project.
 
-LIBNAME="{fmt} library"
-GIT_URL="https://github.com/fmtlib/fmt.git"
+Synopsis
+--------
+build-gtest --help|-h # produces this text
+build-gtest
+
+Description
+-----------
+Installs the [GoogleTest framework](https://google.github.io/googletest/) under `extern/`, which is located based on the top-level git repository's location.
+
+IMPORTANT
+---------
+Must be run inside project git repository.
+
+HELPTEXT
+  exit 0;
+fi
+
+
+LIBNAME="GoogleTest"
+GIT_URL="https://github.com/google/googletest.git"
 
 function Die() {
   echo "FAILED to build and install ${LIBNAME}! $*" 1>&2
   exit 1
 }
 function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
