@@ -17,12 +17,12 @@ alias m='less'
 alias W='command -V'
 alias agl='ag -l --nocolor'
 alias cls='clear ; '
-alias rc='stty -a | perl -lane "print if s/speed[^;]+;// && s/ line =.+//''
 function Open()
 {
   local OS arg
-  OS="${uname -a}"
-  if [[ "${OS}" =~ Darwin ]]; then
+  OS="$(uname -a)"
+  if [[ "${OS}" =~ ^.*Darwin.*$ ]]; then
+    /usr/bin/open "$@"
   elif [[ "${OS}" =~ WSL2 ]]; then
     for arg in "$@"; do
       if [[ "${arg}" =~ [.]git$ ]]; then
