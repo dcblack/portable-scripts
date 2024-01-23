@@ -76,6 +76,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -R REGEX         | Include only tests with names matching regular expression REGEX
 | -run             | When done building, run the executable
 | -S DIR           | Name of source directory -- defaults to \".\"
+| -sq              | Squeeze out blank lines from test
 | -std=NN          | Specify C++ standard version
 | -t TGT           | Passed to cmake to specify the target (TGT)
 | -test            | When done building, run the tests verbosely unless -q supplied
@@ -188,7 +189,7 @@ function Build()
   # Setup defaults
   #------------------------------------------------------------------------------
   export SUBPROJ_DIR DEBUG
-  local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY HAS_NINJA
+  local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY SQUEEZE HAS_NINJA
   SRC_DIR="."
   CMAKE_BUILD_TYPE="Debug"
   BLD_DIR="build"
@@ -205,6 +206,7 @@ function Build()
   DEBUG=""
   QUIET=0
   NOISY=0
+  SQUEEZE=0
   INSTALL=0
   PREFIX=
   ACTION=
@@ -285,6 +287,8 @@ function Build()
     elif [[ "$1" == "-n" ]]; then
       export NOTREALLY
       NOTREALLY="-n"
+    elif [[ "$1" =~ ^-{1,2}sq(ueeze)$ ]]; then
+      SQUEEZE=1
     elif [[ "$1" =~ ^-{1,2}clean$ ]]; then
       CLEAN=1;
     elif [[ "$1" =~ ^-{1,2}info$ ]]; then
@@ -533,12 +537,19 @@ function Build()
     fi
   elif [[ "${ACTION}" == test ]]; then
     Report_info "Testing ${SUBPROJ_DIR}"
-    local HIGHLIGHT_FILTER
+    local HIGHLIGHT_FILTER BLANKLINE_FILTER
     # shellcheck disable=SC2016
     HIGHLIGHT_FILTER='$_="[1m[96m".$_."[0m" if m/% tests passed, .* tests failed out of/;'
+    BLANKLINE_FILTER=""
+    if [[ ${SQUEEZE} == 1 ]]; then
+      # shellcheck disable=SC2016
+      BLANKLINE_FILTER='BEGIN{$prev="";} $curr=$_; $_="" if $_ =~m{^\d+:\s*$} and $prev=~m{^\d+: (Info):}; $prev=$curr;'
+    fi
     # shellcheck disable=SC2086,SC2312
     ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" ) 2>&1 \
-    | perl -pe "${HIGHLIGHT_FILTER}" | tee "${BLD_DIR}/${TEST_LOG}"
+    | perl -pe "${BLANKLINE_FILTER}" \
+    | perl -pe "${HIGHLIGHT_FILTER}" \
+    | tee "${BLD_DIR}/${TEST_LOG}"
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
