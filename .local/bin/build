@@ -254,6 +254,10 @@ function Build()
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "$1")
     elif [[ "$1" =~ ^[a-zA-Z_][a-zA-Z_0-9]*= ]]; then
       eval "export $1"
+    elif [[ "$1" == "-make" ]]; then
+      GENERATOR="Unix Makefiles"
+    elif [[ "$1" == "-ninja" ]]; then
+      GENERATOR="Ninja"
     elif [[ "$1" == "-G" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-P requires a directory argument" ; exit 1
