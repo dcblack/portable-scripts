@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/bin/zsh
 
 (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
 if [[ ${SOURCED} == 0 ]]; then
@@ -7,81 +7,186 @@ if [[ ${SOURCED} == 0 ]]; then
 fi
 SHELLNAME=zsh
 
-#-------------------------------------------------------------------------------
-# Documentation
-#-------------------------------------------------------------------------------
-cat <<'EOD' >/dev/null
-
-There's more than aliases here and we invoke some other files under found under
-$HOME/.local/dotfiles in the following order:
-
-1. ${SHELLNAME}_debug -- if executable
-2. functions -- sets functions for use in scripting
-3. env -- sets environment variables
-4. -- body of aliases happens after the above
-5. ${SHELLNAME}_paths -- sets additional environment variables (usually with dependencies)
-
-EOD
-
-#-------------------------------------------------------------------------------
-#  #####  #####  ##### #     #    # ####   #####                                 
-#  #    # #    # #     #     #    # #   #  #                                     
-#  #    # #    # #     #     #    # #    # #                                     
-#  #####  #####  ##### #     #    # #    # #####                                 
-#  #      #  #   #     #     #    # #    # #                                     
-#  #      #   #  #     #     #    # #   #  #                                     
-#  #      #    # ##### #####  ####  ####   #####                                 
-#-------------------------------------------------------------------------------
-if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
-  export ALIAS_SCRIPT
-  ALIAS_SCRIPT="${script}"
+alias ez='exec zsh'
+alias 1p=op
+alias 0p='eval $(op signin family_tx512)'
+alias bc='shellcheck -s bash -xa -o all'
+alias myip='ipconfig getifaddr en0'
+alias font-sample="echo '#=0123456789_=-^+@auvwxy/\B&8b6ijl1|L_?9gqQO0op2Z75S'"
+alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
+alias tab='it tab'
+alias flow=git-flow
+alias %=_do
+CPU=$(uname -p)
+if [[ "${CPU}" == "arm" ]]; then
+  alias oldbrew=/usr/local/bin/brew
 fi
-
-export SCRIPT_NAME SCRIPT_PATH
-source "${HOME}/.local/scripts/Essential-IO"
-for SCRIPT_NAME in "${SHELLNAME}_debug" "functions" "env"; do
-  SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
-  if [[ -x "${SCRIPT_PATH}" ]]; then
-    # shellcheck disable=SC2154
-    if [[ "${DO_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
+alias nvim='gvim -ngp'
+export VI='vim'
+export LOCAL EDITOR
+alias view-systemc='"${EDITOR}" "${LOCAL}/src/systemc/src"'
+function ViSrc() {
+  local FILE
+  FILE="$(Realpath "$1")"
+  shift
+  echo "${VI} -f $* ${FILE}"
+  "${VI}" -f "$@" "${FILE}"
+  if [[ ! -d "${FILE}" && -x "${FILE}" ]]; then
+    echo "source \"${FILE}\""
     # shellcheck disable=SC1090
-    source "${SCRIPT_PATH}"
+    source "${FILE}"
   fi
-  SCRIPT_PATH="${HOME}/.${SCRIPT_NAME}-local"
-  if [[ -x "${SCRIPT_PATH}" ]]; then
-    # shellcheck disable=SC2154
-    if [[ "${DO_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
-    # shellcheck disable=SC1090
-    source "${SCRIPT_PATH}"
-  fi
-done
+}
+function viscr() {
+  # shellcheck disable=SC2154,SC2312
+  ViSrc "$(Firstreal "${HOME}/scripts/$1" "${LOCAL}/scripts/$1")";
+}
+alias vial='ViSrc ${HOME}/.zsh_aliases'
+alias vizsh='ViSrc ${HOME}/.zshrc'
+alias vigit='ViSrc ${HOME}/.gitconfig'
+alias vissh='ViSrc ${HOME}/.ssh/config'
+alias vifuncs='ViSrc ${HOME}/.zsh_functions'
+alias vimrc='ViSrc ${HOME}/.vimrc'
+alias vienv='ViSrc ${HOME}/.zsh_env'
+alias viobs='ViSrc ${HOME}/OBS/Doulos/.'
+alias Exit="osascript -e 'tell application \"iTerm2\" to quit'; exit"
+alias .alias='. ${HOME}/.zsh_aliases'
+alias .zsh='. ${HOME}/.zshrc'
+alias .env='. ${HOME}/.zsh_env'
+alias .funcs='. ${HOME}/.zsh_functions'
+alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
+function funcs() {
+  # shellcheck disable=SC2312
+  declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]' | fmt
+}
+function agl()
+{
+  ag -l --nocolor "$@" | sort
+}
+function agL()
+{
+  ag -L --nocolor "$@" | sort
+}
+alias ag0='ag --depth=0'
+alias ag1='ag --depth=0'
+alias ag.='ag --depth=0 --hidden'
+function agh() {
+  ag -t -s -w --hidden --depth 1 "$@"
+}
 
-# enable color support of ls and also add handy aliases
-if [[ -r ~/.dircolors ]]; then
-  EVAL_TEXT="$(dircolors -b ~/.dircolors)" || EVAL_TEXT="$(dircolors -b)"
-  eval "${EVAL_TEXT}"
+alias threagile='docker run --rm -it -v "$(pwd)":/app/work threagile/threagile'
+
+function new() {
+  NEWEST="${HOME}/.newest"
+  local e=0
+  if [[ $# == 0 ]]; then
+    # shellcheck disable=SC2154
+    "${LOCAL}/bin/new"
+  fi
+  if [[ "$1" == "-e" ]]; then
+    e=1
+    shift
+  fi
+  if [[ $# -gt 0 ]]; then
+    rm -f "${NEWEST}"
+    if [[ ! ( "$*" =~ -q ) ]]; then
+      echo "${LOCAL}/bin/new" "$@"
+    fi
+    # shellcheck disable=SC2312
+    "${LOCAL}/bin/new" "$@" | tee "${NEWEST}"
+  fi
+  if [[ "${e}" == "1" && -r "${NEWEST}" ]]; then
+    NEWF=$(perl -lane 'print $1 if m/^Created "([^"]+)"/'  "${NEWEST}")
+    if [[ -r "${NEWF}" && ! -d "${NEWF}" ]]; then
+      gvim -f "${NEWF}"
+    fi
+  fi
+}
+
+
+#PS1='\[\e[1;`pws2`m\]\s-\h(`uname`):`pwd2` \!%\[\e[0m\] '
+#PS2='\[\e[1;`pws2`m\]\!>\[\e[0m\] '
+#PS1='\u@\h:\w$(__git_ps1 " (%s)") $ '
+#PROMPT_DIRTRIM=2
+alias sane='reset; stty erase ^H'
+function hclr() {
+  cat /dev/null >"${HOME}/saved$1.history";
+}
+function hput() {
+  history -a >"${HOME}/saved$1.history";
+}
+function hget() {
+  history -n >"${HOME}/saved$1.history";
+}
+function hreduce() {
+  hunique -o "${HOME}/saved$1.history";
+}
+function m() {
+  if [[ "$1" == '-nc' ]]; then
+    env NOCOLOR=1 less "$@"
+  else
+    less "$@"
+  fi
+}
+alias W='command -V';
+alias F='file'
+alias I='lipo -info'
+alias info='info --vi-keys';
+alias cls='/usr/bin/clear; ';
+alias .bashrc='. ${HOME}/.bashrc';
+alias dcblack='. ${HOME}/dcblack.bash'
+alias 7za='7za a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on'
+
+export LS_OPTS=-bhCF
+export TREE_OPTS="-ACF --gitignore"
+# shellcheck disable=SC2312
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  # Macintosh specific
+  alias msword="open -a 'Microsoft Word'"
+  alias excel="open -a 'Microsoft Excel'"
+  alias powerpoint="open -a 'Microsoft PowerPoint'"
+  alias parallels="open -a 'Parallels Desktop'"
+  alias eclipse="open -a eclipse"
+  alias gls='/usr/local/bin/gls ${LS_OPTS} --color';
+  alias ls='ls ${LS_OPTS}G';
+  alias la='ls ${LS_OPTS}AG';
+  export LSUSB='/usr/local/bin/lsusb'
+  export GREP='/usr/bin/grep'
+# alias make='gmake';
+# alias gdb='lldb'
+else
+  alias ls='ls -bCF --color';
+  alias la='ls ${LS_OPTS}A --color';
+  alias make='make';
 fi
+alias tree='tree ${TREE_OPTS}';
+alias st='set_title';
+alias echoln='perl -e '"'"'printf qq{%s\n},join(qq{\n},@ARGV);'"'"
 
-source "${HOME}/.local/dotfiles/aliases"
-
-#-------------------------------------------------------------------------------
-#  #####   ####   ####  #######    #    #     # #####  #     #####               
-#  #    # #    # #    #    #      # #   ##   ## #    # #     #                   
-#  #    # #    # #         #     #   #  # # # # #    # #     #                   
-#  #####  #    #  ####     #    #     # #  #  # #####  #     #####               
-#  #      #    #      #    #    ####### #     # #    # #     #                   
-#  #      #    # #    #    #    #     # #     # #    # #     #                   
-#  #       ####   ####     #    #     # #     # #####  ##### #####               
-#-------------------------------------------------------------------------------
-# shellcheck disable=SC2043
-for SCRIPT_NAME in zsh_paths; do
-  SCRIPT_PATH="${HOME}/.local/dotfiles/${SCRIPT_NAME}"
-  if [[ -x "${SCRIPT_PATH}" ]]; then
-    if [[ "${DO_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
-    # shellcheck disable=SC1090
-    source "${SCRIPT_PATH}"
-  fi
+alias pushbw='pushd +1'
+alias pushfw='pushd -0'
+alias unsetenv="unset"
+for n in 80 100 120 140 160; do
+  # shellcheck disable=SC2139,SC2140
+  alias "${n}"="ruler -n ${n}"
 done
-unset SCRIPT_NAME SCRIPT_PATH
+alias Mktree='mkdir -p a a/b1 a/b2 a/bin; touch a/b3.txt a/b1/c1.txt a/b1/c2.txt a/b2/c3.txt a/bin/dummy; chmod a+rx a/bin/dummy'
+alias Mkvar='export A=a/bin:a/b1:a:a/b2:a/b1:a/b2/c3.txt:a:a/bin:a/bin/dummy'
 
-# vim:nospell
+function serialize() {
+  for var in "$@"; do
+    typeset -p "${var}" > "./serialized_${var}.sh"
+  done
+}
+
+# function deserialize() {
+#   declare() { builtin declare -g "$@"; }
+#   typeset() { builtin typeset -g "$@"; }
+#   for var in "$@"; do
+#     # shellcheck disable=SC1090
+#     source "./serialized_${var}.sh"
+#   done
+#   unset -f declare typeset
+# }
+
+#EOF ${HOME}/.bash_aliases vim:nospell
