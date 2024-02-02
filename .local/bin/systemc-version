@@ -45,21 +45,21 @@ number in one of several formats.
 
 =head1 OPTIONS
 
- -help     this text
- -us       use underscore
- -full     full version (all 3 parts)
- -D        formated for gcc
- -int      integer format major*1e6+minor*1e3+bug
- -min #    require a minimum version #
- -sq       squeeze out non-alpha
- -q        quiet, return appropriate exit status
- -sc PATH  specifies a path to search instead of environment variables
- -cxx      compile minimal program and utilize real API rather than search includes
- -nocxx    turns off -cxx
- -var      return a variable name suitable for #define
- -ieee     return IEEE version number (yyyyMMddL)
- -osci     return Accellera standard number (yyyyMMdd)
- -v        Includes the word SystemC at the beginning of the line
+ --help       this text
+ --us         use underscore
+ --full       full version (all 3 parts)
+ -D|--define  formated for gcc
+ --int        integer format major*1e6+minor*1e3+bug
+ --min #      require a minimum version #
+ --sq         squeeze out non-alpha
+ -q|--quiet   quiet, return appropriate exit status
+ --sc PATH    specifies a path to search instead of environment variables
+ --cxx        compile minimal program and utilize real API rather than search includes
+ --nocxx      turns off -cxx
+ --var        return a variable name suitable for #define
+ --ieee       return IEEE version number (yyyyMMddL)
+ --osci       return Accellera standard number (yyyyMMdd)
+ -v|--verbose Includes the word SystemC at the beginning of the line
 
 =head1 ENVIRONMENT
 
@@ -115,44 +115,47 @@ my $SYSTEMC = '';
 unshift @ARGV,split(m/\s+/,$ENV{'SYSTEMC_VERSIONRC'}) if exists $ENV{'SYSTEMC_VERSIONRC'};
 while (@ARGV) {
   $arg = shift @ARGV;
-  if ($arg eq '_' or $arg eq '-us') {
+  if ($arg eq '_' or $arg =~ m{^-{1,2}us}) {
     $OPT{-us} = 1;
-  } elsif ($arg eq '-DEBUG') {
+  } elsif ($arg =~ m{^-{1,2}DEBUG}) {
     $OPT{-DEBUG} = 1;
-  } elsif ($arg eq '-osci') {
+  } elsif ($arg =~ m{^-{1,2}osci}) {
     $OPT{-osci} = 1;
-  } elsif ($arg eq '-ieee') {
+  } elsif ($arg =~ m{^-{1,2}ieee}) {
     $OPT{-ieee} = 1;
-  } elsif ($arg eq '-full') {
+  } elsif ($arg eq '-f' or $arg =~ m{^-{1,2}full}) {
     $OPT{-full} = 1;
-  } elsif ($arg eq '-nocxx') {
+  } elsif ($arg =~ m{^-{1,2}nocxx}) {
     $OPT{-cxx} = 0;
-  } elsif ($arg eq '-cxx') {
+  } elsif ($arg =~ m{^-{1,2}cxx}) {
     $OPT{-cxx} = 1;
-  } elsif ($arg eq '-var' or $arg eq '-D') {
+  } elsif ($arg =~ m{^-{1,2}var}) {
     $OPT{-var} = 1;
-  } elsif ($arg eq '--version') {
+  } elsif ($arg eq '-D' or $arg =~ m{^-{1,2}define}) {
+    $OPT{-var} = 1;
+    $OPT{-gcc} = 1;
+  } elsif ($arg =~ m{^-{1,2}-version}) {
     $OPT{-v} = 1;
     $OPT{-full} = 1;
   } elsif ($arg eq '-v') {
     $OPT{-v} = 1;
-  } elsif ($arg eq '-int') {
+  } elsif ($arg =~ m{^-{1,2}int}) {
     $OPT{-int} = 1;
-  } elsif ($arg eq '-min') {
+  } elsif ($arg =~ m{^-{1,2}min}) {
     $min = shift @ARGV;
     Die "Must be a dotted or underscore separated number!" 
       unless $min =~ m{^[1-9]\d*([._]\d+){0,2}};
     $min =~ s/\./_/g;
-  } elsif ($arg eq '-sq') {
+  } elsif ($arg =~ m{^-{1,2}sq}) {
     $OPT{-sq} = 1;
-  } elsif ($arg eq '-q' or $arg eq '-quiet') {
+  } elsif ($arg eq '-q' or $arg =~ m{^-{1,2}quiet}) {
     $OPT{-quit} = 1;
-  } elsif ($arg eq '-v' or $arg eq '-verbose') {
+  } elsif ($arg eq '-v' or $arg =~ m{^-{1,2}verbose}) {
     $OPT{-verbose} = 1;
-  } elsif ($arg eq '-sc') {
+  } elsif ($arg =~ m{^-{1,2}sc}) {
     Die "-sc must specify a directory" unless @ARGV and -d $ARGV[0];
     $SYSTEMC = shift @ARGV;
-  } elsif ($arg eq '-test') {
+  } elsif ($arg =~ m{^-{1,2}test}) {
     $OPT{-test} = shift @ARGV;
   } else {
   }#endif
@@ -260,6 +263,7 @@ if (defined $OPT{-int}) {
 $api_version =~ s/_//g if defined $OPT{-sq};
 # Create a variable name suitable for use in make or environment
 $api_version =~ s/^/SYSTEMC_V/ if defined $OPT{-var};
+$api_version =~ s/^/-D/ if defined $OPT{-gcc};
 # Change underscores to decimals
 $api_version =~ s/_/./g unless defined $OPT{-var} or defined $OPT{-us};
 $api_version =~ s/^/SystemC / if defined $OPT{-v};
