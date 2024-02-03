@@ -118,6 +118,20 @@ build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 END_HELP
 }
 
+function Confirm()
+{
+  local REPLY
+  while true; do
+    printf "%s" "$1 "
+    read -r REPLY
+    case "${REPLY}" in
+      y|Y|yes) return 0 ;;
+      n|N|no) return 1 ;;
+      *) REPLY=""; echo "Must reply with 'y' or 'n'" ;;
+    esac
+  done
+}
+
 function Build()
 {
   # Handle extensions
@@ -310,7 +324,7 @@ function Build()
     elif [[ "$1" =~ ^-{1,2}verbose$ ]]; then
       QUIET=0
     elif [[ "$1" =~ ^-{1,2}version$ ]]; then
-      Report_info -blu "
+      Report_info -f -blu "
  -------------------------------------------------------------------------------
  ${BUILD_TOOL_NAME} version ${BUILD_TOOL_VERSION}
  Copyright 2023 by Doulos Inc. All rights reserved.
@@ -411,6 +425,44 @@ function Build()
   fi
 
   BLD_DIR="${BLD_DIR}/$(perl -le 'print lc(qq{@ARGV})' "${CMAKE_BUILD_TYPE}")"
+
+  if [[ -d "${BLD_DIR}" ]]; then
+    # Check for consistency
+    if [[ -r "${BLD_DIR}/build.ninja" ]]; then
+      if [[ "${GENERATOR}" != "Ninja" ]]; then
+        # shellcheck disable=SC2312
+        Report_warning "Pre-existing Ninja build does not match specified generator: $(_C red)${GENERATOR}"
+        # shellcheck disable=SC2310
+        if Confirm "Use specified generator?"; then
+          rm -fr "${BLD_DIR}"
+          # shellcheck disable=SC2312
+          Report_info -f "Using specified generator: $(_C grn)${GENERATOR}"
+        else
+          GENERATOR="Ninja"
+          # shellcheck disable=SC2312
+          Report_info -f "Using previous generator: $(_C grn)${GENERATOR}"
+        fi
+      fi
+    elif [[ -r "${BLD_DIR}/Makefile" ]]; then
+      if [[ "${GENERATOR}" != "Unix Makefiles" ]]; then
+        # shellcheck disable=SC2312
+        Report_warning "Pre-existing Makefile build does not match specified generator: $(_C red)${GENERATOR}"
+        # shellcheck disable=SC2310
+        if Confirm "Use specified generator?"; then
+          rm -fr "${BLD_DIR}"
+          # shellcheck disable=SC2312
+          Report_info -f "Using specified generator: $(_C grn)${GENERATOR}"
+        else
+          GENERATOR="Unix Makefiles"
+          # shellcheck disable=SC2312
+          Report_info -f "Using previous generator: $(_C grn)${GENERATOR}"
+        fi
+      fi
+    else
+      Report_warning "Pre-existing build and unknown generator"
+    fi
+  fi
+
   mkdir -p "${BLD_DIR}"
 
   Logfile "${BLD_DIR}/${BUILD_LOG}"
@@ -437,7 +489,7 @@ function Build()
   '
   TARGETS="$(/usr/bin/perl -ne "${PERLSCRIPT}" CMakeLists.txt)"
   if [[ "${ACTION}" == list ]]; then
-    Report_info "Targets are ${TARGETS}"
+    Report_info -f "Targets are ${TARGETS}"
     return 0
   fi
   #-------------------------------------------------------------------------------
@@ -480,7 +532,7 @@ function Build()
     # Preserve log
     local TEMP_LOG
     TEMP_LOG="$(mktemp -t build.XXXXXX.log)"
-    Report_info "Cleaning ${SUBPROJ_DIR}"
+    Report_info -f "Cleaning ${SUBPROJ_DIR}"
     _do -n rm -fr "${BLD_DIR}"
     mv "${BLD_DIR}/${BUILD_LOG}" "${TEMP_LOG}"
     rm -fr "${BLD_DIR}"
@@ -494,7 +546,7 @@ function Build()
   CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
   #------------------------------------------------------------------------------
-  Report_info "Configuring ${SUBPROJ_DIR}"
+  Report_info -f "Configuring ${SUBPROJ_DIR}"
   if [[ -z "${DEBUG}" ]]; then
     _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" || exit 1
   else
@@ -502,7 +554,7 @@ function Build()
   fi
 
   #------------------------------------------------------------------------------
-  Report_info "Compiling ${SUBPROJ_DIR}"
+  Report_info -f "Compiling ${SUBPROJ_DIR}"
   # shellcheck disable=SC2086
   _do cmake --build "${BLD_DIR}" --config "${CMAKE_BUILD_TYPE}" "${BUILD_OPTS[@]}"
   # shellcheck disable=SC2181
@@ -510,7 +562,7 @@ function Build()
 
   #------------------------------------------------------------------------------
   if [[ "${ACTION}" == gdb ]]; then
-    Report_info "Debugging ${SUBPROJ_DIR}"
+    Report_info -f "Debugging ${SUBPROJ_DIR}"
     if [[ -n "${TARGETS}" ]]; then
       for EXECUTABLE in ${TARGETS}; do
         # shellcheck disable=SC2086,SC2312
@@ -520,7 +572,7 @@ function Build()
       Report_fatal "Not sure what to debug!" 
     fi
   elif [[ "${ACTION}" == lldb ]]; then
-    Report_info "Debugging ${SUBPROJ_DIR}"
+    Report_info -f "Debugging ${SUBPROJ_DIR}"
     if [[ -n "${TARGETS}" ]]; then
       for EXECUTABLE in ${TARGETS}; do
         # shellcheck disable=SC2086,SC2312
@@ -530,7 +582,7 @@ function Build()
       Report_fatal "Not sure what to debug!" 
     fi
   elif [[ "${ACTION}" == run ]]; then
-    Report_info "Running ${SUBPROJ_DIR}"
+    Report_info -f "Running ${SUBPROJ_DIR}"
     if [[ -n "${TARGETS}" ]]; then
       for EXECUTABLE in ${TARGETS}; do
         # shellcheck disable=SC2086,SC2312
@@ -540,7 +592,7 @@ function Build()
       Report_fatal "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under build." 
     fi
   elif [[ "${ACTION}" == test ]]; then
-    Report_info "Testing ${SUBPROJ_DIR}"
+    Report_info -f "Testing ${SUBPROJ_DIR}"
     local HIGHLIGHT_FILTER BLANKLINE_FILTER
     # shellcheck disable=SC2016
     HIGHLIGHT_FILTER='$_="[1m[96m".$_."[0m" if m/% tests passed, .* tests failed out of/;'
@@ -556,25 +608,25 @@ function Build()
     | tee "${BLD_DIR}/${TEST_LOG}"
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
-      Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
+      Report_info -f "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
       _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}"
     else
-      Report_info "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
+      Report_info -f "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
       _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}"
     fi
   else
-    Report_info "Executables in ${BLD_DIR}/ -- HINT: To run try:"
+    Report_info -f "Executables in ${BLD_DIR}/ -- HINT: To run try:"
     _do -n "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}"
-    Report_info "Or consider adding one or more tests to CMakeLists.txt"
+    Report_info -f "Or consider adding one or more tests to CMakeLists.txt"
   fi
 
   #------------------------------------------------------------------------------
   if [[ ${INSTALL} == 1 ]]; then
     if [[ -n "${PREFIX}" ]]; then
-      Report_info "Installing ${SUBPROJ_DIR}"
+      Report_info -f "Installing ${SUBPROJ_DIR}"
       _do cmake --install "${BLD_DIR}" --config Debug --prefix "${PREFIX}"
     else
-      Report_info "Installing ${SUBPROJ_DIR}"
+      Report_info -f "Installing ${SUBPROJ_DIR}"
       _do cmake --install "${BLD_DIR}" --config Debug
     fi
   fi
