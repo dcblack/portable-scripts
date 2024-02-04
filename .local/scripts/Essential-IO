@@ -650,7 +650,9 @@ function Report_error()
   export ERRORS
   if [[ -z "${ERRORS}" ]]; then ERRORS=0; fi
   (( ++ERRORS ))
-  Ruler -bld -red '!'
+  if [[ "$1" == "-ruler" ]]; then
+    Ruler -bld -red '!'
+  fi
   Echo "$(_C bold red)Error #${ERRORS}:$(_C none red) $*$(_C none)" 1>&2
   return 1
 }
@@ -663,7 +665,9 @@ function Report_warning()
   export WARNINGS
   if [[ -z "${WARNINGS}" ]]; then WARNINGS=0; fi
   (( ++WARNINGS ))
-  Ruler -bld -ylw '?'
+  if [[ "$1" == "-ruler" ]]; then
+    Ruler -bld -ylw '?'
+  fi
   Echo "$(_C ylw)$(_C bold)Warning:$(_C none) $(_C none)$*$(_C none)" 1>&2
 }
 
