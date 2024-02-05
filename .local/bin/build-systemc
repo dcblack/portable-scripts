@@ -4,7 +4,7 @@
 #
 #| For help on options use --help or examine utils.bash
 #
-TOOL_BRIEF="$0 - build and install SystemC from github source"
+TOOL_BRIEF="build-systemc - build and install SystemC from github source"
 TOOL_NAME="SystemC"
 TOOL_INFO='Go to <https://accellera.org/downloads/standards/systemc> for more information.'
 # ${TOOL_SRC}/${TOOL_BASE} for full path to source
