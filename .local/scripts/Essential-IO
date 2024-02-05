@@ -778,7 +778,13 @@ function Summary()
 function HelpText() # [-md|-:] PATH
 {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
-  local HELPSCRIPT
+  local HELPSCRIPT HELP_PIPE
+  HELP_PIPE=(cat -)
+  if builtin command -v "glow" 1>/dev/null; then
+    HELP_PIPE=(glow -p)
+  elif builtin command -v "less" 1>/dev/null; then
+    HELP_PIPE=(less)
+  fi
   # shellcheck disable=SC2016
   HELPSCRIPT='$p = $ARGV; $p =~ s{.*/}{}; if( $_ =~ s{^ *#\|}{} ){ $_ =~ s{\$0}{$p}; print; }'
   case "$1" in
@@ -801,7 +807,8 @@ function HelpText() # [-md|-:] PATH
   esac
 # Assert $# -gt 0
   /usr/bin/perl -ne "${HELPSCRIPT}" "$@" \
-    | /usr/bin/perl -pe 'BEGIN{$b=shift@ARGV;} s/BRIEF/$b/' "${TOOL_BRIEF}";
+    | /usr/bin/perl -pe 'BEGIN{$b=shift@ARGV;} s/BRIEF/$b/' "${TOOL_BRIEF}" \
+    | "${HELP_PIPE[@]}";
 }
 
 #-------------------------------------------------------------------------------
