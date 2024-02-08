@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+# build-test - a crutch for those typing challenged
+
+build -test

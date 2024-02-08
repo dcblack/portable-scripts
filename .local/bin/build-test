@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+# build-clean - a crutch for those typing challenged
+
+build -clean -test
