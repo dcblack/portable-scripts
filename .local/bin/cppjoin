@@ -1,0 +1,147 @@
+#!/usr/bin/env perl
+#
+#$Info: cppjoin - Join many files into one. $
+
+require v5.6;
+use strict;
+use warnings;
+use Cwd qw(abs_path getcwd);
+use English;
+use File::Basename;
+use FileHandle;
+use FindBin qw($RealBin $RealScript);
+use Getopt::Long;
+use Pod::Usage;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+# Reporting
+our ($warnings,$errors) = (0,0);
+our ($CYN,$GRN,$YLW,$RED,$NONE) = ("\033[1;96m","\033[1;92m","\033[1;93m","\033[1;91m","\033[0m");
+
+sub Exit {
+  printf "${CYN}Summary:${NONE}\n";
+  printf "  %d warnings\n",$warnings if $warnings > 0;
+  printf "  %d errors\n",$errors if $errors > 0;
+  exit $_;
+}
+
+sub Warn {
+  printf STDERR "${YLW}Warning:${NONE} ";
+  printf STDERR @_;
+  printf STDERR "\n" unless $_ =~ m{\n};
+  ++$warnings;
+}
+
+sub Error {
+  printf STDERR "${RED}Error:${NONE} ";
+  printf STDERR @_;
+  printf STDERR "\n" unless $_ =~ m{\n};
+  ++$errors;
+}
+
+sub Fatal {
+  printf STDERR "${RED}Fatal:${NONE} ";
+  printf STDERR @_;
+  printf STDERR "\n" unless $_ =~ m{\n};
+  Exit 1;
+}
+
+my $out = '';
+my ($fout,$fin);
+my $verbose = 0;
+my $force = 0;
+while( @ARGV ) {
+  my $arg = shift @ARGV;
+  if( $arg =~ m{^-{1,2}h(elp)?$} ) {
+    my @help = <DATA>;
+    print @help;
+    exit 0;
+  } elsif( $arg eq '-f' ) {
+    $force = 1;
+  } elsif( $arg eq '-q' ) {
+    $verbose = 0;
+  } elsif( $arg eq '-v' ) {
+    $verbose = 1;
+  } elsif( $arg eq '-o' ) {
+    Fatal "-o requires a filename" if scalar @ARGV == 0;
+    my $out = shift @ARGV;
+    Warn "Specified filename '$out' does not have a filename extension!?\n" unless $out =~ m{[.]\w+$};
+    Warn "Non-standard output filename '$out' specified." unless $out =~ m{^([~]/)?(\w+/)*\w+([.]\w+)?$};
+    $out =~ s{^[~]}{$ENV{HOME}/};
+    Fatal "Output file '$out' already exists!?\n" if -f $out and $force == 0;
+    open $fout,'>',$out
+      or Fatal "Unable to open file '$out' for writing!?\n";
+    next;
+  }
+  Fatal "Non-existant file '$arg' specified!?\n" unless -f $arg;
+  Fatal "File '$arg' is a directory!?\n" if -d $arg;
+  Fatal "Unreadable file '$arg' specified!?\n" unless -r $arg;
+  open $fin,'<',$arg
+    or Fatal "Unable to open '$arg' for reading!?\n";
+  printf "Reading %s\n", $arg unless $verbose == 0;
+  my $last='x';
+  printf "\n" if $last ne '';
+  printf $fout "%s\n",'/' x 80;
+  printf $fout "//File: %s\n",$arg;
+  my @lines = <$fin>;
+  my %inc;
+  for (@lines) {
+    chomp; chomp;
+    if( m{^#include\s+(("\s+")|(<\s+>))} ) {
+      my $fn = $1;
+      s{^}{//} if exists $inc{$fn};
+      $inc{$fn} = 1;
+    } elsif( m{^#pragma once} ) {
+      my $pragma = $&;
+      s{^}{//} if exists $inc{$pragma};
+      $inc{$pragma} = 1;
+    }
+    printf $fout "%s\n", $_;
+    $last = $_;
+  }
+  close $fin;
+}
+close $fout if $out ne '';
+printf "Created '$out'\n" unless $verbose == 0;
+Exit 0;
+
+__DATA__
+NAME
+----
+
+cppjoin - concatenate a bunch of C/C++ files into one.
+
+SYNOPSIS
+--------
+
+```bash
+cppjoin --help
+cppjoin *OPTIONS* FILES
+```
+
+DESCRIPTION
+-----------
+
+Joins files with separator as follows:
+
+///////////////////////////////////////////////////////////////////////////////
+//File: FILENAME
+
+Adds leading // to duplicate includes and #pragma once.
+
+COMMAND LINE OPTIONS
+--------------------
+
+OPTION | ACTION
+------ | ------
+--help | Display this text
+-f     | Force overwriting if a file already exists
+-q     | Suppress message on each file created
+-v     | Output message on each file created
+
+SEE ALSO
+--------
+
+cppsplit
+

@@ -1,0 +1,164 @@
+#!/usr/bin/env perl
+#
+#$Info: cppsplit - Split one C/C++ file into many. $
+
+require v5.6;
+use strict;
+use warnings;
+use Cwd qw(abs_path getcwd);
+use English;
+use File::Basename;
+use FileHandle;
+use FindBin qw($RealBin $RealScript);
+use Getopt::Long;
+use Pod::Usage;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+# Reporting
+our ($warnings,$errors) = (0,0);
+our ($CYN,$GRN,$YLW,$RED,$NONE) = ("\033[1;96m","\033[1;92m","\033[1;93m","\033[1;91m","\033[0m");
+
+sub Exit {
+  printf "${CYN}Summary:${NONE}\n";
+  printf "  %d warnings\n",$warnings if $warnings > 0;
+  printf "  %d errors\n",$errors if $errors > 0;
+  exit $_;
+}
+
+sub Warn {
+  printf STDERR "${YLW}Warning:${NONE} ";
+  printf STDERR @_;
+  printf STDERR "\n" unless $_ =~ m{\n};
+  ++$warnings;
+}
+
+sub Error {
+  printf STDERR "${RED}Error:${NONE} ";
+  printf STDERR @_;
+  printf STDERR "\n" unless $_ =~ m{\n};
+  ++$errors;
+}
+
+sub Fatal {
+  printf STDERR "${RED}Fatal:${NONE} ";
+  printf STDERR @_;
+  printf STDERR "\n" unless $_ =~ m{\n};
+  Exit 1;
+}
+
+our $verbosity = 0;
+our $force = 0;
+while( $ARGV[0] =~ m{^-} ) {
+  my $arg = shift @ARGV;
+  if( $arg =~ m{^-{1,2}h(elp)?$} ) {
+    my @help = <DATA>;
+    print @help;
+    exit 0;
+  } elsif( $arg eq '-f' ) {
+    $force = 1;
+  } elsif( $arg eq '-q' ) {
+    $verbosity = 1;
+  } elsif( $arg eq '-v' ) {
+    $verbosity = 1;
+  } else {
+    Fatal "Unknown command-line switch '$arg'!?";
+  }
+}
+
+our $prev_line='';
+our $curr_file='';
+our $fout;
+
+sub Close {
+  if( $curr_file ne '' ) {
+    close $fout;
+    printf "Created '%s'\n", $curr_file;
+    $curr_file = '';
+  }
+}
+
+while( scalar @ARGV > 0 ) {
+  my $arg = shift @ARGV;
+  my $fin;
+  open($fin,'<',$arg)
+    or Fatal "Unable to read file '$arg'!?\n";
+  our @lines = <$fin>;
+  close $fin;
+  my $read_first_nonblank_line = 0;
+  while(scalar @lines > 0) {
+    $_ = shift @lines;
+    chomp;
+    chomp;
+    s{\s+$}{}; # Remove trailing
+    if( m{^//{9,}$} ) { next; }
+    if( m{^//File:\s*(\S+)} ) {
+      my $next_file=$1;
+      &Close;
+      if( -f $next_file ) {
+        Fatal "Fatal: '$next_file' already exists!\n" unless $force == 1;
+        Fatal "Fatal: '$next_file' already exists as a directory!?\n" if -d $next_file;
+        unlink $next_file
+          or Fatal "Fatal: Unable to remove existing '$next_file'!?\n";
+      }
+      Warn "File '$next_file' missing extension (e.g., .cpp or .hpp)\n" unless $next_file =~ m{[.]\w+$};
+      open($fout,'>',$next_file)
+        or Fatal "Fatal: Unable to open ${next_file} for writing!?\n";
+      $curr_file = $next_file;
+      $read_first_nonblank_line = 1;
+      next;
+    }
+    if( $read_first_nonblank_line == 0 and m{^$} ) {
+      # Ignore leading blank lines
+      next;
+    }
+    $read_first_nonblank_line = 1;
+    s{^//([^/ ])}{$1};
+    next unless $curr_file ne '';
+    printf $fout "%s\n",$_;
+  }
+  &Close;
+}
+Exit 0;
+
+__DATA__
+NAME
+----
+
+cppsplit - Split one C/C++ file into many.
+
+SYNOPSIS
+--------
+
+```bash
+cppsplit --help
+cppsplit [-v] FILES
+```
+
+DESCRIPTION
+-----------
+
+Reads specified input and searches for lines matching one of three possibilities:
+
+| PATTERN           | ACTION                             |
+| ----------------- | ---------------------------------- |
+| ^//{40,}$         | Discarded                          |
+| ^//File: FILENAME | Begin output to specified FILENAME |
+| ^//[^/ ]          | Remove leading //                  |
+
+COMMAND LINE OPTIONS
+--------------------
+
+OPTION | ACTION
+------ | ------
+--help | Display this text
+-f     | Force overwriting if a file already exists
+-q     | Suppress message on each file created
+-v     | Output message on each file created
+
+
+SEE ALSO
+--------
+
+cppsplit
+
