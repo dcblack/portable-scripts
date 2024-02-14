@@ -14,6 +14,7 @@ alias bc='shellcheck -s bash -xa -o all'
 alias myip='ipconfig getifaddr en0'
 alias font-sample="echo '#=0123456789_=-^+@auvwxy/\B&8b6ijl1|L_?9gqQO0op2Z75S'"
 alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
+alias week='date +%W'
 alias tab='it tab'
 alias flow=git-flow
 alias %=_do
