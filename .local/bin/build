@@ -63,6 +63,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -install [DIR]   | When done building, install in DIR or PREFIX directory
 | -list-extensions | See EXTENSIONS description following.
 | -lldb            | Run under lldb
+| --loadrc=FILE    | Load switches from FILE
 | -noisy           | Some extra info is displayed
 | -norc            | Ignore .buildrc
 | -norun           | Revert -run
@@ -76,9 +77,10 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -R REGEX         | Include only tests with names matching regular expression REGEX
 | -run             | When done building, run the executable
 | -S DIR           | Name of source directory -- defaults to \".\"
+| --saverc[=FILE]  | Save switches in FILE or ./.buildrc (overwrites existing)
 | -sq              | Squeeze out blank lines from test
 | -std=NN          | Specify C++ standard version
-| -t TGT           | Passed to cmake to specify the target (TGT)
+| -t TGT           | Passed to cmake to specify the target (TGT) and limit ctest
 | -test            | When done building, run the tests verbosely unless -q supplied
 | -type BT         | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
 | -verbose         | Adds more information to output. Opposite of quiet.
@@ -102,6 +104,8 @@ If a the file ${HOME}/.buildrc or ./.buildrc exists, their contents will be used
 ```bash
 build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
 ```
+
+Except that comments and blank lines are removed.
 
 ## EXAMPLES
 
@@ -154,7 +158,7 @@ function Build()
             exec "${UTILITY}" "$@"
             return 0
           else
-            Die "No build script found to build specified library or tool named ${UTILITY}" 
+            Die "No build script found to build specified library or tool named ${UTILITY}"
           fi
         fi
         ;;
@@ -169,7 +173,7 @@ function Build()
     exit 0
   fi
 
-  export SCRIPTS_DIR
+  export SCRIPTS_DIR LOGFILE
   # If not yet defined
   if [[ -z "${SCRIPTS_DIR}" ]]; then
     # Try the directory where build is located
@@ -187,17 +191,43 @@ function Build()
 
   # Add .buildrc if present
   #------------------------------------------------------------------------------
-  if [[ ! "$*" =~ norc ]]; then
-    local -a BUILDRC
+  local NORC RC_PERLSCRIPT
+  local -a BUILDRC=()
+  local RCARG
+  local -a RCARGS=()
+  NORC=0
+  # shellcheck disable=SC2016
+  RC_PERLSCRIPT='
+    chomp;
+    chomp;
+    s{#.*}{};
+    s{\s+}{ }g;
+    s{ $}{};
+    s{^\s*}{ } unless m{^$};
+  '
+  if [[ "$*" =~ -{1,2}norc ]]; then
+    Report_warning "Ignoring default .buildrc files."
+    NORC=1
+  fi
+  if [[ ${NORC} == 0 ]]; then
     if [[ -r "${HOME}/.buildrc" ]]; then
-      BUILDRC+=( "$(cat "${HOME}/.buildrc")" )
+      # shellcheck disable=SC2207
+      BUILDRC+=( $(perl -pe "${RC_PERLSCRIPT}" "${HOME}/.buildrc") )
     fi
     if [[ -r "./.buildrc" ]]; then
-      BUILDRC+=( "$(cat "./.buildrc")" )
+      # shellcheck disable=SC2207
+      BUILDRC+=( $(perl -pe "${RC_PERLSCRIPT}" "./.buildrc") )
     fi
-    if [[ ${#BUILDRC[@]} -gt 0 ]]; then
-      set - "${BUILDRC[@]}" "$@"
-    fi
+    RCARGS=()
+    for RCARG in "${BUILDRC[@]}"; do
+      if [[ "${RCARG}" =~ ^\ *$ ]]; then
+        continue;
+      fi
+      RCARGS+=( "${RCARG}" )
+    done
+    RCARGS+=( "$@" )
+    set - "${RCARGS[@]}"
+    Report_info -f "build ${RCARGS[*]}"
   fi
 
   # Setup defaults
@@ -240,11 +270,18 @@ function Build()
   #------------------------------------------------------------------------------
   export WORKTREE_DIR
   WORKTREE_DIR="" ;#< Do not allow environment in
+
+  local -a ORIG_ARGS=()
+  ORIG_ARGS=( "$@" )
+  local RCFILE
+
   while [[ $# != 0 ]]; do
+    #...........................................................................
     if   [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
       shift
       Build_help
       return 0
+    #...........................................................................
     elif [[ "$1" == "-B" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-B requires a directory argument" ; exit 1
@@ -252,6 +289,7 @@ function Build()
         BLD_DIR="$2"
         shift
       fi
+    #...........................................................................
     elif [[ "$1" == "-C" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-C requires a directory argument" ; exit 1
@@ -264,14 +302,19 @@ function Build()
         SUBPROJ_DIR="$(pwd)"
         shift
       fi
+    #...........................................................................
     elif [[ "$1" =~ ^-D[a-zA-Z_]+= ]]; then
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "$1")
+    #...........................................................................
     elif [[ "$1" =~ ^[a-zA-Z_][a-zA-Z_0-9]*= ]]; then
       eval "export $1"
+    #...........................................................................
     elif [[ "$1" == "-make" ]]; then
       GENERATOR="Unix Makefiles"
+    #...........................................................................
     elif [[ "$1" == "-ninja" ]]; then
       GENERATOR="Ninja"
+    #...........................................................................
     elif [[ "$1" == "-G" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-P requires a directory argument" ; exit 1
@@ -279,8 +322,10 @@ function Build()
         GENERATOR="$2"
         shift
       fi
+    #...........................................................................
     elif [[ "$1" == "-CMP" ]]; then
       ADD_CMAKE_PREFIX=1
+    #...........................................................................
     elif [[ "$1" == "-P" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-P requires a directory argument" ; exit 1
@@ -293,6 +338,7 @@ function Build()
         fi
         shift
       fi
+    #...........................................................................
     elif [[ "$1" == "-S" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-S requires a directory argument" ; exit 1
@@ -302,27 +348,74 @@ function Build()
         SRC_DIR="$2"
         shift
       fi
+    #...........................................................................
     elif [[ "$1" == "-n" ]]; then
       export NOTREALLY
       NOTREALLY="-n"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}sq(ueeze)$ ]]; then
       SQUEEZE=1
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}clean$ ]]; then
       CLEAN=1;
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}info$ ]]; then
       DEBUG="--debug-output";
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}noisy$ ]]; then
       NOISY=1;
-    elif [[ "$1" =~ ^-{1,2}norc$ ]]; then
-      echo -n "";# Do nothing
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}norun$ ]]; then
       ACTION=
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}notest$ ]]; then
       ACTION=
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}quiet$ ]]; then
       QUIET=1;
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}verbose$ ]]; then
       QUIET=0
+    #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}saverc(=?) ]]; then
+      RCFILE="./.buildrc"
+      if [[ "$1" =~ .*= ]]; then
+        RCFILE="${1/*=}"
+      fi
+      rm -f "${RCFILE}"
+      date '+# Created %B %d, %Y %H:%M %p %Z' >"${RCFILE}"
+      echo "" >>"${RCFILE}"
+      for ARG in "${ORIG_ARGS[@]}"; do
+        if [[ "${ARG}" =~ ^-{1,2}saverc(=?) ]]; then
+          continue;
+        fi
+        if [[ -z "${ARG}" ]]; then
+          continue;
+        fi
+        echo "${ARG}" >>"${RCFILE}"
+      done
+      echo "" >>"${RCFILE}"
+      echo "# EOF" >>"${RCFILE}"
+      Report_info -f "Created ${RCFILE}"
+    #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}loadrc= ]]; then
+      RCFILE="${1/*=}"
+      if [[ ! -r "${RCFILE}" || ! -f "${RCFILE}" ]]; then
+        Report_error "Specified rc file is not readable!"
+        continue
+      fi
+      # shellcheck disable=SC2207
+      BUILDRC=( $(perl -pe "${RC_PERLSCRIPT}" "${RCFILE}") )
+      RCARGS=()
+      for RCARG in "${BUILDRC[@]}"; do
+        if [[ "${RCARG}" =~ ^\ *$ ]]; then
+          continue;
+        fi
+        RCARGS+=( "${RCARG}" )
+      done
+      RCARGS+=( "$@" )
+      set - "${RCARGS[@]}"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}version$ ]]; then
       Report_info -f -blu "
  -------------------------------------------------------------------------------
@@ -340,14 +433,16 @@ function Build()
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
--------------------------------------------------------------------------------"      
+-------------------------------------------------------------------------------"
       exit 0
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}install$ ]]; then
       INSTALL=1
       if [[ -d "$2" ]]; then
         PREFIX="$2"
         shift
       fi
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}prefix$ ]]; then
       PREFIX="$2"
       if [[ ! -d "${PREFIX}" ]]; then
@@ -356,8 +451,10 @@ function Build()
       else
         shift
       fi
+    #...........................................................................
     elif [[ "$1" =~ ^-std= ]]; then
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DUSE_CXX_VERSION=${1/-std=/}")
+    #...........................................................................
     elif [[ "$1" =~ ^-type$ ]]; then
       if [[ "$2" =~ ^(Debug|Release|RelWithDebInfo|MinSizeRel)$ ]]; then
         CMAKE_BUILD_TYPE="$2"
@@ -368,39 +465,54 @@ function Build()
         Report_warning "Ignoring unknown build type $2"
         shift
       fi
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}(list-)?targets$ ]]; then
       ACTION="list"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}test$ ]]; then
       ACTION="test"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}gdb$ ]]; then
       ACTION="gdb"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}lldb$ ]]; then
       ACTION="lldb"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}quick$ ]]; then
       TEST_LABELS="quick"
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}long$ ]]; then
       TEST_LABELS="long"
       TEST_EXCLUDE="${TEST_EXCLUDE/long}"
+    #...........................................................................
     elif [[ "$1" == "-LE" ]]; then
       TEST_EXCLUDE="$2"
       shift
+    #...........................................................................
     elif [[ "$1" == "-L" ]]; then
       TEST_EXCLUDE="${TEST_EXCLUDE/$2}"
       TEST_LABELS="$2"
       shift
+    #...........................................................................
     elif [[ "$1" == "-R" ]]; then
       TEST_MATCHES="$2"
       shift
+    #...........................................................................
     elif [[ "$1" =~ ^-{1,2}run$ ]]; then
       ACTION="run"
+    #...........................................................................
     elif [[ "$1" == "--" && ${OPTS_SEP} == 0 ]]; then
       OPTS_SEP=1
+    #...........................................................................
     elif [[ ${OPTS_SEP} == 0 ]]; then
       BUILD_OPTS=("${BUILD_OPTS[@]}" "$1")
+    #...........................................................................
     elif [[ "$1" =~ ^-v$ ]]; then
       BUILD_OPTS=("-v")
+    #...........................................................................
     elif [[ "$1" =~ ^-V$ ]]; then
       TEST_OPTS=("-VV")
+    #...........................................................................
     else
       TEST_OPTS=("${TEST_OPTS[@]}" "$1")
     fi
@@ -500,7 +612,9 @@ function Build()
     CMAKE_PREFIX_PATH=
     for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/extern" "${APPS}" "${APPS}/lib"; do
       CDIR="$(Realpath "${CDIR}")"
-      if [[ ! -d "${CDIR}" ]]; then continue; fi
+      if [[ ! -d "${CDIR}" ]]; then
+        continue;
+      fi
       if [[ -d "${CDIR}/cmake" || -d "${CDIR}/lib/cmake" ]]; then
         if [[ -z "${CMAKE_PREFIX_PATH}" ]]; then
           CMAKE_PREFIX_PATH="${CDIR}"
@@ -558,7 +672,9 @@ function Build()
   # shellcheck disable=SC2086
   _do cmake --build "${BLD_DIR}" --config "${CMAKE_BUILD_TYPE}" "${BUILD_OPTS[@]}"
   # shellcheck disable=SC2181
-  if [[ $? != 0 ]]; then exit 1; fi
+  if [[ $? != 0 ]]; then
+    exit 1;
+  fi
 
   #------------------------------------------------------------------------------
   if [[ "${ACTION}" == gdb ]]; then
@@ -569,7 +685,7 @@ function Build()
         ( _do gdb "${BLD_DIR}/${EXECUTABLE}" )
       done
     else
-      Report_fatal "Not sure what to debug!" 
+      Report_fatal "Not sure what to debug!"
     fi
   elif [[ "${ACTION}" == lldb ]]; then
     Report_info -f "Debugging ${SUBPROJ_DIR}"
@@ -579,7 +695,7 @@ function Build()
         ( _do lldb "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" )
       done
     else
-      Report_fatal "Not sure what to debug!" 
+      Report_fatal "Not sure what to debug!"
     fi
   elif [[ "${ACTION}" == run ]]; then
     Report_info -f "Running ${SUBPROJ_DIR}"
@@ -589,7 +705,7 @@ function Build()
         ( _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" ) 2>&1 | tee run.log
       done
     else
-      Report_fatal "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under build." 
+      Report_fatal "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under build."
     fi
   elif [[ "${ACTION}" == test ]]; then
     Report_info -f "Testing ${SUBPROJ_DIR}"
