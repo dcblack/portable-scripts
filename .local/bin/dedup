@@ -8,12 +8,62 @@ use warnings;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
+my $HELPTEXT = "
+
+NAME
+----
+
+*dedup* - Filter to remove adjacent duplicate lines.
+
+SYNOPSIS
+--------
+
+```bash
+dedup -h|-help
+dedup [-a|--all] FILE_LIST
+```
+
+DESCRIPTION
+-----------
+
+OPTIONS
+-------
+
+| Option | Desciption |
+| ------ | ---------- |
+| --help | Display this text |
+| --runs | Remove runs of duplicates |
+
+LICENSE
+-------
+
+Apache 2.0
+
+";
+
+my $RUNS = 0;
+my $BLANKS = 0;
+while ( $ARGV[0] =~ m{^-} ) {
+  my $arg = shift @ARGV;
+  if ( $arg =~ m{^-{1,2}h(elp)?$} ) {
+    print $HELPTEXT;
+    exit 0;
+  } elsif ( $arg =~ m{^-{1,2}r(uns)?$} ) {
+    $RUNS = 1;
+  } else {
+    print STDERR "ERROR: Unknown switch $arg\n";
+    exit 1
+  }
+}
+
 my $prevBuf = '';
 my $prevNum = -1;
 while(<>) {
   if( $_ eq $prevBuf and $prevNum+1 == $. ) {
     $_ = '';
-    $prevBuf = '';
+    if ( $ALL ) {
+      $prevBuf = '';
+    }
   } else {
     $prevBuf = $_;
     print $_;
