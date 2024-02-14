@@ -17,40 +17,47 @@ alias m='less'
 alias W='command -V'
 alias agl='ag -l --nocolor'
 alias cls='clear ; '
-function Open()
-{
-  local OS arg
-  OS="$(uname -a)"
-  if [[ "${OS}" =~ ^.*Darwin.*$ ]]; then
-    /usr/bin/open "$@"
-  elif [[ "${OS}" =~ WSL2 ]]; then
-    for arg in "$@"; do
-      if [[ "${arg}" =~ [.]git$ ]]; then
-        tower "${arg}"
-      elif [[ -d "${arg}" ]]; then
-        explorer "${arg}"
-      elif [[ "${arg}" =~ [.]md$ ]]; then
-        typora "${arg}"
-      elif [[ "${arg}" =~ akefile$ ]]; then
-        gvim "${arg}"
-      elif [[ "${arg}" =~ [.](txt|h|hpp|c|cpp|rs|bash|sh|zsh|py)$ ]]; then
-        gvim "${arg}"
-      else
-        explorer "${arg}"
-      fi
-    done
-  elif [[ "${OS}" =~ ubuntu ]]; then
-    for arg in "$@"; do
-      if [[ -d "${arg}" ]]; then
-        caja "${arg}"
-      else
-        caja "${arg}"
-      fi
-    done
-  else
-    Report_error "Not sure what to open"
-  fi
-}
+if [[ -n "${COCALC_USERNAME}" ]]; then
+  alias Open=/cocalc/bin/open
+else
+  function Open()
+  {
+    local OS arg
+    OS="$(uname -a)"
+    if [[ "${OS}" =~ ^.*Darwin.*$ ]]; then
+      /usr/bin/open "$@"
+    elif [[ "${OS}" =~ WSL2 ]]; then
+      for arg in "$@"; do
+        if [[ "${arg}" =~ [.]git$ ]]; then
+          tower "${arg}"
+        elif [[ -d "${arg}" ]]; then
+          explorer "${arg}"
+        elif [[ "${arg}" =~ [.]md$ ]]; then
+          typora "${arg}"
+        elif [[ "${arg}" =~ akefile$ ]]; then
+          gvim "${arg}"
+        elif [[ "${arg}" =~ [.](txt|h|hpp|c|cpp|rs|bash|sh|zsh|py)$ ]]; then
+          gvim "${arg}"
+        else
+          explorer "${arg}"
+        fi
+      done
+    elif [[ "${COCALC_USERNAME}" == "user" ]]; then
+      /cocalc/bin/open "$@"
+    elif [[ "${OS}" =~ ubuntu ]]; then
+      for arg in "$@"; do
+        if [[ -d "${arg}" ]]; then
+          caja "${arg}"
+        else
+          caja "${arg}"
+        fi
+      done
+    else
+      Report_error "Not sure what to open"
+    fi
+  }
+fi
+
 # shellcheck disable=SC2154
 alias vivado-setup='source "${APPS}"/xilinx/2020.1/Vivado/2020.1/settings64.sh'
 export VI='vim'
