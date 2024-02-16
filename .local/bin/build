@@ -2,7 +2,8 @@
 # vim:syntax=bash
 #
 BUILD_TOOL_VERSION=1.6
-BUILD_TOOL_NAME="$(basename "$0")"
+BUILD_TOOL_NAME="build"
+export BUILD_TOOL_NAME
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
@@ -173,11 +174,14 @@ function Build()
     exit 0
   fi
 
-  export SCRIPTS_DIR LOGFILE
+  export BUILD_TOOL_NAME SCRIPTS_DIR LOGFILE
+  BUILD_TOOL_PATH="$(command -v "${BUILD_TOOL_NAME}")"
+  BUILD_TOOL_DIR="$(dirname "${BUILD_TOOL_PATH}")"
+
   # If not yet defined
   if [[ -z "${SCRIPTS_DIR}" ]]; then
     # Try the directory where build is located
-    SCRIPTS_DIR="$(dirname "$0")"
+    SCRIPTS_DIR="$(dirname "${BUILD_TOOL_DIR}")/scripts"
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     # Try home installation
