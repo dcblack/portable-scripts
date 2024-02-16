@@ -16,14 +16,15 @@ STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
 # Reporting
-our ($warnings,$errors) = (0,0);
+our ($warnings,$errors,$fatal) = (0,0,0);
 our ($CYN,$GRN,$YLW,$RED,$NONE) = ("\033[1;96m","\033[1;92m","\033[1;93m","\033[1;91m","\033[0m");
 
 sub Exit {
   printf "${CYN}Summary:${NONE}\n";
   printf "  %d warnings\n",$warnings if $warnings > 0;
   printf "  %d errors\n",$errors if $errors > 0;
-  exit $_;
+  printf "  %d fatal\n",$fatal if $fatal > 0;
+  exit shift @_;
 }
 
 sub Warn {
@@ -44,13 +45,14 @@ sub Fatal {
   printf STDERR "${RED}Fatal:${NONE} ";
   printf STDERR @_;
   printf STDERR "\n" unless $_ =~ m{\n};
+  ++$fatal;
   Exit 1;
 }
 
+my $verbosity = 0;
+my $force = 0;
 my $out = '';
 my ($fout,$fin);
-my $verbose = 0;
-my $force = 0;
 while( @ARGV ) {
   my $arg = shift @ARGV;
   if( $arg =~ m{^-{1,2}h(elp)?$} ) {
@@ -60,9 +62,9 @@ while( @ARGV ) {
   } elsif( $arg eq '-f' ) {
     $force = 1;
   } elsif( $arg eq '-q' ) {
-    $verbose = 0;
+    $verbosity = 0;
   } elsif( $arg eq '-v' ) {
-    $verbose = 1;
+    $verbosity = 1;
   } elsif( $arg eq '-o' ) {
     Fatal "-o requires a filename" if scalar @ARGV == 0;
     my $out = shift @ARGV;
@@ -79,7 +81,7 @@ while( @ARGV ) {
   Fatal "Unreadable file '$arg' specified!?\n" unless -r $arg;
   open $fin,'<',$arg
     or Fatal "Unable to open '$arg' for reading!?\n";
-  printf "Reading %s\n", $arg unless $verbose == 0;
+  printf "Reading %s\n", $arg unless $verbosity == 0;
   my $last='x';
   printf "\n" if $last ne '';
   printf $fout "%s\n",'/' x 80;
@@ -103,7 +105,7 @@ while( @ARGV ) {
   close $fin;
 }
 close $fout if $out ne '';
-printf "Created '$out'\n" unless $verbose == 0;
+printf "Created '$out'\n" unless $verbosity == 0;
 Exit 0;
 
 __DATA__

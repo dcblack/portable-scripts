@@ -1,4 +1,4 @@
-#!/usr/bin/env perl5
+#!/usr/bin/env perl
 require v5.6;
 use strict;
 use warnings;

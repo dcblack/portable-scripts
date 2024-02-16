@@ -16,14 +16,15 @@ STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
 # Reporting
-our ($warnings,$errors) = (0,0);
+our ($warnings,$errors,$fatal) = (0,0,0);
 our ($CYN,$GRN,$YLW,$RED,$NONE) = ("\033[1;96m","\033[1;92m","\033[1;93m","\033[1;91m","\033[0m");
 
 sub Exit {
   printf "${CYN}Summary:${NONE}\n";
   printf "  %d warnings\n",$warnings if $warnings > 0;
   printf "  %d errors\n",$errors if $errors > 0;
-  exit $_;
+  printf "  %d fatal\n",$fatal if $fatal > 0;
+  exit shift @_;
 }
 
 sub Warn {
@@ -44,6 +45,7 @@ sub Fatal {
   printf STDERR "${RED}Fatal:${NONE} ";
   printf STDERR @_;
   printf STDERR "\n" unless $_ =~ m{\n};
+  ++$fatal;
   Exit 1;
 }
 

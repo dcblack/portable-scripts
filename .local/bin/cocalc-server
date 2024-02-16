@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+#$Info: cocalc-host - Display ssh login for cocalc access. $
+#
+# Execute this on the cocalc server.
+
+if [[ -z "${COCALC_PROJECT_ID}" ]]; then
+  echo "[1;91mError:[0m This script must be executed on a CoCalc server."
+else
+  echo "${COCALC_PROJECT_ID//-/}@ssh.cocalc.com"
+fi
