@@ -233,11 +233,14 @@ function Color()
 }
 
 #-------------------------------------------------------------------------------
+export LOGFILE
+
 function Logfile()
 {
   #@ Logfile - Display, establish or close the logfile
   #| Logfile
-  #| Logfile [--append|-a] FILENAME
+  #| Logfile [--append] [--mktemp] FILENAME
+  #| Logfile --move [--mktemp] FILENAME
   #| Logfile --off
   #| Logfile ""
   export LOGFILE
@@ -255,30 +258,53 @@ function Logfile()
     LOGFILE=""
     return 0
   fi
-  local APPEND PREV_LOGFILE
-  APPEND=0
-  if [[ "$1" =~ ^-{1,2}a(ppend)?$ ]]; then
-    APPEND=1
+  local APPEND=0 MVTEMP=0 MKTEMP="" PREV_LOGFILE=""
+  while [[ "$1" =~ ^- ]]; do
+    if [[ "$1" =~ ^((--append)|(-a))$ ]]; then
+      APPEND=1
+    elif [[ "$1" =~ ^--move$ ]]; then
+      MVTEMP=1
+    elif [[ "$1" =~ ^--mktemp$ ]]; then
+      MKTEMP="+"
+    fi
     shift
-  fi
+  done
   if [[ -n ${LOGFILE} ]]; then PREV_LOGFILE="${LOGFILE}"; else PREV_LOGFILE=""; fi
   LOGFILE=""
   if [[ $# -gt 0 && -z "${LOGFILE}" ]]; then
     # Figure out where to store logfile
-    if [[ "${LOGFILE}" =~ ^/ ]]; then
-      LOGFILE=""
-    elif [[ -n "${LOGDIR}" ]]; then
-      if [[ ! -d "${LOGDIR}" ]]; then mkdir -p "${LOGDIR}"; fi
-      LOGFILE="$(Realpath "${LOGDIR}")/"
+    if [[ "${MKTEMP}" == "+" ]]; then
+      MKTEMP=""
+      if [[ $# == 0 ]]; then
+        MKTEMP="/tmp/build-XXXXXXX.log"
+      else
+        MKTEMP="$1"
+      fi
+      if [[ ! "${MKTEMP}" =~ X ]]; then
+        MKTEMP="${MKTEMP}-XXXXXXX}"
+      fi
+      LOGFILE="$(mktemp "${MKTEMP}")"
     else
-      LOGFILE="$(Realpath .)/"
+      if [[ "${LOGFILE}" =~ ^/ ]]; then
+        LOGFILE=""
+      elif [[ -n "${LOGDIR}" ]]; then
+        if [[ ! -d "${LOGDIR}" ]]; then mkdir -p "${LOGDIR}"; fi
+        LOGFILE="$(Realpath "${LOGDIR}")/"
+      else
+        LOGFILE="$(Realpath .)/"
+      fi
     fi
     # Append the filename ensuring suffix is .log
     LOGFILE="${LOGFILE}${1//.log/}.log"
   fi
   if [[ -n "${PREV_LOGFILE}" && "${PREV_LOGFILE}" != "${LOGFILE}" ]]; then
-    builtin printf "\n# Closed %s\n" "${TIMESTAMP}" >> "${PREV_LOGFILE}"
-    builtin printf "Closed %s\n" "${PREV_LOGFILE}"
+    if [[ ${MVTEMP} == 1 ]]; then
+      mv "${PREV_LOGFILE}" "${LOGFILE}"
+      builtin printf "Moved log file to %s\n" "${LOGFILE}"
+    else
+      builtin printf "\n# Closed %s\n" "${TIMESTAMP}" >> "${PREV_LOGFILE}"
+      builtin printf "Closed %s\n" "${PREV_LOGFILE}"
+    fi
   elif [[ -z "${LOGFILE}" ]]; then
     builtin echo "Error: Must specify a valid logfile name" 1>&2
     exit 1
@@ -296,7 +322,7 @@ function Log()
   #@ Send text to current logfile if $LOGFILE is defined
   #| Log [-n] "MESSAGE"
   #| COMMAND | Log
-  export NOLOG
+  export NOLOG LOGFILE
   if [[ ${NOLOG} == 1 ]]; then return 0; fi
   if [[ -z "${LOGFILE}" ]]; then return 0; fi
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
@@ -418,14 +444,14 @@ SYNOPSIS
   Report_info [-n|-f][-tag TAG ][-(red|grn|blu|ylw|cyn|mag)] MESSAGE
 
 "
-  if [[ -z "${VERBOSITY+x}" || "${VERBOSITY}" -lt 1 ]]; then
+  if [[ -n "${VERBOSITY}" && "${VERBOSITY}" -lt 1 ]]; then
     if [[ "$1" != "-f" ]]; then
       return 0
     else
       shift
     fi
   fi
-  local PRE TAG EOL
+  local PRE TAG EOL FORCE=0
   PRE="$(_C none)"
   EOL=""
   TAG="Info: "
@@ -434,6 +460,7 @@ SYNOPSIS
   fi
   while [[ "$1" =~ ^-[[:alpha:]]{1,3}$ ]]; do
     case "$1" in
+      -f)   FORCE=1; shift ;;
       -h)   Echo "${SYNTAX}"; return 0 ;;
       -n)   EOL="-n"            ; shift ;;
       -clr) PRE="$(_C none)"    ; shift  ; shift ;;
@@ -450,10 +477,10 @@ SYNOPSIS
             if [[ "${#TAG}" -gt 1 ]]; then TAG="${TAG}:" ; fi
             if [[ "${#TAG}" -gt 0 ]]; then TAG="${TAG} " ; fi
             shift ; shift ;;
-      *) PRE="$(_C none)" ;;
+      *) PRE="$(_C none)" ; shift ;;
     esac
   done
-  if [[ -z "${EOL}" ]]; then
+  if [[ -z "${EOL}" || ${FORCE} == 1 ]]; then
     Echo "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
   else
     Echo -n "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
