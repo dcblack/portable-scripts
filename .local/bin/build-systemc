@@ -73,5 +73,11 @@ if [[ -z "${NOINSTALL+x}" || "${NOINSTALL}" == "no" ]]; then
 else
   Report_info -mag "Stopped shy of installing ${TOOL_NAME}"
 fi
+if [[ -r "${LOGFILE}" ]]; then
+  if [[ -z "${TOOL_VERS}" ]]; then
+    TOOL_VERS="default"
+  fi
+  mv "${LOGFILE}" "${LOGFILE}-${TOOL_VERS}"
+fi
 
 # vim:nospell
