@@ -9,20 +9,20 @@
 # - grep
 # - sed
 
+export CC CXX
+
 function Tool_versions()
 {
   # Defaults
   local EXTRA QUIET TOOLS
-  export NOCOLOR
+  export NOCOLOR CXX CC
   EXTRA=0
   QUIET=0
   TOOLS=()
   # Color support
-  local CRED CGRN BOLD NONE
-  if [[ ${NOCOLOR} == 1 ]]; then
-    CRED=""       CGRN=""       BOLD=""      NONE=""
-  else
-    CRED="[91m" CGRN="[92m" BOLD="[1m" NONE="[0m"
+  local CRED CGRN="" CCYN="" BOLD="" NONE=""
+  if [[ "${NOCOLOR}" != 1 ]]; then
+    CRED="[91m" CGRN="[92m" CCYN="[93m" BOLD="[1m" NONE="[0m"
   fi
   while [[ $# != 0 ]]; do
     case "$1" in
@@ -209,6 +209,12 @@ EOT
       echo "${CRED}${TOOL} - ${BOLD}MISSING${NONE}"
     fi
   done
+  if [[ -n "${CXX}" ]]; then
+    echo "${CCYN}export CXX=${CXX}${NONE}"
+  fi
+  if [[ -n "${CC}" ]]; then
+    echo "${CCYN}export CC=${CC}${NONE}"
+  fi
 
   echo "----------------------------------------"
 }
