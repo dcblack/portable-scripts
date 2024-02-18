@@ -1,0 +1,476 @@
+#!/usr/bin/env bash
+#
+# git-qconfig - quick configure git
+
+export EDITOR
+export EXERCISES
+
+function Realpath()
+{
+  if [[ $# == 0 ]]; then set - .; fi
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+SCRIPT="$(Realpath "$0")"
+SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+if [[ -r "${SCRIPT}" ]]; then
+  # shellcheck source=~/.local/bin/utils.bash disable=SC1090
+  source "${SCRIPT}" "$0"
+else
+  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+fi
+
+#-------------------------------------------------------------------------------
+function Read()
+{
+  export REPLY
+  local PROMPT
+  PROMPT="$*"
+  if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
+    PROMPT="${PROMPT}?"
+  fi
+  if [[ -n "${ZSH_VERSION}" ]]; then
+    read -r "REPLY?${PROMPT} "
+  else
+    read -r -p "${PROMPT} "
+  fi
+}
+
+#-------------------------------------------------------------------------------
+function Valid_name()
+{
+  # A valid name consists of at least two words
+  local NAME="${1/. / }"
+  if [[ "${NAME}" =~ ^[A-Za-z][-A-Za-z]+(\ [-A-Za-z]+)+ ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+#-------------------------------------------------------------------------------
+function Get_name()
+{
+  export YOURNAME
+  YOURNAME=""
+  while [[ "${YOURNAME}" == "" ]]; do
+    Read 'Your full name: '
+    if Valid_name "${REPLY}"; then
+      YOURNAME="${REPLY}"
+    elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
+      return 1
+    else
+      Report_warning "Improperly formatted name"
+    fi
+  done
+}
+
+function Valid_email()
+{
+  # A valid e-mail consists of a username and domain separated by an @
+  if [[ "$1" =~ [-.a-zA-Z0-9_]{3,}@[-.a-zA-Z0-9]{3,}[.][a-zA-Z]{3} ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+#-------------------------------------------------------------------------------
+function Get_email()
+{
+  export YOURMAIL
+  YOURMAIL=""
+  while [[ "${YOURMAIL}" == "" ]]; do
+    Read 'Your email address: '
+    if Valid_email "${REPLY}"; then
+      YOURMAIL="${REPLY}"
+    elif [[ "${REPLY}" =~ quit|exit|abort ]]; then
+      return
+    else
+      Report_error "ERROR: Improperly formatted e-mail address" 1>&2
+    fi
+  done
+}
+
+function Choose()
+{
+  # SYNTAX: Choose "QUESTION" CHOICE1 CHOICE2...
+  if [[ $# -lt 3 ]]; then
+    echo "Error: Must have a question and at least two choices." 1>&2
+    exit 1
+  fi
+  local question choices
+  question="$1"
+  shift
+  choices="${*// /|/}"
+  ANS=""
+  
+  while [[ "${ANS}" == "" ]]; do
+    Read "${question}\nChoose action: (${choices}): "
+    if [[ "${REPLY}" =~ ${choices} ]]; then
+      ANS="${REPLY}"
+    fi
+  done
+  if [[ "${ANS}" =~ quit|abort ]]; then exit 0; fi
+  echo "${ANS}"
+}
+
+function Help_configure()
+{
+  cat << 'HELPTEXT'
+NAME
+----
+
+git-qconfig - quick configure git
+
+SYNOPSIS
+--------
+
+git qconfig [OPTIONS]
+
+DESCRIPTION
+-----------
+
+Sets ups three area for git when you`re in a hurry:
+
+1. Name and email
+2. Some common options
+3. Sone helpful aliases
+
+If no options are given, the user is prompted for name and email before proceeding.
+
+The standard configure items are:
+
+| Item                    | Value        |
+| ----------------------- | ------------ |
+| push.followTags         | true         |
+| color.pager             | true         |
+| color.ui                | auto         |
+| core.pager              | "less_-FRSX" |
+| push.default            | current      |
+| cord.editor             | "${EDITOR}"  |
+| merge.branchdesc        | true         |
+
+OPTIONS
+-------
+
+| Option        | Alternative   |  Action
+| ------------- | ------------- | -------
+| --force       |               | Override pre-existing values
+| --list        |               | List all the current settings
+| --no-name     |               | Don't set or update name & email
+| --no-alias    |               | Don't add aliases
+| --no-config   |               | Don't add preset config items
+| --rm-name     |               | Remove name and email
+| --rm-alias    |               | Remove aliases
+| --rm-config   |               | Remove config items
+| --name='NAME' | --name 'NAME' | Specify YOURNAME rather than get prompted.
+| --email=ADDR  | --email ADDR  | Specify YOUREMAIL rather than get prompted.
+
+HELPTEXT
+}
+
+function Set_config()
+{
+  export SCOPE
+  git config --"${SCOPE}" "$1" "$2"
+}
+
+function Rm_config()
+{
+  if git config --"${SCOPE}" --get "$1" 1>/dev/null 2>&1; then
+    export SCOPE
+    git config --"${SCOPE}" --unset "$1"
+  fi
+}
+
+ITEM_WIDTH=16
+VALUE_WIDTH=60
+
+function List_config()
+{
+  export SCOPE
+  if git config --"${SCOPE}" --get "$1" 1>/dev/null 2>&1; then
+    local VALUE
+    VALUE="$(git config --"${SCOPE}" --get "$1")"
+    printf "%${ITEM_WIDTH}s | " "$1"
+    printf "%${VALUE_WIDTH}.${VALUE_WIDTH}s\n" "${VALUE//|/│/}" || true
+  fi
+}
+
+#-------------------------------------------------------------------------------
+# Main
+#-------------------------------------------------------------------------------
+function Git_configure()
+{
+
+  # Parse command-line
+  local YOURNAME=""
+  local YOURMAIL=""
+  local FORCE=0 LIST=0 NONAME=0 NOALIAS=0 NOCONFIG=0 RMNAME=0 RMALIAS=0 RMCONFIG=0 NAH=0
+  export SCOPE="global"
+  while [[ $# -gt 0 ]]; do
+    local ARG="$1"
+    shift
+    case "${ARG}" in
+      --help|-h)   Help_configure
+        return 0
+        ;;
+      # Simple flags
+      --nah|-n)    NAH=1    ;;
+      --force)     FORCE=1    ;;
+      --list)      LIST=1     ;;
+      --no-alias)  NOALIAS=1  ;;
+      --no-config) NOCONFIG=1 ;;
+      --no-name)   NONAME=1   ;;
+      --rm-alias)  RMALIAS=1  ;;
+      --rm-config) RMCONFIG=1 ;;
+      --rm-name)   RMNAME=1   ;;
+      # Aliases
+      help) set - --help ;;
+      list|show) set - --list ;;
+      remove-all) set - --rm-name --rm-config --rm-alias ;;
+      # Options that need a value
+      --scope=*)
+        ARG="${ARG/*=}"
+        if [[ "${ARG}" =~ ^(global|local|system)$ ]]; then
+          SCOPE="${ARG}"
+        else
+          Report_error "Scope ust be one of global, local, or system"; return 1
+        fi
+        ;;
+      --scope)
+        if [[ $# -lt 1 || "$1" =~ ^- ]]; then Report_error "${ARG} needs a value"; return 1; fi
+        ARG="$1"
+        shift
+        if [[ "${ARG}" =~ ^(global|local|system)$ ]]; then
+          SCOPE="${ARG}"
+        else
+          Report_error "Scope ust be one of global, local, or system"; return 1
+        fi
+        ;;
+      --name=*)
+        ARG="${ARG/*=}"
+        if Valid_name "${ARG}"; then
+          YOURNAME="${ARG}"
+        else
+          Report_error "Name is not valid. Use 'First Last'"; return 1
+        fi
+        ;;
+      --name)
+        if [[ $# -lt 1 || "$1" =~ ^- ]]; then Report_error "${ARG} needs a value"; return 1; fi
+        ARG="$1"
+        shift
+        if Valid_name "${ARG}"; then
+          YOURNAME="${ARG}"
+        else
+          Report_error "Name is not valid. Use 'First Last'"; return 1
+        fi
+        ;;
+      --email=*)
+        ARG="${ARG/*=}"
+        if Valid_email "${ARG}"; then
+          YOURNAME="${ARG}"
+        else
+          Report_error "Email address is not valid. Use 'user@domain'"; return 1
+        fi
+        ;;
+      --email)
+        if [[ $# -lt 1 || "$1" =~ ^- ]]; then Report_error "${ARG} needs a value"; return 1; fi
+        ARG="$1"
+        shift
+        if Valid_email "${ARG}"; then
+          YOURMAIL="${ARG}";
+        else
+          Report_error "Email address is not valid. Use 'user@domain'"; return 1
+        fi
+        ;;
+      *)
+        Report_error "Unknown option: ${ARG}"; return 1
+        ;;
+    esac
+  done
+
+  if [[ ${LIST} == 1 ]]; then
+    NONAME=1
+  fi
+
+  if [[ ${NONAME} == 0 ]]; then
+
+    local GIT_USERNAME
+    GIT_USERNAME="$(git config --global user.name)"
+    if [[ ${FORCE} == 1 || -z "${GIT_USER_NAME}" ]]; then
+      if Get_name; then
+        git config --global user.name "${YOURNAME}"
+        printf "Setup user.name=%s\n" "${YOURNAME}"
+      else
+        echo "Aborting..."
+        return 1
+      fi
+    else
+      printf "Leaving user.name=%s\n" "${GIT_USERNAME}"
+    fi
+
+    local GIT_EMAIL
+    GIT_EMAIL="$(git config --global user.email)"
+    if [[ ${FORCE} == 1 || -z "${GIT_EMAIL}" ]]; then
+      Get_email
+      git config --global user.email "${YOURMAIL}"
+      printf "Setup user.email=%s\n" "${YOURMAIL}"
+    else
+      printf "Leaving user.email=%s\n" "${GIT_EMAIL}"
+    fi
+  elif [[ ${RMNAME} == 1 ]]; then
+    git config --global --unset user.name
+    git config --global --unset user.email
+  fi
+
+  if [[ ${LIST} == 1 ]]; then
+    printf "%${ITEM_WIDTH}s | %s\n" "Feature" "Value"
+    printf "%${ITEM_WIDTH}s | %s\n" ":------" "-----"
+    List_config user.name
+    List_config user.email
+  fi
+
+  # Search for a valid text editor if not specified
+  export EDITOR
+  if [[ -z "${EDITOR}" ]]; then
+    local FLAG
+    for FLAG in gvim vim vi; do
+      if builtin command -v "${FLAG}" 1>/dev/null 2>&1; then
+        EDITOR="${FLAG}"
+        break
+      fi
+    done
+  fi
+
+  # Configure items
+  if [[ ${NOCONFIG} == 0 && ${NAH} == 0 ]]; then
+    if [[ ${RMCONFIG} == 0 ]]; then
+      Set_config push.followTags true
+      Set_config color.pager true
+      Set_config color.ui auto
+      Set_config core.pager "less -FRSX"
+      Set_config push.default current
+      Set_config cord.editor "${EDITOR}"
+      Set_config merge.branchdesc true
+    else
+      Rm_config push.followTags
+      Rm_config color.pager
+      Rm_config color.ui
+      Rm_config core.pager
+      Rm_config push.default
+      Rm_config cord.editor
+      Rm_config merge.branchdesc
+    fi
+  fi
+  if [[ ${LIST} == 1 ]]; then
+    List_config push.followTags
+    List_config color.pager
+    List_config color.ui
+    List_config core.pager
+    List_config push.default
+    List_config cord.editor
+    List_config merge.branchdesc
+  fi
+
+  # Useful aliases
+  if [[ ${NOALIAS} == 0 && ${NAH} == 0 ]]; then
+    if [[ ${RMALIAS} == 0 ]]; then
+      # shellcheck disable=SC2016
+      Set_config alias.added     '!git ls-files -s | perl -lane '\''print(pop@F)'\'
+      Set_config alias.br        'branch'
+      Set_config alias.changed   'ls-files -m'
+      Set_config alias.changes   'status -s -uno'
+      Set_config alias.co        'checkout'
+      Set_config alias.conflicts 'diff --name-only --diff-filter=U'
+      # shellcheck disable=SC2016
+      Set_config alias.diffs     '!git diff $(git ls-files -m)'
+      Set_config alias.hash      'hash-object'
+      Set_config alias.history   'log --pretty=format:"%h %cs %s" --graph'
+      Set_config alias.ignored   'ls-files -o'
+      Set_config alias.missed    'ls-files -o --exclude-standard'
+      Set_config alias.new       'init -b main'
+      Set_config alias.remotes   'remote -v'
+      Set_config alias.remotes   'remote -v'
+      Set_config alias.tags      "!git for-each-ref --count=30 --sort='-*authordate' --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' refs/tags/* | perl -pe 's-refs/tags/--;s{... }{  };'"
+      Set_config alias.top       'rev-parse --show-toplevel'
+      Set_config alias.unstage   'reset HEAD'
+      Set_config alias.untrack   'rm --cached'
+      Set_config alias.url       'remote get-url origin'
+    else
+      Rm_config alias.added
+      Rm_config alias.br
+      Rm_config alias.changed
+      Rm_config alias.changes
+      Rm_config alias.co
+      Rm_config alias.conflicts
+      Rm_config alias.diffs
+      Rm_config alias.hash
+      Rm_config alias.history
+      Rm_config alias.ignored
+      Rm_config alias.missed
+      Rm_config alias.new
+      Rm_config alias.remotes
+      Rm_config alias.remotes
+      Rm_config alias.tags
+      Rm_config alias.top
+      Rm_config alias.unstage
+      Rm_config alias.untrack
+      Rm_config alias.url
+    fi
+  fi
+  if [[ ${LIST} == 1 ]]; then
+      List_config alias.added
+      List_config alias.br
+      List_config alias.changed
+      List_config alias.changes
+      List_config alias.co
+      List_config alias.conflicts
+      List_config alias.diffs
+      List_config alias.hash
+      List_config alias.history
+      List_config alias.ignored
+      List_config alias.missed
+      List_config alias.new
+      List_config alias.remotes
+      List_config alias.remotes
+      List_config alias.tags
+      List_config alias.top
+      List_config alias.unstage
+      List_config alias.untrack
+      List_config alias.url
+  fi
+
+  if [[ ${LIST} == 1 ]]; then
+    return 0
+  fi
+
+  # Add git to exercises if missing
+  if [[ -z "${EXERCISES}" ]]; then
+    local DIR
+    for DIR in "${HOME}/Exercises" "${HOME}/exercises" "${HOME}/EXERCISES"; do
+      if [[ -d "${DIR}" ]]; then
+        EXERCISES="${DIR}"
+        break
+      fi
+    done
+  fi
+  if [[ -n "${EXERCISES}" ]]; then
+    for COURSE in esscpp syscfund tlm-2; do
+      if [[ -d "${EXERCISES}/${COURSE}" && ! -d "${EXERCISES}/${COURSE}/.git" ]]; then
+        git new "${EXERCISES}/${COURSE}"
+        git -C "${EXERCISES}/${COURSE}" add .
+        git -C "${EXERCISES}/${COURSE}" commit -m 'initial'
+      fi
+    done
+  fi
+
+  Report_info "Git set up"
+}
+
+if [[ "$*" != "-n" ]]; then
+  Git_configure "$@"
+fi
+
+# vim:nospell
+#-------------------------------------------------------------------------------
