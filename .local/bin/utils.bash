@@ -319,6 +319,7 @@ function GetBuildOpts()
 #|  --use-lwg          |                   | change URL to use Accellera private repo
 #|  --verbose          |  -v               | echo more information (may be repeated)
 #|  --version=X.Y.Z    |  -vers X.Y.Z      | set the desired tool version
+#|  --versions         |                   | list available versions       
 #|  --quiet            |  -q               | echo less information (may be repeated)
 #|
 #|OUTPUTS
@@ -404,7 +405,8 @@ function GetBuildOpts()
   # Scan command-line for options
   #-------------------------------------------------------------------------------
   while [[ $# != 0 ]]; do
-    case "$1" in
+    local ARG="$1"
+    case "${ARG}" in
     -devhelp|--devhelp)
       HelpText -md -b 'utils.bash' "${UTILS_SCRIPT}";
       exit 0
@@ -415,143 +417,122 @@ function GetBuildOpts()
       ;;
     -n|--not-really|--notreally)
       NOTREALLY="-n"
-      shift
       ;;
     -no-fetch|--no-fetch|--nofetch)
       NOFETCH="yes"
-      shift
       ;;
     -no-compile|--no-compile|--nocompile)
       NOCOMPILE="yes"
-      shift
       ;;
     -no-install|--no-install|--noinstall)
       export NOINSTALL
       NOINSTALL="yes"
-      shift
       ;;
     -no-patch|-nopatch|--no-patch|--nopatch)
       NOPATCH=1
-      shift
       ;;
     --build-dir=*|-bd)
-      if [[ "$1" != '-bd' ]]; then
-        BUILD_DIR="${1//*=}"
+      if [[ "${ARG}" != '-bd' ]]; then
+        BUILD_DIR="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         BUILD_DIR="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --build-type=*|-bt)
-      if [[ "$1" != '-bd' ]]; then
-        CMAKE_BUILD_TYPE="${1//*=}"
+      if [[ "${ARG}" != '-bd' ]]; then
+        CMAKE_BUILD_TYPE="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         CMAKE_BUILD_TYPE="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --builder=*|-bld)
-      if [[ "$1" != '-gen' ]]; then
-        BUILDER="${1//*=}"
+      if [[ "${ARG}" != '-gen' ]]; then
+        BUILDER="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         BUILDER="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --cc=*|CC=*)
-      CC="${1//*=}"
+      CC="${ARG//*=}"
       if [[ "${CC}" =~ .*gcc ]];then
         CXX=g++
       elif [[ "${CC}" =~ .*clang++ ]]; then
         CXX=clang++
       fi
-      shift
       ;;
     --checkout=*)
-      TOOL_CHECKOUT="${1//*=}"
-      shift
+      TOOL_CHECKOUT="${ARG//*=}"
       ;;
     --clang)
       CC=clang
       CXX=clang++
-      shift
       ;;
     --clean|-clean)
       CLEAN=1;
-      shift
       ;;
     --cleanup|-cleanup)
       CLEANUP=1;
-      shift
       ;;
     --cxx=*|CXX=*)
-      CXX="${1//*=}"
+      CXX="${ARG//*=}"
       if [[ "${CXX}" == g++ ]]; then
         CC=gcc
       elif [[ "${CXX}" == clang++ ]]; then
         CC=clang
       fi
-      shift
       ;;
     -d|-debug|--debug)
       DEBUG=1;
-      shift
       ;;
     --default)
       APPS="${HOME}.local/apps"
       SRC="${HOME}/.local/src"
-      shift
       ;;
     --doxy)
       BUILD_SOURCE_DOCUMENTATION=on
-      shift
       ;;
     --gcc)
       CC=gcc
       CXX=g++
-      shift
       ;;
     --generator=*|-gen)
-      if [[ "$1" != '-gen' ]]; then
-        GENERATOR="${1//*=}"
+      if [[ "${ARG}" != '-gen' ]]; then
+        GENERATOR="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         GENERATOR="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --info=*|-info)
-      if [[ "$1" != '-info' ]]; then
-        TOOL_INFO="${1//*=}"
+      if [[ "${ARG}" != '-info' ]]; then
+        TOOL_INFO="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         TOOL_INFO="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     -i|--install=*|--apps=)
-      if [[ "$1" != '-i' ]]; then
-        APPS="${1//*=}"
+      if [[ "${ARG}" != '-i' ]]; then
+        APPS="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         APPS="$2"
         shift
       else
-        Report_fatal "Need directory argument for $1"
+        Report_fatal "Need directory argument for ${ARG}"
       fi
-      shift
       ;;
     --extern)
       APPS="${WORKTREE_DIR}"
@@ -560,35 +541,32 @@ function GetBuildOpts()
     --home)
       APPS="${HOME}"
       SRC="${HOME}/src"
-      shift
       ;;
     -pref|--prefix=*)
-      if [[ "$1" != '-pref' ]]; then
-        CMAKE_INSTALL_PREFIX="${1//*=}"
+      if [[ "${ARG}" != '-pref' ]]; then
+        CMAKE_INSTALL_PREFIX="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         CMAKE_INSTALL_PREFIX="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --root-dir=*|-rd)
-      if [[ "$1" != '-rd' ]]; then
-        WORKTREE_DIR="${1//*=}"
+      if [[ "${ARG}" != '-rd' ]]; then
+        WORKTREE_DIR="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         WORKTREE_DIR="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     -patch|--patch=*)
       NOPATCH=0
       PATCH=
-      if [[ "$1" != '-patch' ]]; then
-        PATCH="${1//*=}"
+      if [[ "${ARG}" != '-patch' ]]; then
+        PATCH="${ARG//*=}"
       elif [[ $# -gt 1 && ! "$2" =~ ^- ]]; then
         PATCH="$2"
         shift
@@ -606,108 +584,96 @@ function GetBuildOpts()
       else
         Report_fatal "Patch '${PATCH}' does not exist"
       fi
-      shift
       ;;
     -s|--src=*)
-      if [[ "$1" != '-s' ]]; then
-        SRC="${1//*=}"
+      if [[ "${ARG}" != '-s' ]]; then
+        SRC="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         SRC="$2"
         shift
       else
-        Report_fatal "Need directory argument for $1"
+        Report_fatal "Need directory argument for ${ARG}"
       fi
-      shift
       ;;
     --std=*|-std=*)
-      CMAKE_CXX_STANDARD="${1//*=}"
-      shift
+      CMAKE_CXX_STANDARD="${ARG}//*=}"
       ;;
     --steps=*|-steps=*)
-      STEP_MAX="${1//*=}"
-      shift
+      STEP_MAX="${ARG//*=}"
       ;;
     --systemc=*|-sc)
-      if [[ "$1" != '-sc' ]]; then
-        SYSTEMC_HOME="${1//*=}"
+      if [[ "${ARG}" != '-sc' ]]; then
+        SYSTEMC_HOME="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         SYSTEMC_HOME="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --suffix=*|-suf)
-      if [[ "$1" != '-suf' ]]; then
-        SUFFIX="${1//*=}"
+      if [[ "${ARG}" != '-suf' ]]; then
+        SUFFIX="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         SUFFIX="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --tool=*|-tool)
-      if [[ "$1" != '-tool' ]]; then
-        TOOL_NAME="${1//*=}"
+      if [[ "${ARG}" != '-tool' ]]; then
+        TOOL_NAME="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         TOOL_NAME="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     --uninstall|-rm)
       CLEANUP=1;
-      shift
       ;;
     --use-lwg)
       TOOL_URL="git@github.com:OSCI-WG/systemc.git"
-      shift
       ;;
     --use-https)
       TOOL_URL="$(perl -le '$_=shift@ARGV;s{git.github.com:}{https://github.com/};print $_' "${TOOL_URL}" )"
-      shift
       ;;
     --use-ssh)
       TOOL_URL="$(perl -le '$_=shift@ARGV;s{https://github.com/}{git\@github.com:};print $_' "${TOOL_URL}" )"
-      shift
       ;;
     --url=*|-url)
-      TOOL_URL="${1//*=}"
-      shift
+      TOOL_URL="${ARG//*=}"
       ;;
     --loud|-L)
       VERBOSITY=2
-      shift
       ;;
     --quiet|-q)
       VERBOSITY=0
-      shift
       ;;
     --verbose|-v)
       VERBOSITY=1
-      shift
+      ;;
+    --versions)
+      _do git -C "${TOOL_SRC}/${TOOL_BASE}" tag
+      exit 0
       ;;
     --version=*|-vers)
-      if [[ "$1" != '-vers' ]]; then
-        TOOL_VERS="${1//*=}"
+      if [[ "${ARG}" != '-vers' ]]; then
+        TOOL_VERS="${ARG//*=}"
       elif [[ $# -gt 1 && -d "$2" ]]; then
         TOOL_VERS="$2"
         shift
       else
-        Report_fatal "Need argument for $1"
+        Report_fatal "Need argument for ${ARG}"
       fi
-      shift
       ;;
     *)
-      ARGV[${#ARGV[@]}]="$1"
-      shift
+      ARGV[${#ARGV[@]}]="${ARG}"
       ;;
     esac
+    shift
   done
 
   #-------------------------------------------------------------------------------
