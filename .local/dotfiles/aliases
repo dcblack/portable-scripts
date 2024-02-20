@@ -9,12 +9,12 @@
 #  #     # #      #  #     # #    # #     #    #                                 
 #  #     # ##### ### #     #  ####  #####  ####                                  
 #-------------------------------------------------------------------------------
-alias ls='ls -BCF --color=always'
+alias ls='ls -F --color=always'
 alias la='ls -A'
 alias ll='ls -l'
 alias dir='dir --color=auto'
 alias m='less'
-alias W='command -V'
+alias W='builtin command -V'
 alias agl='ag -l --nocolor'
 alias cls='clear ; '
 if [[ -n "${COCALC_USERNAME}" ]]; then
