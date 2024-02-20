@@ -50,7 +50,7 @@ function Report_info() {
 }
 
 #-------------------------------------------------------------------------------
-SRC="${HOME}/.local/src"
+SRC=~/.local/src
 mkdir -p "${SRC}"
 cd "${SRC}" || Die "Unable to enter source directory ${SRC}"
 echo "Fetching ninja"
@@ -62,4 +62,6 @@ cmake
 cmake -B build-cmake -H.
 cmake --build build-cmake
 build-cmake/ninja_test
-rsync -av build-cmake/ninja "${HOME}/.local/bin/"
+rsync -av build-cmake/ninja ~/.local/bin/
+
+# The end

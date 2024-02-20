@@ -100,10 +100,10 @@ For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
 ## DEFAULT OPTIONS
 
-If a the file ${HOME}/.buildrc or ./.buildrc exists, their contents will be used for initial command-line options. It will be as if invoked with:
+If a the file ~/.buildrc or ./.buildrc exists, their contents will be used for initial command-line options. It will be as if invoked with:
 
 ```bash
-build "$(cat "${HOME}/.buildrc" ./.buildrc)" "$@"
+build "$(cat ~/.buildrc ./.buildrc)" "$@"
 ```
 
 Except that comments and blank lines are removed.
@@ -185,7 +185,7 @@ function Build()
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     # Try home installation
-    SCRIPTS_DIR="${HOME}/.local/scripts"
+    SCRIPTS_DIR=~/.local/scripts
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     Die "Unable to find Essential-IO in ${SCRIPTS_DIR}"
@@ -214,9 +214,9 @@ function Build()
     NORC=1
   fi
   if [[ ${NORC} == 0 ]]; then
-    if [[ -r "${HOME}/.buildrc" ]]; then
+    if [[ -r ~/.buildrc ]]; then
       # shellcheck disable=SC2207
-      BUILDRC+=( $(perl -pe "${RC_PERLSCRIPT}" "${HOME}/.buildrc") )
+      BUILDRC+=( $(perl -pe "${RC_PERLSCRIPT}" ~/.buildrc) )
     fi
     if [[ -r "./.buildrc" ]]; then
       # shellcheck disable=SC2207
@@ -249,7 +249,7 @@ function Build()
     GENERATOR="Unix Makefiles"
   fi
   ADD_CMAKE_PREFIX=0
-  APPS="${HOME}/.local/apps"
+  APPS=~/.local/apps
   CLEAN=0
   DEBUG=""
   QUIET=0

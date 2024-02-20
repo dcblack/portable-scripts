@@ -3,18 +3,22 @@
 # FILE: .bash_profile
 
 # This script sources bashrc and ensure the home directory is setup properly.
+export HOME USER
+USER="$(whoami)"
+HOME="$(getent passwd "${USER}" | cut -d: -f6 || true)"
 
 # Get the aliases and functions
-if [ -f "${HOME}/.bashrc" ]; then
-  source "${HOME}/.bashrc"
+if [[ -f ~/.bashrc ]]; then
+  # shellcheck source=/dev/null
+  source ~/.bashrc
 fi
 
 # User specific environment and startup programs
 
-if [[ -d "${HOME}/bin" ]]; then
-  mkdir -p   "${HOME}/bin"
-  chmod g+s  "${HOME}/bin"
-  chmod a+rx "${HOME}/bin"
+if [[ -d ~/bin ]]; then
+  mkdir -p   ~/bin
+  chmod g+s  ~/bin
+  chmod a+rx ~/bin
 fi
 
 if [[ "${HOME}" == "${LEAD}" && ! -d "${LEAD}/.local/bin" ]]; then
@@ -27,7 +31,7 @@ fi
 
 if [[ -n "${LEAD}" ]]; then
   prepend_path PATH "${LEAD}/.local/bin"
-  prepend_path PATH "${HOME}/bin" # Allow user overrides
-  MANPATH=${HOME}/man:"${LEAD}/.local/man:${LEAD}/.local/share/man:/usr/local/share/man:/usr/share/man"
+  prepend_path PATH ~/bin # Allow user overrides
+  MANPATH=~/man:"${LEAD}/.local/man:${LEAD}/.local/share/man:/usr/local/share/man:/usr/share/man"
 fi
 export MANPATH

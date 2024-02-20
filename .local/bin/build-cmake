@@ -30,7 +30,7 @@ fi
 
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../bin)"
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-SCRIPTDIR="$(Realpath "${HOME}"/.local/bin)"
+SCRIPTDIR="$(Realpath ~/.local/bin)"
 fi
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
 SCRIPTDIR="$(Realpath "$(dirname "$0")")"
@@ -117,8 +117,8 @@ fi
 CWD="$(pwd)"
 if [[ -v APPS ]]; then
 SRC="${APPS}/src"
-elif [[ "${HOME}" == "${CWD}" ]]; then
-SRC="${HOME}/.local/src"
+elif [[ ~ == "${CWD}" ]]; then
+SRC=~/.local/src
 else
 SRC="$(pwd)/src"
 fi

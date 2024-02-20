@@ -10,7 +10,7 @@ function Realpath ()
 # Using Essential-IO
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+  SCRIPTDIR="$(Realpath ~/.local/scripts)"
 fi
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
@@ -34,9 +34,9 @@ function Build_python3()
   BRANCH=('--branch' "v${VERS}")
   DEPTH=('--depth' 1)
   ONLINE=1
-  INSTALL_DIR="${HOME}/.local/apps/python${VERS}"
+  INSTALL_DIR=~/.local/apps/python${VERS}
   GIT_DIR="cpython"
-  SRC_DIR="${HOME}/.local/src"
+  SRC_DIR=~/.local/src
   BLD_DIR=build
 
   # Command-line

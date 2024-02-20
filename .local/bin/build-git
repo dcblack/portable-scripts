@@ -65,7 +65,10 @@ while [[ $# != 0 ]]; do
   esac
 done
 
-cd "${HOME}" || Die "Unable to cd to ${HOME}"
+export HOME USER
+USER="$(whoami)"
+HOME="$(getent passwd "${USER}" | cut -d: -f6 || true)"
+cd ~ || Die "Unable to cd to ${HOME}"
 mkdir -p .local/src
 cd .local/src
 export CMAKE_INSTALL_PREFIX="${HOME}/.local"

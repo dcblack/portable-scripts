@@ -8,7 +8,7 @@ function findkey()
   Syntax: findkey FINGERPRINT
   "
   local k f
-  for k in "${HOME}"/.ssh/*.pub; do
+  for k in ~/.ssh/*.pub; do
     f="$(ssh-keygen -l -E md5 -f "${k}" 2>/dev/null)" 
     if [[ "${f}" =~ $1 ]]; then
       echo "${k} -> ${f}"

@@ -24,7 +24,7 @@ HELPTEXT
 fi
 
 GIT_URL="https://github.com/rurban/safeclib.git"
-LOCAL="${HOME}/.local"
+LOCAL=~/.local
 OS="$(uname -a)"
 ARCH="$(uname -m)"
 OPTS=(--prefix="${LOCAL}/apps")

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cd $HOME/.local
+cd ~/.local
 TYPE=centos
 uname -a | grep ubuntu && TYPE=ubuntu
 echo "TYPE=$TYPE"

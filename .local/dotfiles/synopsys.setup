@@ -2,7 +2,7 @@
 
 export SNPS SNPS_VERS LM_LICENSE_FILE LM_LOG_FILE
 
-SNPS="${HOME}/synopsys"
+SNPS=~/synopsys
 SNPS_VERS="S-2021.09-3"
 LM_LICENSE_FILE="${SNPS}/license.txt"
 LM_LOG_FILE="${SNPS}/lmgrd.log"

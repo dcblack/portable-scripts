@@ -9,7 +9,7 @@ function dotfile() {
        *) ;;
     esac
   done
-  for p in "${HOME}/.$1" "${HOME}/.local/dotfiles/$1"; do
+  for p in ~/".$1" ~/.local/dotfiles/"$1"; do
     if [[ -f "${p}" ]]; then
       echo "${p}"
       if [[ ${a} == 0 ]]; then return 0; fi

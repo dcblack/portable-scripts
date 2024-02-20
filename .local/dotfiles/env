@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Must source ${HOME}/.local/dotfiles/functions first
+# Must source ~/.local/dotfiles/functions first
+
 export DID_FUNCTIONS
 if [[ ${DID_FUNCTIONS} != 1 ]]; then
-  TRY="${HOME}/.local/dotfiles/functions"
-  # shellcheck source=.local/dotfiles/functions
+  TRY=~/.local/dotfiles/functions
+  # shellcheck source=/dev/null
   if [[ -r "${TRY}" ]]; then
     source "${TRY}"
   else
@@ -35,14 +36,14 @@ function portable-env() {
     TEMPLATEPATH\
 
   ORIGPATH="${PATH}"
-  PSCR="$(Realpath "${HOME}/.local")"
+  PSCR="$(Realpath ~/.local)"
   APPS="$(Realpath "${PSCR}/apps")"
   DOTBIN="$(Realpath "${PSCR}/bin")"
   APPSBIN="${PSCR}/apps/bin"
-  SCREENDIR="${HOME}/.screen"
+  SCREENDIR=~/.screen
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   SYSTEMC_SRC="${PSCR}/src/systemc"
-  Prepend_path PATH "${HOME}/.rvm/bin"
+  Prepend_path PATH ~/".rvm/bin"
   Prepend_path PATH "/sbin"
   Prepend_path PATH "/bin"
   Prepend_path PATH "/usr/sbin"
@@ -56,11 +57,11 @@ function portable-env() {
   Prepend_path PATH "/opt/homebrew/bin"
   Prepend_path PATH "${APPSBIN}"
   Prepend_path PATH "${DOTBIN}"
-  Prepend_path PATH "${HOME}/bin"
+  Prepend_path PATH ~/bin
   PERL5LIB="$(Realpath "${PSCR}/lib")"
-  TEMPLATEPATH="$(Realpath "${HOME}/templates")"
-  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath "${HOME}/.local/templates")"
-  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath "${HOME}/.local/apps/templates")"
+  TEMPLATEPATH="$(Realpath ~/templates)"
+  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath ~/.local/templates)"
+  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath ~/.local/apps/templates)"
 
   Unique_path PATH
   Unique_path MANPATH
@@ -80,10 +81,10 @@ function portable-env() {
   WHOME="/mnt/c/Users/${USER}"
 
   # Favorites
-  FAVS="${HOME}"/Favorites
+  FAVS=~/Favorites
   mkdir -p "${FAVS}"
   CDPATH="."
-  for dir in "${FAVS}" "${HOME}"; do
+  for dir in "${FAVS}" ~; do
     Append_path CDPATH "${dir}"
   done
 

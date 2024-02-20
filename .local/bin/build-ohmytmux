@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-TMUX="${HOME}.local/src"
+TMUX=~.local/src
 git clone https://github.com/gpakosz/.tmux.git "${TMUX}"
-ln -s "${TMUX}/.tmux.conf" "${HOME}/.tmux.conf"
-rsync -av "${TMUX}/.tmux.conf.local" "${HOME}/"
+ln -s "${TMUX}/.tmux.conf" ~/.tmux.conf
+rsync -av "${TMUX}/.tmux.conf.local" ~/
 

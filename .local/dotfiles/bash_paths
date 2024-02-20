@@ -7,7 +7,7 @@ function SetupPaths() {
   if [[ $# -gt 0 ]]; then
     for dir in "${@}"; do
       if [[ -z "${dir}" ]]; then continue; fi
-      COURSE="$(find "${HOME}" -type d -path '**/.snapshots' -prune -false -o "${dir}" 2>/dev/null)"
+      COURSE="$(find ~ -type d -path '**/.snapshots' -prune -false -o "${dir}" 2>/dev/null)"
       if [[ -d "${COURSE}" ]]; then
         Prepend_path CDPATH "${COURSE}"
       fi
@@ -18,14 +18,14 @@ function SetupPaths() {
   # Add man page paths
   #-----------------------------------------------------------------------------
   for dir in \
-    "/usr/share/man" \
-    "/opt/local/man" \
-    "/opt/local/share/man" \
-    "/usr/local/share/man" \
-    "/ext/linux/Ubuntu-20.04/usr/share/man" \
-    "${HOME}/.local/man" \
-    "${HOME}/man" \
-    "./man" \
+    /usr/share/man \
+    /opt/local/man \
+    /opt/local/share/man \
+    /usr/local/share/man \
+    /ext/linux/Ubuntu-20.04/usr/share/man \
+    ~/.local/man \
+    ~/man \
+    ./man \
   ; do
     Prepend_path MANPATH "${dir}"
   done

@@ -110,6 +110,9 @@ Report_info "Setup source directory"
 if [[ -n ${SRC} && -d "${SRC}" ]]; then
   echo "Using SRC=${SRC}"
 fi
+export HOME USER
+USER="$(whoami)"
+HOME="$(getent passwd "${USER}" | cut -d: -f6 || true)"
 if [[ -v APPS ]]; then
   SRC="${APPS}/src"
 elif [[ "${HOME}" == "$(pwd)" ]]; then

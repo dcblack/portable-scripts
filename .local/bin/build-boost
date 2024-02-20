@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#$Info: build-boost - {:ONE_LINE_DESCRIPTION_HERE:}. $
+#$Info: build-boost - Install boost locally. $
 
 LIB_NAME="Boost library"
 LIB_INFO='Go to 'https://boost.org' for more information.'
@@ -62,7 +62,7 @@ function Realpath ()
 # Using Essential-IO
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+  SCRIPTDIR="$(Realpath ~/.local/scripts)"
 fi
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
@@ -76,7 +76,7 @@ source "$SCRIPTDIR/Essential-IO"
 
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../bin)"
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-  SCRIPTDIR="$(Realpath "${HOME}"/.local/bin)"
+  SCRIPTDIR="$(Realpath ~/.local/bin)"
 fi
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"

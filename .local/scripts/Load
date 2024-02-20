@@ -17,7 +17,7 @@ function Load()
     echo "
 NAME
 ----
-Load - source scripts from \$HOME/.local/scripts directory
+Load - source scripts from \~/.local/scripts directory
 
 SYNOPSIS
 --------
@@ -91,7 +91,7 @@ function Reload()
   FUNCS=$(declare -f | /usr/bin/perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]')
   if [[ -z "${SCRIPTDIRS+x}" ]]; then
     # Missing SCRIPTDIRS! Attempt default locations.
-    for DIR in "${HOME}/scripts" "${HOME}/.local/scripts" ; do
+    for DIR in ~/scripts ~/.local/scripts ; do
       if [[ -d "${DIR}" ]]; then
         if [[ "${SCRIPTDIRS}" =~ : ]]; then
           SCRIPTDIRS="${SCRIPTDIRS}:${DIR}"

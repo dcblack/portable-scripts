@@ -20,7 +20,7 @@ function FindScript()
   #-----------------------------------------------------------------------------
   if [[ -z "${SCRIPTDIRS}" ]]; then
     # Missing SCRIPTDIRS! Attempt default locations.
-    for DIR in "../scripts" "${HOME}/scripts" "${HOME}/.local/scripts" ; do
+    for DIR in ../scripts ~/scripts ~/.local/scripts ; do
       Append_path SCRIPTDIRS "${DIR}"
     done
   fi

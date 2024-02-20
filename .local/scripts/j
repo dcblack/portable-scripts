@@ -24,9 +24,9 @@ function j() {
   J_DEBUG=0
   # Setup favorites list if not defined via exported FAVS variable
   if [[ -z "${FAVS}" ]]; then
-    local fav
-    for fav in favs .favs Favorites; do
-      FAVS="$(Realpath "${HOME}/${fav}")"
+    local FAV
+    for FAV in favs .favs Favorites; do
+      FAVS="$(Realpath ~/"${FAV}")"
       if [[ -n "${FAVS}" ]]; then
         break
       fi

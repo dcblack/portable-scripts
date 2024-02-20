@@ -5,7 +5,7 @@ if [[ ${SOURCED} == 0 ]]; then
   echo "Don't run $0, source it" >&2
   exit 1
 fi
-SHELLNAME=zsh
+export SHELLNAME=zsh
 
 alias ez='exec zsh'
 alias 1p=op
@@ -40,21 +40,21 @@ function ViSrc() {
 }
 function viscr() {
   # shellcheck disable=SC2154,SC2312
-  ViSrc "$(Firstreal "${HOME}/scripts/$1" "${LOCAL}/scripts/$1")";
+  ViSrc "$(Firstreal ~/"scripts/$1" "${LOCAL}/scripts/$1")";
 }
-alias vial='ViSrc ${HOME}/.zsh_aliases'
-alias vizsh='ViSrc ${HOME}/.zshrc'
-alias vigit='ViSrc ${HOME}/.gitconfig'
-alias vissh='ViSrc ${HOME}/.ssh/config'
-alias vifuncs='ViSrc ${HOME}/.zsh_functions'
-alias vimrc='ViSrc ${HOME}/.vimrc'
-alias vienv='ViSrc ${HOME}/.zsh_env'
-alias viobs='ViSrc ${HOME}/OBS/Doulos/.'
+alias vial='ViSrc ~/.zsh_aliases'
+alias vizsh='ViSrc ~/.zshrc'
+alias vigit='ViSrc ~/.gitconfig'
+alias vissh='ViSrc ~/.ssh/config'
+alias vifuncs='ViSrc ~/.zsh_functions'
+alias vimrc='ViSrc ~/.vimrc'
+alias vienv='ViSrc ~/.zsh_env'
+alias viobs='ViSrc ~/OBS/Doulos/.'
 alias Exit="osascript -e 'tell application \"iTerm2\" to quit'; exit"
-alias .alias='. ${HOME}/.zsh_aliases'
-alias .zsh='. ${HOME}/.zshrc'
-alias .env='. ${HOME}/.zsh_env'
-alias .funcs='. ${HOME}/.zsh_functions'
+alias .alias='. ~/.zsh_aliases'
+alias .zsh='. ~/.zshrc'
+alias .env='. ~/.zsh_env'
+alias .funcs='. ~/.zsh_functions'
 alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
 function funcs() {
   # shellcheck disable=SC2312
@@ -62,11 +62,11 @@ function funcs() {
 }
 function agl()
 {
-  ag -l --nocolor "$@" | sort
+  ag -l --nocolor "$@" | sort || true
 }
 function agL()
 {
-  ag -L --nocolor "$@" | sort
+  ag -L --nocolor "$@" | sort || true
 }
 alias ag0='ag --depth=0'
 alias ag1='ag --depth=0'
@@ -78,7 +78,7 @@ function agh() {
 alias threagile='docker run --rm -it -v "$(pwd)":/app/work threagile/threagile'
 
 function new() {
-  NEWEST="${HOME}/.newest"
+  NEWEST=~"/.newest"
   local e=0
   if [[ $# == 0 ]]; then
     # shellcheck disable=SC2154
@@ -111,16 +111,16 @@ function new() {
 #PROMPT_DIRTRIM=2
 alias sane='reset; stty erase ^H'
 function hclr() {
-  cat /dev/null >"${HOME}/saved$1.history";
+  cat /dev/null >~/"saved$1.history";
 }
 function hput() {
-  history -a >"${HOME}/saved$1.history";
+  history -a >~/"saved$1.history";
 }
 function hget() {
-  history -n >"${HOME}/saved$1.history";
+  history -n >~/"saved$1.history";
 }
 function hreduce() {
-  hunique -o "${HOME}/saved$1.history";
+  hunique -o ~/"saved$1.history";
 }
 function m() {
   if [[ "$1" == '-nc' ]]; then
@@ -134,8 +134,8 @@ alias F='file'
 alias I='lipo -info'
 alias info='info --vi-keys';
 alias cls='/usr/bin/clear; ';
-alias .bashrc='. ${HOME}/.bashrc';
-alias dcblack='. ${HOME}/dcblack.bash'
+alias .bashrc='. ~/.bashrc';
+alias dcblack='. ~/dcblack.bash'
 alias 7za='7za a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on'
 
 export LS_OPTS=-bhCF
@@ -190,4 +190,4 @@ function serialize() {
 #   unset -f declare typeset
 # }
 
-#EOF ${HOME}/.bash_aliases vim:nospell
+#EOF ~/.bash_aliases vim:nospell

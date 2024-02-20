@@ -60,7 +60,7 @@ function Realpath() {
 
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../bin)"
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-  SCRIPTDIR="$(Realpath "${HOME}"/.local/bin)"
+  SCRIPTDIR="$(Realpath ~/.local/bin)"
 fi
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
