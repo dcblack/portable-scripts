@@ -262,9 +262,10 @@ function Build()
   TEST_MATCHES="" # implies all
   TEST_LABELS=""
   TEST_EXCLUDE="long"
-  declare -a CONFIG_OPTS BUILD_OPTS TEST_OPTS
+  declare -a CONFIG_OPTS BUILD_OPTS TEST_OPTS CTEST_OPTS
   CONFIG_OPTS=()
   BUILD_OPTS=()
+  CTEST_OPTS=()
   TEST_OPTS=()
   BUILD_LOG=build.log
   TEST_LOG=test.log
@@ -515,7 +516,7 @@ function Build()
       BUILD_OPTS=("-v")
     #...........................................................................
     elif [[ "$1" =~ ^-V$ ]]; then
-      TEST_OPTS=("-VV")
+      CTEST_OPTS=("-VV")
     #...........................................................................
     else
       TEST_OPTS=("${TEST_OPTS[@]}" "$1")
@@ -528,16 +529,16 @@ function Build()
   fi
 
   if [[ ${QUIET} == 0 ]]; then
-    TEST_OPTS=(-VV "${TEST_OPTS[@]}")
+    CTEST_OPTS=(-VV "${CTEST_OPTS[@]}")
   fi
   if [[ -n "${TEST_MATCHES}" ]]; then
-    TEST_OPTS+=(-R "${TEST_MATCHES}")
+    CTEST_OPTS+=(-R "${TEST_MATCHES}")
   fi
   if [[ -n "${TEST_LABELS}" ]]; then
-    TEST_OPTS+=(-L "${TEST_LABELS}")
+    CTEST_OPTS+=(-L "${TEST_LABELS}")
   fi
   if [[ -n "${TEST_EXCLUDE}" ]]; then
-    TEST_OPTS+=(-LE "${TEST_EXCLUDE}")
+    CTEST_OPTS+=(-LE "${TEST_EXCLUDE}")
   fi
 
   BLD_DIR="${BLD_DIR}/$(perl -le 'print lc(qq{@ARGV})' "${CMAKE_BUILD_TYPE}")"
@@ -597,17 +598,6 @@ function Build()
     Report_fatal "CMakeLists.txt missing project directive -- are you in the right directory?" ; exit 1
   fi
 
-  # shellcheck disable=SC2016
-  PERLSCRIPT='
-  chomp; chomp;
-  next if m{[{}]};
-  print " $2" if m{(add_executable|add_library|set_target)[(] "([^")]+)};
-  '
-  TARGETS="$(/usr/bin/perl -ne "${PERLSCRIPT}" CMakeLists.txt)"
-  if [[ "${ACTION}" == list ]]; then
-    Report_info -f "Targets are ${TARGETS}"
-    return 0
-  fi
   #-------------------------------------------------------------------------------
   # Locate cmake modules that we assume
   #-------------------------------------------------------------------------------
@@ -680,38 +670,66 @@ function Build()
     exit 1;
   fi
 
+  local -a TARGETS=()
+  local FIND
+  for FIND in gfind find; do
+    if builtin command -v "${FIND}" 1>/dev/null 2>&1; then
+      break
+    fi
+  done
+  mapfile -d '' TARGETS < <( "${FIND}" "${BLD_DIR}" -type f -executable ! -path '*/CMake*/*' -print0 || true )
+
   #------------------------------------------------------------------------------
-  if [[ "${ACTION}" == gdb ]]; then
+  if [[ "${ACTION}" == "list" ]]; then
+    case ${#TARGETS[@]} in
+      0) 
+        Report_warning "No targets found? Did you build successfully?"
+        ;;
+      1) 
+        Report_info -f "Targets is ${TARGETS[0]}"
+        ;;
+      *)
+        Report_info -f "Targets are:"
+        local t i=1
+        for t in "${TARGETS[@]}"; do
+          Report_info -f "  ${i} ${t}"
+          (( ++i ))
+        done
+        ;;
+    esac
+    return 0
+  fi
+  if [[ "${ACTION}" == "gdb" ]]; then
     Report_info -f "Debugging ${SUBPROJ_DIR}"
-    if [[ -n "${TARGETS}" ]]; then
-      for EXECUTABLE in ${TARGETS}; do
+    if [[ ${#TARGETS[@]} -gt 0 ]]; then
+      for EXECUTABLE in "${TARGETS[@]}"; do
         # shellcheck disable=SC2086,SC2312
-        ( _do gdb "${BLD_DIR}/${EXECUTABLE}" )
+        ( _do gdb "${EXECUTABLE}" )
       done
     else
       Report_fatal "Not sure what to debug!"
     fi
-  elif [[ "${ACTION}" == lldb ]]; then
+  elif [[ "${ACTION}" == "lldb" ]]; then
     Report_info -f "Debugging ${SUBPROJ_DIR}"
-    if [[ -n "${TARGETS}" ]]; then
-      for EXECUTABLE in ${TARGETS}; do
+    if [[ ${#TARGETS[@]} -gt 0 ]]; then
+      for EXECUTABLE in "${TARGETS[@]}"; do
         # shellcheck disable=SC2086,SC2312
-        ( _do lldb "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" )
+        ( _do lldb "${EXECUTABLE}" "${TEST_OPTS[@]}" )
       done
     else
       Report_fatal "Not sure what to debug!"
     fi
-  elif [[ "${ACTION}" == run ]]; then
+  elif [[ "${ACTION}" == "run" ]]; then
     Report_info -f "Running ${SUBPROJ_DIR}"
-    if [[ -n "${TARGETS}" ]]; then
-      for EXECUTABLE in ${TARGETS}; do
+    if [[ ${#TARGETS[@]} -gt 0 ]]; then
+      for EXECUTABLE in "${TARGETS[@]}"; do
         # shellcheck disable=SC2086,SC2312
-        ( _do "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}" ) 2>&1 | tee run.log
+        ( _do "${EXECUTABLE}" "${TEST_OPTS[@]}" ) 2>&1 | tee run.log
       done
     else
       Report_fatal "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under build."
     fi
-  elif [[ "${ACTION}" == test ]]; then
+  elif [[ "${ACTION}" == "test" ]]; then
     Report_info -f "Testing ${SUBPROJ_DIR}"
     local HIGHLIGHT_FILTER BLANKLINE_FILTER
     # shellcheck disable=SC2016
@@ -722,21 +740,21 @@ function Build()
       BLANKLINE_FILTER='BEGIN{$prev="";} $curr=$_; $_="" if $_ =~m{^\d+:\s*$} and $prev=~m{^\d+: (Info):}; $prev=$curr;'
     fi
     # shellcheck disable=SC2086,SC2312
-    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}" ) 2>&1 \
+    ( _do ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${CTEST_OPTS[@]}" ) 2>&1 \
     | perl -pe "${BLANKLINE_FILTER}" \
     | perl -pe "${HIGHLIGHT_FILTER}" \
     | tee "${BLD_DIR}/${TEST_LOG}"
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info -f "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
-      _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}"
+      _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${CTEST_OPTS[@]}"
     else
       Report_info -f "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"
-      _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${TEST_OPTS[@]}"
+      _do -n env ctest --test-dir "${BLD_DIR}" -C "${CMAKE_BUILD_TYPE}" "${CTEST_OPTS[@]}"
     fi
   else
     Report_info -f "Executables in ${BLD_DIR}/ -- HINT: To run try:"
-    _do -n "${BLD_DIR}/${EXECUTABLE}" "${TEST_OPTS[@]}"
+    _do -n "${BLD_DIR}/${EXECUTABLE}" "${CTEST_OPTS[@]}"
     Report_info -f "Or consider adding one or more tests to CMakeLists.txt"
   fi
 
