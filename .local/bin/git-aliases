@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 #
-# List all git aliases
+# List all or specified git aliases
 
-git config --get-regexp 'alias.*' | colrm 1 6 | sed -e 's/ .*//' | fmt | table
+if [[ $# == 0 ]]; then
+  git config --get-regexp 'alias.*' | colrm 1 6 | sed -e 's/ .*//' | fmt | table || true
+else
+  while [[ $# -gt 0 ]]; do
+    git config --get-regexp "alias.$1" | colrm 1 6 | perl -pe 's/ / => /' || true
+    shift
+  done
+fi
 
 # THE END
