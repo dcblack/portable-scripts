@@ -39,6 +39,7 @@ set( CMAKE_C_STANDARD            11 CACHE STRING "C standard to build all target
 set( CMAKE_C_STANDARD_REQUIRED   11 CACHE BOOL   "The CMAKE_CXX_STANDARD selected C standard is a requirement." )
 
 if( DEFINED ENV{SYSTEMC_HOME} )
+  message( STATUS "Using SYSTEMC_HOME=$ENV{SYSTEMC_HOME}" )
   include( systemc )
 else()
   message( SEND_ERROR "SYSTEMC_HOME environment variable needs to be setup" )
