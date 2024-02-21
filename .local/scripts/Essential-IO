@@ -389,7 +389,7 @@ function _do()
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
 
   # Process command-line
-  while [[ "$1" =~ ^[^_0-9a-zA-Z] ]]; do
+  while [[ "$1" =~ ^[^./_0-9a-zA-Z] ]]; do
     if [[ "$1" == "-q" ]]; then Q=1;
     elif [[ "$1" == "-n" ]]; then NX="-";
     else Report_warning "Dropping '$1'"
