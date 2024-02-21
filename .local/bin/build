@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.6
+BUILD_TOOL_VERSION=1.7
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 
@@ -425,7 +425,7 @@ function Build()
       Report_info -f -blu "
  -------------------------------------------------------------------------------
  ${BUILD_TOOL_NAME} version ${BUILD_TOOL_VERSION}
- Copyright 2023 by Doulos Inc. All rights reserved.
+ Copyright 2024 by Doulos Inc. All rights reserved.
 
  Licensed under the Apache License, Version 2.0 (the \"License\");
  you may not use this file except in compliance with the License.
@@ -677,7 +677,7 @@ function Build()
       break
     fi
   done
-  mapfile -d '' TARGETS < <( "${FIND}" "${BLD_DIR}" -type f -executable ! -path '*/CMake*/*' -print0 || true )
+  mapfile -d '' TARGETS < <( "${FIND}" "./${BLD_DIR}" -type f -executable ! -path '*/CMake*/*' -print0 || true )
 
   #------------------------------------------------------------------------------
   if [[ "${ACTION}" == "list" ]]; then
@@ -686,7 +686,7 @@ function Build()
         Report_warning "No targets found? Did you build successfully?"
         ;;
       1) 
-        Report_info -f "Targets is ${TARGETS[0]}"
+        Report_info -f "Target is ${TARGETS[0]}"
         ;;
       *)
         Report_info -f "Targets are:"
@@ -720,7 +720,7 @@ function Build()
       Report_fatal "Not sure what to debug!"
     fi
   elif [[ "${ACTION}" == "run" ]]; then
-    Report_info -f "Running ${SUBPROJ_DIR}"
+    Report_info -f "Running in ${SUBPROJ_DIR}"
     if [[ ${#TARGETS[@]} -gt 0 ]]; then
       for EXECUTABLE in "${TARGETS[@]}"; do
         # shellcheck disable=SC2086,SC2312
