@@ -127,11 +127,12 @@ function Confirm()
 {
   local REPLY
   while true; do
-    printf "%s" "$1 "
+    printf "%s" "$1 (yes|no|y|n|abort) "
     read -r REPLY
     case "${REPLY}" in
       y|Y|yes) return 0 ;;
       n|N|no) return 1 ;;
+      abort) exit 1 ;;
       *) REPLY=""; echo "Must reply with 'y' or 'n'" ;;
     esac
   done
@@ -145,9 +146,13 @@ function Build()
     # Check first argument for possible build-TARGET
     case "$1" in
       clean)
-        echo "Warning: Assume you meant -clean?"
-        shift
-        set - -clean "$@"
+        if Confirm "Did you mean -clean?"; then
+          shift
+          set - -clean "$@"
+        else
+          echo "Ignoring"
+          shift
+        fi
         ;;
       [A-Za-z]*)
         if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
