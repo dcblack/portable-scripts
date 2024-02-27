@@ -1,6 +1,18 @@
 #!/usr/bin/env perl
-#
 #$Info: cppjoin - Join many files into one. $
+
+# Subroutines
+# - Main
+# - Exit
+# - Report_fatal
+# - Report_error
+# - Report_warning
+# - Report_info
+# - Report_raw
+# - Debug_list
+# - Debug_set1
+# - Debug_set2
+# - Writef
 
 require v5.6;
 use strict;
@@ -15,97 +27,305 @@ use Pod::Usage;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
+# Global defaults
+our $out = '-';
+our $debugging = 0;
+our $verbosity = 0;
+our $force = 0;
+our $reorder = 0;
+our ($fout,$fin);
+our $home = &abs_path('~');
+our @sources;
+our %lines;
+our %srcs; # each entry is a list of headers included by the source
+our %hdrs; # each entry is a list of sources that include the header
+our %library;
+our %external;
+our %internal; # set of files included by another within the list
+our @ordered;
+our $processed = 0;
+
 # Reporting
 our ($warnings,$errors,$fatal) = (0,0,0);
-our ($CYN,$GRN,$YLW,$RED,$NONE) = ("\033[1;96m","\033[1;92m","\033[1;93m","\033[1;91m","\033[0m");
+our ($CYN, $GRN, $YLW, $RED, $MAG, $BLU, $NONE) 
+     = ("\033[1;96m", "\033[1;92m", "\033[1;93m", "\033[1;91m", "\033[1;95m", "\033[1;94m", "\033[0m");
 
+#-------------------------------------------------------------------------------
 sub Exit {
   printf "${CYN}Summary:${NONE}\n";
-  printf "  %d warnings\n",$warnings if $warnings > 0;
-  printf "  %d errors\n",$errors if $errors > 0;
-  printf "  %d fatal\n",$fatal if $fatal > 0;
+  printf "  processed %d files\n",$processed;
+  printf "  %d warnings\n",$warnings;
+  printf "  %d errors\n",$errors;
+  printf "  %d fatal\n",$fatal;
   exit shift @_;
 }
 
-sub Warn {
+#-------------------------------------------------------------------------------
+sub Report_raw {
+  my $fmt = shift(@_);
+  if( $out eq '-' ) {
+    if ( scalar(@_)  > 0 ) {
+      printf STDERR $fmt,@_;
+    } else {
+      printf STDERR $fmt;
+    }
+  } else {
+    if ( scalar(@_) > 0 ) {
+      printf $fmt,@_;
+    } else {
+      printf $fmt;
+    }
+  }
+}
+
+#-------------------------------------------------------------------------------
+sub Report_info {
+  return if $verbosity == 0;
+  my $fmt = "//: ${CYN}Info:${NONE} ".shift(@_);
+  if( $out eq '-' ) {
+    printf STDERR $fmt,@_;
+  } else {
+    printf $fmt,@_;
+  }
+}
+
+our $ruler = '-' x 80;
+our $DEBUG1 = "${MAG}Debug:";
+our $DEBUG2 = "${MAG}Debug|${NONE}";
+
+#-------------------------------------------------------------------------------
+sub Debug_list {
+  return unless $debugging == 1;
+  my ($title,$list) = (@_);
+  chomp $title;
+  &Report_raw("%80.80s${NONE}\n${DEBUG2}  ","${DEBUG1} ${title} ".$ruler);
+  &Report_raw("%s",join("\n${DEBUG2}  ",@$list));
+  &Report_raw("\n");
+}
+
+#-------------------------------------------------------------------------------
+sub Debug_set1 {
+  return unless $debugging == 1;
+  my ($title,$hash) = (@_);
+  chomp $title;
+  &Report_raw("%80.80s${NONE}\n","${DEBUG1} ${title} ".$ruler);
+  for my $key1 (sort keys %$hash) {
+    &Report_raw("${DEBUG2}  %s->%d\n",$key1,$hash->{$key1});
+  }
+}
+
+#-------------------------------------------------------------------------------
+sub Debug_set2 {
+  return unless $debugging == 1;
+  my ($title,$hash) = (@_);
+  chomp $title;
+  &Report_raw("%80.80s${NONE}\n","${DEBUG1} ${title} ".$ruler);
+  for my $key1 (sort keys %$hash) {
+    &Report_raw("${DEBUG2}  %s->\n",$key1);
+    my $hash2 = $hash->{$key1};
+    for my $key2 (sort keys %$hash2) {
+      &Report_raw("${DEBUG2}    %s\n",$key2);
+    }
+  }
+}
+
+#-------------------------------------------------------------------------------
+sub Report_warning {
   printf STDERR "${YLW}Warning:${NONE} ";
   printf STDERR @_;
   printf STDERR "\n" unless $_ =~ m{\n};
   ++$warnings;
 }
 
-sub Error {
-  printf STDERR "${RED}Error:${NONE} ";
+#-------------------------------------------------------------------------------
+sub Report_error {
+  printf STDERR "${RED}Report_error:${NONE} ";
   printf STDERR @_;
   printf STDERR "\n" unless $_ =~ m{\n};
   ++$errors;
 }
 
-sub Fatal {
-  printf STDERR "${RED}Fatal:${NONE} ";
+#-------------------------------------------------------------------------------
+sub Report_fatal {
+  printf STDERR "${RED}Report_fatal:${NONE} ";
   printf STDERR @_;
   printf STDERR "\n" unless $_ =~ m{\n};
   ++$fatal;
   Exit 1;
 }
 
-my $verbosity = 0;
-my $force = 0;
-my $out = '';
-my ($fout,$fin);
-while( @ARGV ) {
-  my $arg = shift @ARGV;
-  if( $arg =~ m{^-{1,2}h(elp)?$} ) {
-    my @help = <DATA>;
-    print @help;
-    exit 0;
-  } elsif( $arg eq '-f' ) {
-    $force = 1;
-  } elsif( $arg eq '-q' ) {
-    $verbosity = 0;
-  } elsif( $arg eq '-v' ) {
-    $verbosity = 1;
-  } elsif( $arg eq '-o' ) {
-    Fatal "-o requires a filename" if scalar @ARGV == 0;
-    my $out = shift @ARGV;
-    Warn "Specified filename '$out' does not have a filename extension!?\n" unless $out =~ m{[.]\w+$};
-    Warn "Non-standard output filename '$out' specified." unless $out =~ m{^([~]/)?(\w+/)*\w+([.]\w+)?$};
-    $out =~ s{^[~]}{$ENV{HOME}/};
-    Fatal "Output file '$out' already exists!?\n" if -f $out and $force == 0;
-    open $fout,'>',$out
-      or Fatal "Unable to open file '$out' for writing!?\n";
-    next;
+#-------------------------------------------------------------------------------
+sub Writef {
+  if( $out ne '-' ) {
+    printf $fout @_;
+  } else {
+    printf @_;
   }
-  Fatal "Non-existant file '$arg' specified!?\n" unless -f $arg;
-  Fatal "File '$arg' is a directory!?\n" if -d $arg;
-  Fatal "Unreadable file '$arg' specified!?\n" unless -r $arg;
-  open $fin,'<',$arg
-    or Fatal "Unable to open '$arg' for reading!?\n";
-  printf "Reading %s\n", $arg unless $verbosity == 0;
-  my $last='x';
-  printf "\n" if $last ne '';
-  printf $fout "%s\n",'/' x 80;
-  printf $fout "//File: %s\n",$arg;
-  my @lines = <$fin>;
-  my %inc;
-  for (@lines) {
-    chomp; chomp;
-    if( m{^#include\s+(("\s+")|(<\s+>))} ) {
-      my $fn = $1;
-      s{^}{//} if exists $inc{$fn};
-      $inc{$fn} = 1;
-    } elsif( m{^#pragma once} ) {
-      my $pragma = $&;
-      s{^}{//} if exists $inc{$pragma};
-      $inc{$pragma} = 1;
-    }
-    printf $fout "%s\n", $_;
-    $last = $_;
-  }
-  close $fin;
 }
-close $fout if $out ne '';
-printf "Created '$out'\n" unless $verbosity == 0;
+
+#-------------------------------------------------------------------------------
+sub Parse_command_line {
+  # Parse command-line
+  while( @ARGV ) {
+    my $arg = shift @ARGV;
+    if( $arg =~ m{^-{1,2}h(elp)?$} ) {
+      my @help = <DATA>;
+      print @help;
+      exit 0;
+    } elsif( $arg eq '-debug' or $arg eq '-D' ) {
+      $debugging = 1;
+    } elsif( $arg eq '-f' ) {
+      $force = 1;
+      next;
+    } elsif( $arg eq '-q' ) {
+      $verbosity = 0;
+      next;
+    } elsif( $arg eq '-reorder' ) {
+      $reorder = 1;
+      next;
+    } elsif( $arg eq '-v' ) {
+      $verbosity = 1;
+      next;
+    } elsif( $arg eq '-vv' ) {
+      $verbosity = 2;
+      next;
+    } elsif( $arg eq '-o' ) {
+      Report_fatal "-o requires a filename" if scalar @ARGV == 0;
+      $out = shift @ARGV;
+      Report_warning "Specified filename '$out' does not have a filename extension!?\n" unless $out =~ m{[.]\w+$};
+      Report_warning "Non-standard output filename '$out' specified." unless $out =~ m{^([~]/)?(\w+/)*\w+([.]\w+)?$};
+      $out =~ s{^[\~]}{${home}/}; #< expand tilde to home
+      next;
+    } else {
+      Report_fatal "Non-existant file '$arg' specified!?\n" unless -f $arg;
+      Report_fatal "File '$arg' is a directory!?\n" if -d $arg;
+      Report_fatal "Unreadable file '$arg' specified!?\n" unless -r $arg;
+      push @sources, $arg;
+    }
+  }
+  &Debug_list("@ sources", \@sources);
+}
+
+#-------------------------------------------------------------------------------
+sub Inspect {
+  # Gather list of who includes who
+  for my $srcf (@sources) {
+    open $fin,'<',$srcf
+      or Report_fatal "Unable to open '$srcf' for reading!?\n";
+    Report_info "Scanning %s\n", $srcf;
+    $lines{$srcf} = [ <$fin> ];
+    for ($lines{$srcf}->@*) {
+      if ( m{^ *# *include *["]([^"]+)["]} ) {
+        my $hdrf = $1;
+        if ( -r $hdrf ) {
+          if ( exists $internal{$hdrf} ) {
+            ++$internal{$hdrf};
+          } else {
+            $internal{$hdrf} = 1;
+          }
+          $srcs{$srcf}{$hdrf} = 1;
+          $hdrs{$hdrf}{$srcf} = 1;
+        } else {
+          if ( exists $external{$hdrf} ) {
+            ++$external{$hdrf};
+          } else {
+            $external{$hdrf} = 1;
+          }
+        }
+      }
+      elsif ( m{^ *# *include *[<]([^>]+)[>]} ) {
+        my $hdrf = $1;
+        if ( exists $library{$hdrf} ) {
+          ++$library{$hdrf};
+        } else {
+          $library{$hdrf} = 1;
+        }
+      }
+    }
+    close $fin;
+  }
+
+  &Debug_set2("%%srcs", \%srcs);
+  &Debug_set2("%%hdrs", \%hdrs);
+  &Debug_set1("%%internal",  \%internal);
+  &Debug_set1("%%external",  \%external);
+  &Debug_set1("%%library", \%library);
+}
+
+#-------------------------------------------------------------------------------
+sub Reorder {
+
+  while ( scalar(@sources) > 0 ) {
+    my $file = shift @sources;
+    if ( exists($srcs{$file}) and scalar(%{$srcs{$file}}) != 0 ) { # has includes
+      push @sources,$file;
+    } else {
+      push @ordered, $file;
+      if ( exists $hdrs{$file} ) { # => included by others
+        for my $srcf ( sort keys %srcs ) {
+          delete $srcs{$srcf}{$file}
+            if exists $srcs{$srcf}{$file};
+        }
+        delete $hdrs{$file};
+      }
+    }#endif
+  }#endwhile
+  &Debug_list("@ ordered", \@ordered);
+  @sources = @ordered;
+}
+
+#-------------------------------------------------------------------------------
+sub Open_output {
+  if( $out ne "-" ) {
+    Report_fatal "Output file '$out' already exists!?\n" if -f $out and $force == 0;
+    open $fout,'>',$out
+      or Report_fatal "Unable to open file '$out' for writing!?\n";
+    Report_info "Writing to %s\n", $out;
+  }
+}
+
+#-------------------------------------------------------------------------------
+sub Main {
+
+  &Parse_command_line();
+  &Inspect;
+  &Reorder if $reorder == 1;
+  &Open_output;
+
+  #-----------------------------------------------------------------------------
+  # Write the results
+  my %once;
+  for my $file (@sources) {
+    ++$processed;
+    my $last='';
+    Writef "\n" if $last ne '';
+    Writef "%s\n",'/' x 80;
+    Writef "//File: %s\n",$file;
+    my @lines = @{$lines{$file}};
+    for (@lines) {
+      chomp; chomp;
+      if( m{^#include\s*"([^"]+)"} ) {
+        my $fn = $1;
+        s{^#}{//#} if exists $once{$fn};
+        s{^#}{//#} if exists $internal{$fn};
+        $once{$fn} = 1;
+      } elsif( m{^#include\s*<([^>]+)>} ) {
+        my $fn = $1;
+        s{^}{//} if exists $once{$fn};
+        $once{$fn} = 1;
+      } elsif( m{^#pragma once} ) {
+        s{^}{//};
+      }
+      Writef "%s\n", $_;
+      $last = $_;
+    }
+  }
+  close $fout if $out ne '-';
+  Report_info "Created '$out'\n";
+}
+
+&Main();
+
 Exit 0;
 
 __DATA__
@@ -135,12 +355,15 @@ Adds leading // to duplicate includes and #pragma once.
 COMMAND LINE OPTIONS
 --------------------
 
-OPTION | ACTION
------- | ------
---help | Display this text
--f     | Force overwriting if a file already exists
--q     | Suppress message on each file created
--v     | Output message on each file created
+OPTION  | ACTION
+------  | ------
+--help  | Display this text
+-f      | Force overwriting if a file already exists
+-o FILE | Specify output FILE (default stdout)
+-q      | Suppress message on each file created
+-v      | Output message on each file created
+-vv     | Very verbose
+-debug  | Display debug information
 
 SEE ALSO
 --------
