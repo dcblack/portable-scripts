@@ -11,7 +11,7 @@ TOOL_INFO='Go to <https://accellera.org/downloads/standards/systemc> for more in
 TOOL_SRC=~/.local/src
 TOOL_BASE="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
-TOOL_VERS='master' # latest or 3.0 or 2.3.4
+TOOL_VERS='main' # latest or 3.0 or 2.3.4
 TOOL_CHECKOUT=""
 
 export TOOL_BRIEF TOOL_NAME TOOL_SRC TOOL_BASE TOOL_URL TOOL_INFO TOOL_VERS TOOL_CHECKOUT TOOL_PATCHES
