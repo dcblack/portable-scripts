@@ -5,13 +5,18 @@
 # This code is intended for use inside build scripts (e.g., see build-systemc) and provides aids.
 
 (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+
+# Allow display of version
+export UTILS_VERSION
+UTILS_VERSION=1.10.0
+if [[ "$*" == "--version" ]]; then
+  echo "utils.bash version ${UTILS_VERSION}"
+fi
+
 if [[ ${SOURCED} == 0 ]]; then
   echo "Don't run $0, source it" >&2
   exit 1
 fi
-
-export UTILS_VERSION
-UTILS_VERSION=1.8
 
 cat >/dev/null <<'EOF' ;# Documentation begin_markdown {
 SYNOPSIS
@@ -61,49 +66,100 @@ SetupLogdir "$0"
 } end_markdown
 EOF
 
-declare -a ARGV
-export APPS
-export ARGV
-export BUILD_SOURCE_DOCUMENTATION
-export CC
-export CLEAN
-export CLEANUP
-export CMAKE_BUILD_TYPE
-export CMAKE_CXX_STANDARD
-export CMAKE_INSTALL_PREFIX
-export CXX
-export DEBUG
-export ERRORS
-export GENERATOR
-export BUILDER
-export WORKTREE_DIR
-export LOGDIR
-export LOGFILE
-export NOPATCH
-export NOTREALLY
-export SRC
-export SYSTEMC_HOME
-export STEP_CURRENT
-export STEP_MAX
-export SUFFIX
-export TOOL_BRIEF
-export TOOL_NAME
-# shellcheck disable=SC2090
-export TOOL_INFO
-export TOOL_CHECKOUT
-export TOOL_SRC
-export TOOL_BASE
-export TOOL_VERS
-export TOOL_URL
-export TOOL_PATCHES
-export BUILD_DIR
-export NOFETCH
-export NOCOMPILE
-export NOINSTALL
-export UNINSTALL
-export UTILS_SCRIPT
-export VERBOSITY
-export WARNINGS
+alias Declare_exports='\
+  declare -a ARGV;
+  export\
+    APPS\
+    ARGV\
+    BUILD_SOURCE_DOCUMENTATION\
+    CC\
+    CLEAN\
+    CLEANUP\
+    CMAKE_BUILD_TYPE\
+    CMAKE_CXX_STANDARD\
+    CMAKE_INSTALL_PREFIX\
+    CXX\
+    DEBUG\
+    ERRORS\
+    GENERATOR\
+    BUILDER\
+    WORKTREE_DIR\
+    LOGDIR\
+    LOGFILE\
+    NOPATCH\
+    NOTREALLY\
+    TMP\
+    SRC\
+    SYSTEMC_HOME\
+    STEP_CURRENT\
+    STEP_MAX\
+    SUFFIX\
+    TOOL_BRIEF\
+    TOOL_NAME\
+    TOOL_INFO\
+    TOOL_SRC\
+    TOOL_BASE\
+    TOOL_TAG\
+    TOOL_VERS\
+    TOOL_URL\
+    TOOL_PATCHES\
+    BUILD_DIR\
+    NOFETCH\
+    NOCOMPILE\
+    NOINSTALL\
+    UNINSTALL\
+    UTILS_SCRIPT\
+    VERBOSITY\
+    WARNINGS\
+'
+
+declare -a ARGV;
+export\
+  APPS\
+  ARGV\
+  BUILD_SOURCE_DOCUMENTATION\
+  CC\
+  CLEAN\
+  CLEANUP\
+  CMAKE_BUILD_TYPE\
+  CMAKE_CXX_STANDARD\
+  CMAKE_INSTALL_PREFIX\
+  CXX\
+  DEBUG\
+  ERRORS\
+  GENERATOR\
+  BUILDER\
+  WORKTREE_DIR\
+  LOGDIR\
+  LOGFILE\
+  NOPATCH\
+  NOTREALLY\
+  TMP\
+  SRC\
+  SYSTEMC_HOME\
+  STEP_CURRENT\
+  STEP_MAX\
+  SUFFIX\
+  TOOL_BRIEF\
+  TOOL_NAME\
+  TOOL_INFO\
+  TOOL_SRC\
+  TOOL_BASE\
+  TOOL_TAG\
+  TOOL_VERS\
+  TOOL_URL\
+  TOOL_PATCHES\
+  BUILD_DIR\
+  NOFETCH\
+  NOCOMPILE\
+  NOINSTALL\
+  UNINSTALL\
+  UTILS_SCRIPT\
+  VERBOSITY\
+  WARNINGS\
+
+#NOW="$(date '+%m%d%H%M%Y.%S')"
+TMP="$(mktemp Save-XXX)"
 
 # Defaults if empty
 if [[ -z "${VERBOSITY}" ]]; then VERBOSITY=0;  fi
@@ -212,6 +268,7 @@ function ShowBuildOpts()
   for (( i=0; i<${#ARGV[@]}; ++i )); do
     Report_debug "ARGV[${i}]='${ARGV[${i}]}'"
   done
+  Declare_exports
   ShowVars -x\
     APPS \
     BUILD_SOURCE_DOCUMENTATION \
@@ -238,7 +295,6 @@ function ShowBuildOpts()
     TOOL_BASE \
     TOOL_VERS \
     TOOL_URL \
-    TOOL_CHECKOUT \
     TOOL_PATCHES \
     BUILD_DIR \
     CMAKE_BUILD_TYPE \
@@ -255,6 +311,7 @@ function ShowBuildOpts()
 
 function ConfirmBuildOpts()
 {
+  Declare_exports
   ShowBuildOpts
   while true; do
     printf "Confirm above options (y/n)? "
@@ -269,6 +326,7 @@ function ConfirmBuildOpts()
 
 function GetBuildOpts()
 {
+  Declare_exports
   Step_Show "Get build options"
 
 # Establishes options for building
@@ -348,12 +406,12 @@ function GetBuildOpts()
 #| - $SUFFIX
 #| - $SYSTEMC_HOME
 #| - $SYSTEMC_SRC
-#| - $TOOL_CHECKOUT
 #| - $TOOL_INFO
 #| - $TOOL_BASE base directory name for tool source
 #| - $TOOL_NAME fancy name for display
 #| - $TOOL_PATCHES
 #| - $TOOL_SRC usually ${HOME}/.local/src
+#| - $TOOL_TAG 
 #| - $TOOL_URL
 #| - $TOOL_VERS
 #| - $WORKTREE_DIR
@@ -468,9 +526,6 @@ function GetBuildOpts()
       elif [[ "${CC}" =~ .*clang++ ]]; then
         CXX=clang++
       fi
-      ;;
-    --checkout=*)
-      TOOL_CHECKOUT="${ARG//*=}"
       ;;
     --clang)
       CC=clang
@@ -691,7 +746,7 @@ function GetBuildOpts()
     BUILDER=cmake
   fi
   if [[ -z "${BUILD_DIR}" ]]; then
-    BUILD_DIR="build-${BUILDER}-$(basename "${CC}")"
+    BUILD_DIR="build-${BUILDER}-${CC/*\//}"
   fi
   if [[ -z "${CMAKE_BUILD_TYPE}" ]]; then
     CMAKE_BUILD_TYPE="RelWithDebInfo"
@@ -739,6 +794,7 @@ function GetBuildOpts()
 function SetupLogdir()
 {
   Step_Show "Set up log directory $1"
+  Declare_exports
   local NONE
   NONE="$(_C none)"
   # Creates log directory and sets initial LOGFILE
@@ -766,6 +822,7 @@ function SetupLogdir()
 # Make directory and enter
 function Create_and_Cd() # DIR
 {
+  Declare_exports
   if [[ $# != 1 ]]; then return 1; fi # Assert
   Step_Show "Create source for ${1}"
   _do mkdir -p "${1}" || Report_fatal "Unable to create ${1}" || return 1
@@ -776,6 +833,7 @@ function Create_and_Cd() # DIR
 # Download and enter directory and patch (TODO)
 function GetSource_and_Cd() # DIR URL
 {
+  Declare_exports
   if [[ $# != 2 ]]; then return 1; fi # Assert
   Step_Show "Get source code from $2 and enter $1"
   local DIR URL
@@ -789,20 +847,21 @@ function GetSource_and_Cd() # DIR URL
     if ! _do cd "${DIR}" ; then Report_fatal "Unable to enter ${DIR}"; exit 1; fi
     Step_Next && return 0 || return 1
   fi
+  # Git
   if [[ "${URL}" =~ [.]git$ ]]; then
     if [[ -d "${DIR}/.git" ]]; then
       _do git -C "${DIR}" pull --no-edit origin master
     else
+      # If directory exists, move it out of the way
       if [[ -d "${DIR}/." ]]; then
-        _do rm -fr "${DIR}" "${DIR}-save"
-        _do mv "${DIR}" "${DIR}-save"
-        _do rm -fr "${DIR}"
+        Report_warning "Directory already existed without git repo. Renamed ${DIR}-${TMP}"
+        _do mv "${DIR}" "${DIR}-${TMP}"
       fi
       _do git clone "${URL}" "${DIR}" || Report_fatal "Unable to clone into ${DIR}" || exit 1
     fi
     if ! _do cd "${DIR}" ; then Report_fatal "Unable to enter ${DIR}"; exit 1; fi
-    if [[ -n "${TOOL_CHECKOUT}" ]]; then
-      _do git checkout "${TOOL_CHECKOUT}"
+    if [[ -n "${TOOL_VERS}" ]]; then
+      _do git checkout "${TOOL_VERS}"
     fi
     if [[ ${NOPATCH} == 0 && -n "${TOOL_PATCHES}" ]]; then
       _do git  am --empty=drop "${TOOL_PATCHES}"
@@ -823,12 +882,12 @@ function GetSource_and_Cd() # DIR URL
 #Checks out specified or latest tagged version
 function Select_version()
 {
-  if [[ "${TOOL_CHECKOUT}" != "" ]]; then return 0; fi
+  Declare_exports
   if [[ $# != 1 ]]; then return 1; fi # Assert
   Step_Show "Selecting version $1"
-  SELECTED="$1"
+  local SELECTED="$1"
   case "${SELECTED}" in
-    latest)
+    last)
       SELECTED="$(git tag | tail -1)"
       ;;
     *) ;; # use specified version
@@ -840,6 +899,7 @@ function Select_version()
 # shellcheck disable=SC2120
 function Configure_tool() # [TYPE]
 {
+  Declare_exports
   export NOLOG=1
   Step_Show "Configure $1"
   Report_info -grn "Configuring ${TOOL_NAME}"
@@ -920,6 +980,7 @@ alias Generate=Configure_tool
 # shellcheck disable=SC2120
 function Compile_tool()
 {
+  Declare_exports
   export NOLOG=1
   Step_Show "Compile"
   if [[ "${NOCOMPILE}" == "-n" ]]; then
@@ -948,6 +1009,7 @@ function Compile_tool()
 
 function Install_tool()
 {
+  Declare_exports
   export NOLOG=1
   Step_Show "Install"
   if [[ "${NOINSTALL}" == "yes" ]]; then
@@ -975,6 +1037,7 @@ function Install_tool()
 
 function Cleanup()
 {
+  Declare_exports
   export NOLOG=1
   if [[ $# = 1 ]]; then return 1; fi # Assert
   Step_Show "Clean up"
@@ -988,6 +1051,7 @@ function Cleanup()
 
 function Main()
 {
+  Declare_exports
   if [[ "${BASH_VERSINFO[0]}" -ge 5 ]]; then return 1; fi # Assert
   if [[ $# != 0 ]]; then
     GetBuildOpts "$0" "$@"
