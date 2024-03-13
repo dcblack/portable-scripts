@@ -38,6 +38,13 @@ our %for; # contains for-loop contents indexed by list-name
 our $optional;
 our $revn = '1.12.0'; #< manually update
 
+# Color support
+our $COLOR = 1;
+$COLOR = 0 if exists $ENV{'NOCOLOR'} and $ENV{'NOCOLOR'} ne '0';
+our ($RED,$GRN,$YLW,$BLU,$MAG,$CYN,$WHT,$NONE) = ("","","","","","","","","");
+($RED,$GRN,$YLW,$BLU,$MAG,$CYN,$WHT,$NONE) = ( '[1;91m', '[1;92m', '[1;93m', '[1;94m',
+                                               '[1;95m', '[1;96m', '[1;97m', '[0m'     ) if $COLOR == 1;
+
 # Setup package for export #{{{
 use Exporter   ();
 our ($VERSION,@ISA,@EXPORT,@EXPORT_OK,%EXPORT_TAGS,@EXPORTS);
@@ -472,7 +479,7 @@ EOT
       }#endif
       if (not $once) {
         printf $MORE_FH "\n" if $cols != 0;
-        printf $MORE_FH "  ----- %s -----\n",$dir unless $OPT{-quiet} and $OPT{-ls};
+        printf $MORE_FH "  ${GRN}----- %s -----${NONE}\n",$dir unless $OPT{-quiet} and $OPT{-ls};
         $once = 1;
         $cols = 0;
       }#endif
@@ -1132,7 +1139,7 @@ sub replace_placeholder { #<<<2
       ++$phld_c;
     }#endif
   }#endfor $i
-SKIP:
+  SKIP:
   if (wantarray) {
     return $line,$repl_c,$phld_c;
   } else {
