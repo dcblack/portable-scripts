@@ -1,4 +1,4 @@
-#!/usr/bin/env perl5
+#!/usr/bin/env perl
 require v5.6;
 use strict;
 use warnings;
@@ -13,9 +13,18 @@ SYNOPSIS
 --------
 destruct [-nbu] FILENAME(S)
 
- Option | Description
- ------ | -----------
- -nbu   | Don't keep backup files
+DESCRIPTION
+-----------
+
+Replaces struct with class and updates public/private labeling.
+
+OPTIONS
+-------
+
+Option | Description
+------ | -----------
+-nbu   | Don't keep backup files
+
 };
 }
 
@@ -48,10 +57,17 @@ for my $file (@ARGV) {
   close $FH;
   my $state = 'LOOK_FOR_START';
   my $changes = 0;
+  my $lno = 0;
   for my $line (@text) {
+    ++$lno;
     $line =~ s{\r\n}{\n}; # Just in case Windows text
     if ($state eq 'LOOK_FOR_START') {
-      if ($line =~ m{^struct\s+(\w+)}) {
+      if ($line =~ m{^\s*struct\s+(\w+).*;}) { # one-liner
+        my $found = $1;
+        printf "Ignoring struct %s on line %d\n",$found,$lno;
+      } elsif ($line =~ m{^\s*class\s+(\w+).*;}) { # one-liner
+        # ignore
+      } elsif ($line =~ m{^\s*struct\s+(\w+)}) {
         printf "Found struct %s\n",$1;
         ++$total_structs;
         $changes += $line =~ s{struct}{class};
@@ -68,6 +84,8 @@ for my $file (@ARGV) {
           $state = 'LOOK_FOR_END';
         }
       }
+    } elsif ($line =~ m{^\s*class\s+(\w+)}) {
+        $state = 'LOOK_FOR_END';
     } elsif ($state eq 'STRUCT_FOUND') {
         $changes += $line =~ s{private}{Private}g; # protect
         $changes += $line =~ s{public}{Public}g;   # protect
@@ -88,6 +106,13 @@ for my $file (@ARGV) {
       die "Unknown state!!!?\n";
     }
   }#endfor
+
+  my $text = join('',@text);
+
+  # Remove private: public line pairs
+  $text =~ s{\npublic:\nprivate:\n}{\n}g;
+  $text =~ s{\nprivate:\npublic:\n}{\n}g;
+
   $total_changes += $changes;
 
   if ($changes != 0) {
@@ -98,7 +123,7 @@ for my $file (@ARGV) {
     my $temp = $file."-tmp";
     open(my $TH,'>',$temp)
       or die "Unable to open '$temp' for writing!?\n";
-    print $TH @text;
+    print $TH $text;
     close $TH;
 
     if ( $nobackup != 0 ) {
@@ -116,3 +141,5 @@ for my $file (@ARGV) {
 printf "Found %d structs\n",$total_structs;
 printf "Changed %d files\n",$total_renamed;
 printf "Made %d modifications\n",$total_changes;
+
+# vim:nospell

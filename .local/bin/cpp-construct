@@ -11,11 +11,20 @@ cpp-construct - Converts C++ `class` into `struct`.$
 
 SYNOPSIS
 --------
-destruct [-nbu] FILENAME(S)
+construct [-nbu] FILENAME(S)
 
- Option | Description
- ------ | -----------
- -nbu   | Don't keep backup files
+DESCRIPTION
+-----------
+
+Replaces class with struct and updates public/private labeling.
+
+OPTIONS
+-------
+
+Option | Description
+------ | -----------
+-nbu   | Don't keep backup files
+
 };
 }
 
@@ -48,11 +57,19 @@ for my $file (@ARGV) {
   close $FH;
   my $state = 'LOOK_FOR_START';
   my $changes = 0;
+  my $lno = 0;
   for my $line (@text) {
+    ++$lno;
     $line =~ s{\r\n}{\n}; # Just in case Windows text
     if ($state eq 'LOOK_FOR_START') {
-      if ($line =~ m{^class\s+(\w+)}) {
-        printf "Found class %s\n",$1;
+      if ($line =~ m{^\s*class\s+(\w+).*;}) { # one-liner
+        my $found = $1;
+        printf "Ignoring class %s on line %d\n",$found,$lno;
+      } elsif ($line =~ m{^\s*struct\s+(\w+).*;}) { # one-liner
+        # ignore
+      } elsif ($line =~ m{^\s*class\s+(\w+)}) {
+        my $found = $1;
+        printf "Found class %s\n",$found;
         ++$total_classes;
         $changes += $line =~ s{class}{struct};
         $changes += $line =~ s{private}{Private}g; # protect
@@ -68,6 +85,8 @@ for my $file (@ARGV) {
           $state = 'LOOK_FOR_END';
         }
       }
+    } elsif ($line =~ m{^\s*struct\s+(\w+)}) {
+        $state = 'LOOK_FOR_END';
     } elsif ($state eq 'CLASS_FOUND') {
         $changes += $line =~ s{private}{Private}g; # protect
         $changes += $line =~ s{public}{Public}g;   # protect
