@@ -389,7 +389,6 @@ function Git_configure()
       Set_config alias.history   'log --pretty=format:"%h %cs %s" --graph'
       Set_config alias.ignored   'ls-files -o'
       Set_config alias.missed    'ls-files -o --exclude-standard'
-      Set_config alias.new       'init -b main'
       Set_config alias.remotes   'remote -v'
       Set_config alias.remotes   'remote -v'
       Set_config alias.tags      "!git for-each-ref --count=30 --sort='-*authordate' --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' refs/tags/* | perl -pe 's-refs/tags/--;s{... }{  };'"

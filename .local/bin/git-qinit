@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+#
+#$Info: git-qinit - quick create a new repository. $
+
+if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+git-qinit - quick create a new repository.
+
+Synopsis
+--------
+git-qinit --help|-h # produces this text
+git-qinit [--gh OWNER] [--private|--public] [-m "ABOUT"] REPO
+
+Description
+-----------
+
+Creates a new repository with some default files. Adds all the files found (skipping ignored files). Tags an initial version 0.1.0.
+
+If an *OWNER* is specified, then create a remote repository on GitHub and push the first version there.
+
+Examples
+--------
+
+```bash
+git qinit myRepo # Mostly empty local repository
+
+git qinit --gh doulos --public myExample # Mostly empty GitHub public code
+
+mkdir myWork 
+cd myWork
+new cpp-cmake
+edit main.cpp myClass.hpp myClass.cpp
+build -test # succeeds
+git qinit --gh $USER . # private repo
+```
+
+HELPTEXT
+  exit 0;
+fi
+
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function Git_qinit()
+{
+  local SCRIPTDIR
+  # Using Essential-IO
+  SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+  if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+    SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+  fi
+  if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+    SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+  fi
+  if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+    printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+    return 1
+  fi
+  # shellcheck disable=SC2250,SC1091
+  source "$SCRIPTDIR/Essential-IO"
+  export ERRORS
+  Reset-errors
+
+  # Parse command-line
+  local BRANCH="main" TYPE="--private" OWNER="" REPO="." ABOUT="{:TO BE SUPPLIED:}" DEBUG=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --debug|-D) DEBUG=1 ;;
+      --gh)       OWNER="$2"; shift ;;
+      -m)         ABOUT="$2"; shift ;;
+      --private)  TYPE="$1" ;;
+      --public)   TYPE="$1" ;;
+      -*)         Report_error "Unknown option '$1'" ;;
+      *)
+        if [[ "${REPO}" =~ ^[.]?$ ]]; then
+          REPO="$1"
+        else
+          Report_error "Too many arguments"
+        fi
+        ;;
+    esac
+    shift
+  done
+  if [[ "${REPO}" == "." ]]; then
+    local WD
+    WD="$(pwd)"
+    REPO="${WD/*\//}"
+  fi
+  if [[ -z "${REPO}" ]]; then
+    Report_error "Must specify repository"
+  fi
+  if [[ ${ERRORS} != 0 ]]; then exit 1; fi
+  if [[ ${DEBUG} != 0 ]]; then
+    ShowVars WD REPO BRANCH OWNER
+    return 0
+  fi
+
+  _do git init -b "${BRANCH}" "${REPO}"
+
+  cd "${REPO}" || die
+
+  if [[ ! -r README.md ]]; then
+    cat >README.md <<README
+# About ${REPO}
+
+${ABOUT}
+
+README
+  fi
+  if [[ ! -r .gitignore ]]; then
+    cat >.gitignore <<"IGNORE"
+# MacOS junk
+.DS_store
+
+# Windows junk
+thumbs.db
+
+# Linux junk
+*~
+*.bak
+.hide
+.nocache
+
+# Compiler junk
+*.[ado]
+*.so
+build
+
+#TAF!
+IGNORE
+  fi
+  _do git add .
+  _do git commit -m "Initial"
+  _do git tag -a -m "Initial" "0.1.0"
+  if [[ -n "${OWNER}" ]]; then
+    local URL=""
+    if [[ "${OWNER}" =~ ^http ]]; then
+      URL="${OWNER}/${REPO}.git"
+    else
+      URL="git@github.com:${OWNER}/${REPO}"
+    fi
+    if command -v gh ; then
+      _do gh repo create --"${TYPE}" "${OWNER}/${REPO}"
+    else
+      Report_warning "Missing github cli command: gh"
+    fi
+    _do git remote add -m "${BRANCH}" origin "${URL}"
+    _do git push
+  fi
+}
+
+Git_qinit "$@"

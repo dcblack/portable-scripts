@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+#
+#$Info: git-qci - quick checkin. $
+
+function Qcommit_helptext()
+{
+  cat <<'HELPTEXT'
+NAME
+----
+
+git-qci - quick checkin
+
+SYNOPSIS
+--------
+
+```bash
+git-qci [-C DIR] [-f] [-m "MESSAGE"] FILE...
+```
+
+DESCRIPTION
+-----------
+
+Performs a file commit and push in one step. Specifically, it does the following actions:
+
+1. `git fetch`
+2. If there are changes, query user to proceed.
+3. `git merge`
+4. `git add YOUR_FILES`
+5. `git commit YOUR_ARGS`
+6. `git push`
+
+OPTIONS
+-------
+
+Most options to `git commit` work.
+
+EXAMPLES
+--------
+
+```bash
+git qcfg
+git qinit my_repo
+echo >README.md '# About this directory
+This is a quick example'
+git qci -m "initial" README.md
+```
+
+SEE ALSO
+
+qrepo qinit qcfg
+
+HELPTEXT
+}
+
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function HelpMe()
+{
+  declare -a pager
+  if command -v "glow" 1>/dev/null; then
+    pager=("glow" "-p")
+  elif command -v "less" 1>/dev/null; then
+    pager=("less")
+  elif command -v "more" 1>/dev/null; then
+    pager=("more")
+  else
+    pager=("cat" -)
+  fi
+  # shellcheck disable=SC2312
+  "$1" | "${pager[@]}"
+}
+
+function Git_ci()
+{
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    HelpMe Qcommit_helptext
+    return 0
+  fi
+
+  # Using Essential-IO
+  local HDIR DIR SCRIPT_DIR
+  HDIR="$(Realpath ~)"
+  for DIR in "$0/../scripts" "${HDIR}/.local/scripts" "$0"; do
+    SCRIPT_DIR="$(Realpath "${DIR}")"
+    if [[ -r "${SCRIPT_DIR}/Essential-IO" ]]; then
+      break
+    fi
+  done
+  if [[ ! -r "${SCRIPT_DIR}/Essential-IO" ]]; then
+    printf "FATAL: Missing required source file '%s'\n" "${SCRIPT_DIR}/Essential-IO"
+    return 1
+  fi
+  # shellcheck disable=SC2250,SC1091
+  source "$SCRIPT_DIR/Essential-IO"
+  export ERRORS
+  Reset-errors
+
+  # Grab file list
+  local -a FILES ARGS
+  ARGS=( "$@" )
+  local ARG
+  while [[ $# -gt 0 ]]; do
+    ARG="$1"
+    shift
+    case "${ARG}" in
+      # Options requiring an argument
+      -c | -C | --squash | --fixup | -F | -m | --trailer)
+        shift
+        continue
+        ;;
+      -*)
+        continue
+        ;;
+      *)
+        if [[ ! -r "${ARG}" ]]; then
+          Report_error "Missing file '${ARG}'"
+          continue;
+        fi
+        FILES+=( "${ARG}" )
+        ;;
+    esac
+  done
+  if [[ ${ERRORS} -gt 0 ]]; then return 1; fi
+
+  local REMOTE BRANCH
+  REMOTE="$(git remote)"
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  _do git fetch origin main
+  # shellcheck disable=SC2312
+  CHANGES="$(git log "${BRANCH}  ${REMOTE}/${BRANCH}" | perl -lne 'BEGIN{our $c=0} $c++ if m/^commit/; END {print $c}')"
+  if [[ ${CHANGES} != 0 ]]; then
+    if Confirm "${CHANGES} incoming changes. Review (y|n)?"; then
+      _do git log "${BRANCH}..${REMOTE}/${BRANCH}"
+    fi
+    if Confirm "${CHANGES} will be merged. Proceed (y|n)?"; then
+      _do git merge "${REMOTE}/${BRANCH}"
+    else
+      return 0
+    fi
+  fi
+  _do git commit "${ARGS[@]}" || exit 1
+  _do git push "${REMOTE}/${BRANCH}"
+}
+
+Git_ci "$@"
