@@ -52,6 +52,7 @@ function portable-env() {
   Prepend_path PATH "/usr/local/bin"
   Prepend_path PATH "/opt/local/sbin"
   Prepend_path PATH "/opt/local/bin"
+  Prepend_path PATH "/cocalc/bin"
   Prepend_path PATH "/opt/homebrew/opt/ccache/libexec"
   Prepend_path PATH "/opt/homebrew/sbin"
   Prepend_path PATH "/opt/homebrew/bin"
