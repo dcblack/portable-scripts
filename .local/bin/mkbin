@@ -385,6 +385,8 @@ EOT
       bash)
         Verbose_info "${V}" "Added essentials"
         cat >> "${SCRIPT}" <<'EOT'
+          ---> (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+          --->
           ---> if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
           --->   cat <<'HELPTEXT'
           ---> Name
