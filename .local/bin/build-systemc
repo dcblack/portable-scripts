@@ -38,6 +38,7 @@ export UTILS_VERSION
 # shellcheck disable=SC2250,SC1091
 source "$SCRIPTDIR/utils.bash"
 
+export LOGFILE
 SetupLogdir "$0"
 SCRIPTPATH="$(Realpath "$0")"
 Report_info -cyn "Executing ${SCRIPTPATH} with utils.bash v${UTILS_VERSION}"
@@ -77,7 +78,7 @@ if [[ -r "${LOGFILE}" ]]; then
   if [[ -z "${TOOL_VERS}" ]]; then
     TOOL_VERS="default"
   fi
-  mv "${LOGFILE}" "${LOGFILE}-${TOOL_VERS}"
+  mv "${LOGFILE}" "${LOGFILE/.log/}-${TOOL_VERS}.log"
 fi
 
 # vim:nospell
