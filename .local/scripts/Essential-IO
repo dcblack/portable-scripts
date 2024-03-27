@@ -383,14 +383,14 @@ function _do()
 
   # Defaults
   export NOLOG
-  local NX Q
-  Q=0
+  local NX Q V=0 Q=0
   export NOTREALLY
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
 
   # Process command-line
   while [[ "$1" =~ ^[^./_0-9a-zA-Z] ]]; do
-    if [[ "$1" == "-q" ]]; then Q=1;
+    if [[ "$1" == "-q" ]]; then Q=1 V=0;
+    elif [[ "$1" == "-v" ]]; then V=1 Q=0;
     elif [[ "$1" == "-n" ]]; then NX="-";
     else Report_warning "Dropping '$1'"
     fi
@@ -398,7 +398,7 @@ function _do()
   done
 
   # Display command
-  if [[ ${Q} == 0 ]]; then
+  if [[ ${Q} == 0 || ${V} == 1 ]]; then
     if [[ "${NX}" == "-" ]]; then
       Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
       return 0;
