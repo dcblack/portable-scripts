@@ -23,7 +23,7 @@ list( PREPEND CMAKE_MODULE_PATH "${WORKTREE_DIR}/cmake" )
 include( "${defaults}" )
 
 # Packages for this project
-find_package( fmt REQUIRED )
+find_package( fmt )
 
 #-------------------------------------------------------------------------------
 # Code
@@ -34,7 +34,9 @@ target_sources( "${Target}"
   PRIVATE
   {:lc:NAME:}.cpp
   )
-target_link_libraries( "${Target}" PRIVATE fmt::fmt )
+if( fmt_FOUND )
+  target_link_libraries( "${Target}" PRIVATE fmt::fmt )
+endif()
 #> target_compile_definitions( "${Target}" PRIVATE MYEXAMPLE )
 #> target_compile_features(    "${Target}" PUBLIC cxx_std_11 )
 add_test(

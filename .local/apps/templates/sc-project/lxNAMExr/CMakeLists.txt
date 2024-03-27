@@ -8,7 +8,7 @@
 
 cmake_minimum_required( VERSION 3.20 )
 
-project( syscfund VERSION 6.2 DESCRIPTION "Fundamentals of SystemC course" LANGUAGES CXX )
+project( {:NAME:} VERSION 0.1 DESCRIPTION "{:DESC:}" LANGUAGES CXX )
 
 #-------------------------------------------------------------------------------
 # Find project directory containing defaults
@@ -26,8 +26,24 @@ set( WORKTREE_DIR "${_dir}" CACHE PATH "Contains cmake/${defaults}.cmake" )
 list( PREPEND CMAKE_MODULE_PATH "${WORKTREE_DIR}/cmake" )
 include( "${defaults}" )
 
+# Packages
+find_package( fmt )
+
 #-------------------------------------------------------------------------------
-# Exercise specific
-enable_testing()
-add_subdirectory( answers )
-add_subdirectory( samples )
+# Code
+#-------------------------------------------------------------------------------
+set_target( "${PROJECT_NAME}" )
+add_executable( "${Target}" )
+target_sources( "${Target}" PRIVATE
+  {:lc:NAME:}.hpp
+  {:lc:NAME:}.cpp
+  main.cpp
+)
+if( fmt_FOUND )
+  target_link_libraries( "${Target}" PRIVATE fmt::fmt )
+endif()
+add_test( NAME "${Target}" COMMAND "${Target}" )
+set_tests_properties( "${Target}" PROPERTIES LABELS "exercise;${PROJECT_NAME}" )
+
+#TAF!
+

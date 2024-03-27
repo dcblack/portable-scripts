@@ -35,22 +35,20 @@ include( "${defaults}" )
 
 # Packages
 find_package( fmt REQUIRED )
-#find_package( yaml-cpp CONFIG REQUIRED )
-#find_package( Boost REQUIRED filesystem )
 
-add_executable( {:lc:NAME:} )
-target_include_directories( {:lc:NAME:} PRIVATE . )
-target_sources( {:lc:NAME:} PRIVATE
+set_target( {:lc:NAME:} )
+add_executable( "${Target}" )
+target_include_directories( "${Target}" PRIVATE . )
+target_sources( "${Target}" PRIVATE
   {:if:SRCS:}
   {:sp:SRCS:}
   {:else:SRCS:}
   {:qx:ls -1 *.cpp:}
   {:endif:SRCS:}
 )
-# Uncomment the following only as needed
-#> target_compile_definitions( {:NAME:} PRIVATE MYEXAMPLE )
-#> target_link_libraries( {:NAME:} yaml-cpp )
-#> target_compile_features( {:NAME:} PUBLIC cxx_std_11 )
-#> target_include_directories( {:NAME:} includes )
+if( fmt_FOUND )
+  target_link_libraries( "${Target}" PRIVATE fmt::fmt )
+endif()
+add_test( NAME "${Target}-{:TESTNAME:}" COMMAND "${Target}" {:OPTIONS:} )
 
 # vim:syntax=cmake:nospell

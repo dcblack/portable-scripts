@@ -14,10 +14,11 @@ list( PREPEND CMAKE_MODULE_PATH "$ENV{WORKTREE_DIR}/cmake" )
 include( project_defaults )
 
 # Packages for this project
-find_package( fmt REQUIRED )
+find_package( fmt )
 
-add_executable( {:lc:NAME:} )
-target_sources( {:lc:NAME:}
+set( Target {:lc:NAME:} )
+add_executable( "${Target}" )
+target_sources( "${Target}"
   PRIVATE
   {:if:SRCS:}
   {:sp:SRCS:}
@@ -25,10 +26,12 @@ target_sources( {:lc:NAME:}
   {:qx:ls -1 *pp:}
   {:endif:SRCS:}
 )
-target_link_libraries(         {:lc:NAME:} PRIVATE fmt::fmt )
-#> target_compile_definitions( {:lc:NAME:} PRIVATE MYEXAMPLE )
-#> target_compile_features(    {:lc:NAME:} PUBLIC cxx_std_11 )
-add_test( NAME {:TESTNAME:} COMMAND {:lc:NAME:} {:OPTIONS:} )
+if( fmt_FOUND )
+  target_link_libraries( "${Target}" PRIVATE fmt::fmt )
+endif()
+#> target_compile_definitions( "${Target}" PRIVATE MYEXAMPLE )
+#> target_compile_features(    "${Target}" PUBLIC cxx_std_11 )
+add_test( NAME "${Target}-{:TESTNAME:}" COMMAND "${Target}" {:OPTIONS:} )
 
 #> add_subdirectory( tests )
 
