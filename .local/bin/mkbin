@@ -22,6 +22,14 @@ mkbin - Create an executable script
 
 Creates a new executable script with a bare minimum template. The result contains a hashbang and is made executable.
 
+There are three parts added besides the leading hasbang:
+
+1. HEAD
+2. UTILS
+3. TAIL
+
+HEAD and TAIL are added automatically unless --raw is specified. UTILS is added only if --utils is specified.
+
 ## OPTIONS
 
 OPTION                | DESCRIPTION
@@ -162,7 +170,7 @@ function Mkbin()
   CMNT="#"
   DEBUG=0
   N=0
-  R=0
+  RAW=0
   V=1
   T=()
 
@@ -278,9 +286,9 @@ function Mkbin()
     elif [[ "${OPTION}" =~ ^-{1,2}n(otreally)? ]]; then
       N=1
     elif [[ "${OPTION}" =~ ^-{1,2}noraw ]]; then
-      R=0
+      RAW=0
     elif [[ "${OPTION}" =~ ^-{1,2}r(aw)? ]]; then
-      R=1
+      RAW=1
     elif [[ "${OPTION}" =~ ^-{1,2}q(uiet)? ]]; then
       V=0
     elif [[ "${OPTION}" =~ ^-{1,2}v(erbose)? ]]; then
@@ -344,7 +352,7 @@ function Mkbin()
   Verbose_info "${V}" "${FIRST_LINE}"
 
   # Add essentials
-  if [[ ${IS_NEW} == 1 && ${R} == 0 ]]; then
+  if [[ ${IS_NEW} == 1 && ${RAW} == 0 ]]; then
     case "${KIND}" in
 
       ###############################################################################
@@ -358,20 +366,20 @@ function Mkbin()
       ###############################################################################
       make)
         Verbose_info "${V}" "Added essentials"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> 
-          ---> # Find path to THIS file
-          ---> THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
-          ---> PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
-          ---> .DEFAULT_GOAL := help
-          ---> .PHONY: $(PHONIES)
-          ---> 
-          ---> 
-          ---> #| * help - display documentation
-          ---> help:
-          ---> 	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
-EOT
-        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+        cat >> "${SCRIPT}" <<'HEAD'
+          --> 
+          --> # Find path to THIS file
+          --> THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
+          --> PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
+          --> .DEFAULT_GOAL := help
+          --> .PHONY: $(PHONIES)
+          --> 
+          --> 
+          --> #| * help - display documentation
+          --> help:
+          --> 	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
+HEAD
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
       ###############################################################################
       #  #####     #     ####  #    #                                                 
@@ -384,50 +392,55 @@ EOT
       ###############################################################################
       bash)
         Verbose_info "${V}" "Added essentials"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
-          --->
-          ---> if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
-          --->   cat <<'HELPTEXT'
-          ---> Name
-          ---> ----
-          ---> {:TOOLNAME:} - {:BRIEF:}
-          ---> 
-          ---> Synopsis
-          ---> --------
-          ---> {:TOOLNAME:} --help|-h # produces this text
-          ---> {:TOOLNAME:}
-          ---> 
-          ---> Description
-          ---> -----------
-          ---> {:DESCRIPTION:}
-          ---> 
-          ---> HELPTEXT
-          --->   exit 0;
-          ---> fi
-          ---> 
-          ---> function Realpath ()
-          ---> {
-          --->   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
-          ---> }
-          ---> 
-          ---> # Using Essential-IO
-          ---> SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
-          ---> if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-          --->   SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
-          ---> fi
-          ---> if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-          --->   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
-          ---> fi
-          ---> if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-          --->   printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
-          --->   crash
-          ---> fi
-          ---> # shellcheck disable=SC2250,SC1091
-          ---> source "$SCRIPTDIR/Essential-IO"
+        cat >> "${SCRIPT}" <<'HEAD'
+          --> (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+          -->
+          --> if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+          -->   cat <<'HELPTEXT'
+          --> Name
+          --> ----
+          --> {:TOOLNAME:} - {:BRIEF:}
+          --> 
+          --> Synopsis
+          --> --------
+          --> {:TOOLNAME:} --help|-h # produces this text
+          --> {:TOOLNAME:}
+          --> 
+          --> Description
+          --> -----------
+          --> {:DESCRIPTION:}
+          --> 
+          --> HELPTEXT
+          -->   exit 0;
+          --> fi
+          --> 
+          --> function Realpath ()
+          --> {
+          -->   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+          --> }
+          --> 
+          --> function {:wc:NAME:}()
+          --> {
+          -->   local SCRIPTDIR SCRIPT
+          -->   local -a REQUIRED=( Essential-IO Essential-manip )
+          -->   SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+          -->   if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
+          -->     SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+          -->   fi
+          -->   if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
+          -->     SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+          -->   fi
+          -->   for SCRIPT in "${REQUIRED[@]}"; do
+          -->     if [[ ! -r "${SCRIPTDIR}/${SCRIPT}" ]]; then
+          -->       printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/${SCRIPT}"
+          -->       return 1
+          -->     fi
+          -->     # shellcheck disable=SC1090,SC2250,SC1091
+          -->     source "$SCRIPTDIR/$SCRIPT"
+          -->   done
 
-EOT
-        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+HEAD
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
       ###############################################################################
       #  #####  ##### #####  #                                                         
@@ -440,22 +453,22 @@ EOT
       ###############################################################################
       perl)
         Verbose_info "${V}" "Added strict"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> require v5.6;
-          ---> use strict;
-          ---> use warnings;
-          ---> use Cwd qw(abs_path getcwd);
-          ---> use English;
-          ---> use File::Basename;
-          ---> use FileHandle;
-          ---> use FindBin qw($RealBin $RealScript);
-          ---> use Getopt::Long;
-          ---> use Pod::Usage;
-          ---> STDOUT->autoflush(1);
-          ---> STDERR->autoflush(1);
+        cat >> "${SCRIPT}" <<'HEAD'
+          --> require v5.6;
+          --> use strict;
+          --> use warnings;
+          --> use Cwd qw(abs_path getcwd);
+          --> use English;
+          --> use File::Basename;
+          --> use FileHandle;
+          --> use FindBin qw($RealBin $RealScript);
+          --> use Getopt::Long;
+          --> use Pod::Usage;
+          --> STDOUT->autoflush(1);
+          --> STDERR->autoflush(1);
 
-EOT
-        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+HEAD
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
       *)
         ;;
@@ -476,18 +489,18 @@ EOT
       ###############################################################################
       bash)
         Verbose_info "${V}" "Added util.bash"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> SCRIPT="$(Realpath "$0")"
-          ---> SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
-          ---> if [[ -x "${SCRIPT}" ]]; then
-          --->   # shellcheck source=utils.bash disable=SC1091
-          --->   source "${SCRIPT}" "$0"
-          ---> else
-          --->   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
-          ---> fi
+        cat >> "${SCRIPT}" <<'UTILS'
+          --> SCRIPT="$(Realpath "$0")"
+          --> SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
+          --> if [[ -x "${SCRIPT}" ]]; then
+          -->   # shellcheck source=utils.bash disable=SC1091
+          -->   source "${SCRIPT}" "$0"
+          --> else
+          -->   echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
+          --> fi
 
-EOT
-        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+UTILS
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
       
       ###############################################################################
@@ -501,40 +514,40 @@ EOT
       ###############################################################################
       perl)
         Verbose_info "${V}" "Added command-line parsing"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> #------------------------------------------------------------------------------
-          ---> # Parse command-line
-          ---> #------------------------------------------------------------------------------
-          ---> my $POD2MAN_BIN = 'pod2man';
-          ---> our @ORIG = @ARGV;
-          ---> our %opts;
-          ---> GetOptions(\%opts,
-          --->   'help',
-          --->   'man',
-          --->   'nroff',
-          --->   'usage',
-          ---> )  or pod2usage(-verbose => 0);
-          ---> if (exists $opts{'usage'} ) {
-          --->   pod2usage(-exitval => 0, -verbose => 0);
-          ---> }
-          ---> if (exists $opts{'man'} ) {
-          --->   pod2usage(-exitval => 0, -verbose => 2);
-          ---> }
-          ---> if (exists $opts{'nroff'} ) {
-          --->   open SCRIPT,"$POD2MAN_BIN --name='Scratch tools' $RealBin/$RealScript|";
-          --->   print grep($_ ne '',<SCRIPT>);
-          --->   close SCRIPT;
-          --->   exit 0;
-          ---> }
-          ---> if (exists $opts{'help'}) {
-          --->   pod2usage(-verbose => 1);
-          ---> }
+        cat >> "${SCRIPT}" <<'UTILS'
+          --> #------------------------------------------------------------------------------
+          --> # Parse command-line
+          --> #------------------------------------------------------------------------------
+          --> my $POD2MAN_BIN = 'pod2man';
+          --> our @ORIG = @ARGV;
+          --> our %opts;
+          --> GetOptions(\%opts,
+          -->   'help',
+          -->   'man',
+          -->   'nroff',
+          -->   'usage',
+          --> )  or pod2usage(-verbose => 0);
+          --> if (exists $opts{'usage'} ) {
+          -->   pod2usage(-exitval => 0, -verbose => 0);
+          --> }
+          --> if (exists $opts{'man'} ) {
+          -->   pod2usage(-exitval => 0, -verbose => 2);
+          --> }
+          --> if (exists $opts{'nroff'} ) {
+          -->   open SCRIPT,"$POD2MAN_BIN --name='Scratch tools' $RealBin/$RealScript|";
+          -->   print grep($_ ne '',<SCRIPT>);
+          -->   close SCRIPT;
+          -->   exit 0;
+          --> }
+          --> if (exists $opts{'help'}) {
+          -->   pod2usage(-verbose => 1);
+          --> }
 
-          ---> #------------------------------------------------------------------------------
-          ---> # Main
-          ---> #------------------------------------------------------------------------------
-EOT
-        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+          --> #------------------------------------------------------------------------------
+          --> # Main
+          --> #------------------------------------------------------------------------------
+UTILS
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
     *)
       ;;
@@ -555,38 +568,53 @@ EOT
   fi
 
   # Add tail
-  if [[ ${ADD_TAIL} == 1 && ${R} == 0 ]]; then
+  if [[ ${ADD_TAIL} == 1 && ${RAW} == 0 ]]; then
     case "${KIND}" in
       make)
         Verbose_info "${V}" "Added tail"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> 
-          ---> # vim:nospell:syntax=make
-EOT
+        cat >> "${SCRIPT}" <<'TAIL'
+          --> 
+          --> # vim:nospell:syntax=make
+TAIL
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
+        ;;
+      bash)
+        cat >> "${SCRIPT}" <<'TAIL'
+          -->
+          -->   {:CODE:}
+          -->
+          --> }
+          -->
+          --> }
+          --> if [[ ${SOURCED} == 0 ]]; then
+          -->   {:wc:NAME:} "$@"
+          --> fi
+TAIL
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
       perl)
         Verbose_info "${V}" "Added tail"
-        cat >> "${SCRIPT}" <<'EOT'
-          ---> exit 0;
-          ---> __DATA__
-          ---> =pod
+        cat >> "${SCRIPT}" <<'TAIL'
+          --> exit 0;
+          --> __DATA__
+          --> =pod
 
-          ---> =head1 NAME
+          --> =head1 NAME
 
-          ---> {:SCRIPT_NAME:} - {:ONE_LINE_SUMMARY:}
+          --> {:SCRIPT_NAME:} - {:ONE_LINE_SUMMARY:}
 
-          ---> =head1 SYNOPSIS
+          --> =head1 SYNOPSIS
 
-          ---> {:SCRIPT_NAME:} {:SYNTAX:}
+          --> {:SCRIPT_NAME:} {:SYNTAX:}
 
-          ---> =head1 DESCRIPTION
+          --> =head1 DESCRIPTION
 
-          ---> {:DESCRIBE_DETAILS:}
+          --> {:DESCRIBE_DETAILS:}
 
-          ---> =cut
+          --> =cut
 
-EOT
-        perl -pi -e 's/^ +---> //' "${SCRIPT}"
+TAIL
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
     *)
       ;;
