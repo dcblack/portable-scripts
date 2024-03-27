@@ -104,6 +104,7 @@ alias Declare_exports='\
     TOOL_URL\
     TOOL_PATCHES\
     BUILD_DIR\
+    MAKECHECK\
     NOFETCH\
     NOCOMPILE\
     NOINSTALL\
@@ -150,6 +151,7 @@ export\
   TOOL_URL\
   TOOL_PATCHES\
   BUILD_DIR\
+  MAKECHECK\
   NOFETCH\
   NOCOMPILE\
   NOINSTALL\
@@ -163,6 +165,7 @@ TMP="$(mktemp Save-XXX)"
 
 # Defaults if empty
 if [[ -z "${VERBOSITY}" ]]; then VERBOSITY=0;  fi
+if [[ -z "${MAKECHECK}"   ]]; then MAKECHECK=0;fi
 if [[ -z "${NOFETCH}"   ]]; then NOFETCH=no;   fi
 if [[ -z "${NOCOMPILE}" ]]; then NOCOMPILE=no; fi
 if [[ -z "${NOINSTALL}" ]]; then NOINSTALL=no; fi
@@ -282,6 +285,7 @@ function ShowBuildOpts()
     WORKTREE_DIR \
     LOGDIR \
     LOGFILE \
+    MAKECHECK \
     NOTREALLY \
     SRC \
     SYSTEMC_HOME \
@@ -300,6 +304,7 @@ function ShowBuildOpts()
     CMAKE_BUILD_TYPE \
     BUILDER \
     GENERATOR \
+    MAKECHECK \
     NOFETCH \
     NOCOMPILE \
     NOINSTALL \
@@ -348,6 +353,7 @@ function GetBuildOpts()
 #|  --builder=TYPE     |  -bld TYPE        | cmake, autotools, or boost
 #|  --build-type TYPE  |  -bt TYPE         | Debug, Release, or RelWithDebInfo
 #|  --cc=C_COMPILER    |  CC=C_COMPILER    | chooses C compiler executable (e.g., gcc or clang)
+#|  --check            |  -ck              | run 'make check' after build
 #|  --clang            |                   | quick --cc=clang --cxx=clang++
 #|  --clean            |  -clean           | reinstall source
 #|  --cleanup          |  -cleanup         | remove source after installation
@@ -398,6 +404,7 @@ function GetBuildOpts()
 #| - $ERRORS integer
 #| - $LOGDIR
 #| - $LOGFILE
+#| - $MAKECHECK
 #| - $NOCOMPILE
 #| - $NOFETCH
 #| - $NOINSTALL
@@ -472,6 +479,9 @@ function GetBuildOpts()
     -h|-help|--help)
       HelpText -b "${TOOL_BRIEF}" "${UTILS_SCRIPT}";
       exit 0
+      ;;
+    -ck|-check|--check)
+      MAKECHECK=1
       ;;
     -n|--not-really|--notreally)
       NOTREALLY="-n"
@@ -991,10 +1001,16 @@ function Compile_tool()
   case "${BUILDER}" in
     cmake)
       _do cmake --build "${BUILD_DIR}"
+      if [[ ${MAKECHECK} == 1 ]]; then
+        _do make -C "${BUILD_DIR}" check
+      fi
       ;;
     autotools)
       if ! _do cd "${BUILD_DIR}" ; then Report_fatal "Unable to enter ${BUILD_DIR}"; exit 1; fi
       _do make
+      if [[ ${MAKECHECK} == 1 ]]; then
+        _do make -C "${BUILD_DIR}" check
+      fi
       ;;
     boost)
       _do ./b2
