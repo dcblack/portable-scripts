@@ -6,7 +6,7 @@ if [[ ${SOURCED} == 0 ]]; then
   exit 1
 fi
 
-export SYSTEMC_HOME LD_LIBRARY_PATH DYLD_LIBRARY_PATH
+export SYSTEMC_HOME LD_LIBRARY_PATH DYLD_LIBRARY_PATH SETUP_PATH PROJECT_DIR
 
 # NOTES
 # - APPS is occasionally used to reference tools installed outside the project.
@@ -43,17 +43,20 @@ function Realpath()
 function Project_setup()
 {
   # @brief does the real work of setup
+  if [[ "$2" == "-v" ]]; then
+    Report_info -f "Sourcing $1"
+  fi
 
-  APPS="${HOME}/.local/apps"
+  APPS="${HOME}/.local/apps" ;# Defaut location
   local OPT FLAG=0
   for OPT in "$@"; do
     case "${OPT}" in
       --install-dir)
         FLAG=1
         ;;
-      -*) 
+      -*)
         ;;
-      *) 
+      *)
         if [[ ${FLAG} == 1 ]]; then
           APPS="${OPT}"
           FLAG=0
@@ -64,15 +67,18 @@ function Project_setup()
   export ACTION
   if [[ "$2" =~ --rm || "${ACTION}" == "rm" ]]; then
     ACTION="rm"
-    Remove_path PATH "${PROJECT_BIN}"
+    Remove_path PATH "${PROJECT_DIR}/extern/bin"
+    PROJECT_NAME="$(basename "${PROJECT_DIR}")"
+    echo "$1: ${PROJECT_NAME} environment removed"
   else
     ACTION="add"
-    SETUP_PATH="$(Realpath "$1")"
+    SETUP_PATH="$1"
     PROJECT_DIR="$(dirname "${SETUP_PATH}")"
     PROJECT_NAME="$(basename "${PROJECT_DIR}")"
     PROJECT_BIN="${PROJECT_DIR}/extern/bin"
     # shellcheck disable=SC1091
     source "${PROJECT_DIR}/extern/scripts/Essential-IO"
+    # shellcheck disable=SC1091
     source "${PROJECT_DIR}/extern/scripts/Essential-manip"
 
     SYSTEMC_HOME="${APPS}/systemc"
@@ -80,27 +86,9 @@ function Project_setup()
     DYLD_LIBRARY_PATH="${HOME}/.local/apps/systemc/lib"
     Prepend_path PATH "${PROJECT_BIN}"
 
-    if [[ ! -d "${SETUP_PATH}/.git" ]]; then
-      _do git init "${SETUP_PATH}/.git"
-      _do git -C "${SETUP_PATH}" add .
-      _do git -C "${SETUP_PATH}" commit -m 'initial'
-    fi
-
     export ACTION APPS PROJECT_NAME SETUP_PATH PROJECT_DIR
     export SYSTEMC_HOME LD_LIBRARY_PATH DYLD_LIBRARY_PATH
     echo "$1: ${PROJECT_NAME} environment set up"
-  fi
-}
-
-function Check_version()
-{
-  # @brief return the version of tool
-  local version
-  if command -v "$1" 1>/dev/null 2>&1; then
-    echo -n "$1 "
-    version="$1 $(command "$1" --version)"
-    # shellcheck disable=SC2312
-    perl -e 'printf qq{%s\n},$& if "@ARGV" =~ m{\b[1-9]+([.][0-9]+)+}' "${version}"
   fi
 }
 
@@ -117,11 +105,7 @@ function Check_environment()
       Report_warning "Missing ${dir}/ directory -- suspicious"
     fi
   done
-  # What tools are available
-  local tool version
-  for tool in make ninja cmake ctest; do
-    Check_version "${tool}"
-  done
+  # Make sure we have SystemC set up properly
   if [[ ! -d "${SYSTEMC_HOME}" ]]; then
     Report_warning "SYSTEMC_HOME does not point to a directory!?"
   else
@@ -132,16 +116,25 @@ function Check_environment()
       Report_warning "Missing SYSTEMC_HOME/lib!?"
     fi
   fi
+  # What tools are available
+  tool-versions
 }
 
-if [[ "$0" =~ sh$ ]]; then
-  Project_setup "setup.profile" "$@"
+# Works in ZSH and BASH
+# shellcheck disable=SC2154
+if [[ -n "${ZSH_VERSION}" ]]; then
+  SETUP_PATH="$(Realpath "$0")"
+  Project_setup "${SETUP_PATH}" "$@"
 else
-  Project_setup "$0" "$@"
+  SETUP_PATH="$(Realpath "${BASH_SOURCE[0]}")"
+  Project_setup "${SETUP_PATH}" "$@"
 fi
+# shellcheck disable=SC2139
+alias setup="source '${SETUP_PATH}'"
+
 if [[ "$1" == "-v" ]]; then
   ( Check_environment )
-  Summary setup.profile
+  Summary "${SETUP_PATH}"
 fi
 
 # vim:nospell
