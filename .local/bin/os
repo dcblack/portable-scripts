@@ -16,6 +16,15 @@ Description
 -----------
 Displays information about the operating system.
 
+Options
+-------
+
+Flag | Description
+---- | -----------
+-1   | Succint one-line
+-p   | Indicate platform (macOS|CoCalc|WSL)
+-v   | Verbose
+
 HELPTEXT
   exit 0;
 fi
@@ -34,22 +43,16 @@ source "$SCRIPTDIR/Essential-IO"
 
 function Os_main()
 {
-  local OS 
-  OS="$(uname -s)"
-  if [[ "${OS}" != "Darwin" && -r /etc/os-release ]]; then
-    OS="$(perl -lne 'if(m{PRETTY_NAME="([^"]+)"}){$os=$1;$os=~s{Oracle}{CentOS};print $os;}' /etc/os-release)"
-  fi
-
   # Parse command options
-  local VERBOSE SUCCINCT
-  VERBOSE=0
-  SUCCINCT=0
+  local VERBOSE=0 SUCCINCT=0 PLATFORM=0
   while [[ $# -gt 0 ]]; do
     if [[ "$1" =~ ^-{1,2}v(erbose)?$ ]]; then
       VERBOSE=1
     elif [[ "$1" == "-1" ]]; then
       VERBOSE=0
       SUCCINCT=1
+    elif [[ "$1" =~ ^-{1,2}p(latform)?$ ]]; then
+      PLATFORM=1
     else
       Report_error "Unknown option $1" 1>&2
       exit 1
@@ -57,8 +60,28 @@ function Os_main()
     shift
   done
 
+  local OS 
+  OS="$(uname -s)"
+  if [[ "${OS}" != "Darwin" && -r /etc/os-release ]]; then
+    OS="$(perl -lne 'if(m{PRETTY_NAME="([^"]+)"}){$os=$1;$os=~s{Oracle}{CentOS};print $os;}' /etc/os-release)"
+  fi
+
 
   if [[ ${VERBOSE} == 0 ]]; then
+    if [[ ${PLATFORM} == 1 ]]; then
+      case "${OS}" in
+        Darwin)
+          OS="macOS"
+          ;;
+        *)
+          if [[ -r /cocacl/bin/cocalc-open ]]; then
+            OS="cocalc"
+          elif builtin command -V wsl.exe 1>/dev/null 2>&1; then
+            OS="WSL"
+          fi
+          ;;
+      esac
+    fi
     if [[ ${SUCCINCT} == 1 ]]; then
       echo "${OS/ *}"
     else
