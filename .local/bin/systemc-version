@@ -59,6 +59,7 @@ number in one of several formats.
  --var        return a variable name suitable for #define
  --ieee       return IEEE version number (yyyyMMddL)
  --osci       return Accellera standard number (yyyyMMdd)
+ --tlm2       include the TLM version
  -v|--verbose Includes the word SystemC at the beginning of the line
 
 =head1 ENVIRONMENT
@@ -109,7 +110,7 @@ my %OPT;
 
 # Parse command-line
 my $arg;
-my $min = "2.0.1";
+my $min = "2.3.3";
 my $scale=1000;
 my $SYSTEMC = '';
 unshift @ARGV,split(m/\s+/,$ENV{'SYSTEMC_VERSIONRC'}) if exists $ENV{'SYSTEMC_VERSIONRC'};
@@ -155,6 +156,10 @@ while (@ARGV) {
   } elsif ($arg =~ m{^-{1,2}sc}) {
     Die "-sc must specify a directory" unless @ARGV and -d $ARGV[0];
     $SYSTEMC = shift @ARGV;
+  } elsif ($arg =~ m{^-{1,2}cci}) {
+    $OPT{-cci} = 1;
+  } elsif ($arg =~ m{^-{1,2}tlm(-?[12])?}) {
+    $OPT{-tlm} = 1;
   } elsif ($arg =~ m{^-{1,2}test}) {
     $OPT{-test} = shift @ARGV;
   } else {
@@ -170,7 +175,11 @@ print "SYSTEMC=$SYSTEMC\n" if exists $OPT{-DEBUG};
 my $rel_version = '?';
 my $std_version = '?';
 my $api_version = $min;
+my $tlm_version = $min;
+my $cci_version = $min;
 my $api_extra = '';
+my $tlm_extra = '';
+my $cci_extra = '';
 my $api_version_file;
 if (exists $OPT{-cxx} and $OPT{-cxx}) {
   my $orig = getcwd();
@@ -184,9 +193,30 @@ if (exists $OPT{-cxx} and $OPT{-cxx}) {
   print SOURCE <<'.';
 #include <systemc>
 #include <iostream>
+#include <string>
 using namespace std;
 using namespace sc_core;
+using namespace tlm;
+#if __has_include("cci_configuration")
+  #include <cci_configuration>
+#endif
 int sc_main(int argc, char* argv[]) {
+  for( auto i=1; i<argc; ++i ) {
+    std::string arg = argv[i];
+    if( arg == "--tlm" ) {
+      cout << "tlm_version = " << sc_release() << endl;
+      return 0;
+    }
+    #ifdef CCI_VERSION
+    if( arg == "--cci" ) {
+      cout << "cci_version = " << CCI_VERSION << endl;
+      return 0;
+    }
+    #else
+      cout << "cci_version = not.available" << endl;
+      return 0;
+    #endif
+  }
   cout << "api_version = " << sc_release() << endl;
   return 0;
 }
@@ -197,6 +227,7 @@ int sc_main(int argc, char* argv[]) {
   printf "%% %s\n",$cmd if exists $OPT{-verbose};
   system($cmd);
   printf "%% %s\n",$temp_exe if exists $OPT{-verbose};
+
   open EXE,"$temp_exe 2>&1 |";
   while (<EXE>) {
     chomp;
@@ -204,6 +235,27 @@ int sc_main(int argc, char* argv[]) {
     $api_version = $';
   }#endwhile
   close EXE;
+
+  if( exists $OPT{-tlm}) {
+    open EXE,"$temp_exe --tlm 2>&1 |";
+    while (<EXE>) {
+      chomp;
+      next unless m/^tlm_version = /;
+      $tlm_version = $';
+    }#endwhile
+    close EXE;
+  }
+
+  if( exists $OPT{-cci}) {
+    open EXE,"$temp_exe --cci 2>&1 |";
+    while (<EXE>) {
+      chomp;
+      next unless m/^cci_version = /;
+      $cci_version = $';
+    }#endwhile
+    close EXE;
+  }
+
   unlink glob('sc_version.*');
   chdir $orig;
   unlink $temp_dir;
