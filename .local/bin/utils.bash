@@ -1002,7 +1002,7 @@ function Compile_tool()
     cmake)
       _do cmake --build "${BUILD_DIR}"
       if [[ ${MAKECHECK} == 1 ]]; then
-        _do make -C "${BUILD_DIR}" check
+        _do cmake --build "${BUILD_DIR}" -- check
       fi
       ;;
     autotools)
