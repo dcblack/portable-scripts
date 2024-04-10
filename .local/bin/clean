@@ -29,7 +29,7 @@ OPTIONS
 | --all    | Remove almost everything (Mac, PC & Vim files are left)
 | --ALL    | Remove everything defined by other options (perhaps overkill)
 | --build  | Remove standard compilation files (e.g., object files, libraries)
-| --clion  | Remove CLion .idea directories
+| --clion  | Remove CLion .idea directories (aka  --idea)
 | --cmake  | Remove cmake files (e.g., when you accidentally use cmake in the source directory)
 | --exe    | Remove only executables
 | --git    | Remove non-tracked files
@@ -119,7 +119,7 @@ function Clean()
     elif [[ "$1" =~ ^-{1,2}(cmake)$ ]]; then
       WHAT+=" + cmake"
       OPTS+=c
-    elif [[ "$1" =~ ^-{1,2}(c|clion)$ ]]; then
+    elif [[ "$1" =~ ^-{1,2}(c|clion|idea)$ ]]; then
       WHAT+=" + clion"
       OPTS+=C
     elif [[ "$1" =~ ^-{1,2}exe$ || "$1" =~ ^-x$ ]]; then
