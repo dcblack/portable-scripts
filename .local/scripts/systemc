@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+#
+#$Info: systemc - {:ONE_LINE_DESCRIPTION_HERE:}. $
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+  echo 1>&2 "${BOLD}${CRED}Error: ${CYLW}Please source $0${NONE}"
+fi
+
+function Systemc_help()
+{
+  cat <<'HELPTEXT'
+Name
+----
+
+systemc - display or change systemc version in use
+
+Synopsis
+--------
+
+systemc [--version] # list current version
+systemc --help|-h   # produces this text
+systemc --list|-l   # list available versions
+systemc --default   # use default
+systemc VERSION     # change to specified version
+
+where VERSION is of the form #.#.# (e.g., 3.0.0)
+
+Description
+-----------
+
+Displays the currently selected version of SystemC as defined by $SYSTEMC_HOME
+or optionally sets the version.
+
+HELPTEXT
+}
+
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function systemc()
+{
+
+  export SYSTEMC_HOME
+  local BOLD="\033[1m" CRED="\033[91m" CYLW="\033[93m" NONE="\033[0m"
+  if [[ $# == 0 ]]; then
+    systemc-version -v -f
+  else
+    if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+      Systemc_help
+    elif [[ "$1" =~ ^[0-9]+[.][0-9] ]]; then
+      #-------------------------------------------------------------------------
+      # Change to selected version
+      #-------------------------------------------------------------------------
+      local VERSION="$1"
+      local DIR=~/.local/apps
+      DIR="$(Realpath "${DIR}")"
+      if [[ -n "${SYSTEMC_HOME}" ]]; then
+        DIR="$(dirname "${SYSTEMC_HOME}")"
+      fi
+      if [[ "${VERSION}" =~ ^[0-9]+[.][0-9]+$ ]]; then
+        local V LATEST=""
+        for V in "${DIR}"/systemc-"${VERSION}"*; do
+          LATEST="${V}"
+        done
+        if [[ -n "${LATEST}" ]]; then
+          VERSION="${LATEST/*systemc-/}"
+        fi
+      fi
+      if [[ -d "${DIR}/systemc-${VERSION}/include" ]]; then
+        SYSTEMC_HOME="${DIR}/systemc-${VERSION}"
+        echo -n "Selected version is "; systemc-version -v -f
+      else
+        echo 1>&2 "${BOLD}${CRED}Error: ${CYLW}Missing directory ${DIR}/systemc-${VERSION}${NONE}"
+      fi
+    elif [[ "$1" =~ ^-{1,2}default$ ]]; then
+      #-------------------------------------------------------------------------
+      # Use default
+      #-------------------------------------------------------------------------
+      local DIR=~/.local/apps
+      DIR="$(Realpath "${DIR}")"
+      if [[ -n "${SYSTEMC_HOME}" ]]; then
+        DIR="$(dirname "${SYSTEMC_HOME}")"
+      fi
+      if [[ -d "${DIR}/systemc/include" ]]; then
+        SYSTEMC_HOME="${DIR}/systemc"
+        echo -n "Selected version is "; systemc-version -v -f
+      else
+        local D V=""
+        for D in "${DIR}"/systemc*/include; do
+          V="$(dirname "${D}")"
+        done
+        if [[ -n "${V}" ]]; then
+          SYSTEMC_HOME="${V}"
+        else
+          echo 1>&2 "${BOLD}${CRED}Error: ${CYLW}Cannot locate SystemC${NONE}"
+        fi
+      fi
+    elif [[ "$1" =~ ^-{1,2}l(ist)?$ ]]; then
+      #-------------------------------------------------------------------------
+      # List available versions
+      #-------------------------------------------------------------------------
+      local DIR=~/.local/apps
+      DIR="$(Realpath "${DIR}")"
+      if [[ -n "${SYSTEMC_HOME}" ]]; then
+        DIR="$(dirname "${SYSTEMC_HOME}")"
+      fi
+      echo "Available versions are:"
+      local D
+      for D in "${DIR}"/systemc*; do
+        echo -n "  ${D/*\//} => version "
+        env SYSTEMC_HOME="${D}" systemc-version -f
+      done
+    elif [[ "$1" =~ ^-{1,2}vers(ion)?$ ]]; then
+      #-------------------------------------------------------------------------
+      # Display currently selected version
+      #-------------------------------------------------------------------------
+      shift
+      systemc-version "$@"
+    else
+      #-------------------------------------------------------------------------
+      # Display currently selected version
+      #-------------------------------------------------------------------------
+      systemc-version "$@"
+    fi
+  fi
+}
