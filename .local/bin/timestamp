@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#
+#$Info: timestamp - {:ONE_LINE_DESCRIPTION_HERE:}. $
+
+case $# in
+  0) env TZ=UTC date +"UTC-%Y-%m-%d-%H-%M-%S" ;;
+  1)
+    case "$1" in
+      --short|-s) env TZ=UTC date +"%y%m%d%H%M%S" ;;
+      *) echo "Error: Unknown option '$1' -- ignored";;
+    esac
+    ;;
+  *) 
+    timestamp "$1"
+    shift
+    timestamp "$@"
+    ;;
+esac

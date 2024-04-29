@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+#
+#$Info: same - identify files that are the same (identical). $
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+
+function Same_help()
+{
+  cat <<'HELPTEXT'
+Name
+----
+same-find - identify files that are the same (identical)
+
+Synopsis
+--------
+same-find --help|-h # produces this text
+same-find [OPTIONS] FILE_LIST
+
+Description
+-----------
+Examines a list of files or files within specified directories and determines which files are identical.
+
+Output consists of lines with filenames that are identical. Different lines are files that do not match others.
+
+For example, the following output:
+
+```
+a1 b2 d/b3
+a2
+a3 b4
+```
+
+The above indicates three unique files a1, a2, and a3. The files b2 and d/b3 are identical to a1. Similarly, b4 has identical contents to a3.
+
+Options
+-------
+
+Opt        | Alt  | Description
+---        | ---  | -----------
+--help     | -h   | Provide this text
+--markdown | -md  | Markdown
+--newest   | -N   | Sort files by date with newest first
+--number   | -n   | Add numbers to output
+--oldest   | -O   | Sort files by date with oldest first
+--out FILE | -o F | Specify where to output
+--verbose  | -v   | Verbose
+--quiet    | -q   | Quiet
+
+HELPTEXT
+  exit 0;
+}
+
+function Realpath()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function Output()
+{
+  export OUTFILE
+  if [[ "${OUTFILE}" == "-" ]]; then
+    if [[ "$*" =~ ^# ]]; then return; fi
+    if [[ "$*" =~ ^\s*$ ]]; then return; fi
+    # shellcheck disable=SC2059
+    printf "$@"
+  else
+    # shellcheck disable=SC2059
+    printf "$@" >>"${OUTFILE}"
+  fi
+}
+
+function Same_files()
+{
+  local SCRIPTDIR SCRIPT EXEC="$1"
+  if [[ "$1" =~ same ]]; then
+    shift
+  else
+    EXEC="$(builtin command -V same)"
+  fi
+  local -a REQUIRED=( Essential-IO Essential-manip )
+  SCRIPTDIR="$(Realpath "$(dirname "${EXEC}")"/../scripts)"
+  if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
+    SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+  fi
+  if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
+    SCRIPTDIR="$(Realpath "$(dirname "${EXEC}")")"
+  fi
+  for SCRIPT in "${REQUIRED[@]}"; do
+    if [[ ! -r "${SCRIPTDIR}/${SCRIPT}" ]]; then
+      printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/${SCRIPT}"
+      return 1
+    fi
+    # shellcheck disable=SC1090,SC2250,SC1091
+    source "$SCRIPTDIR/$SCRIPT"
+  done
+
+  # Parse options
+  local MD=0 NUMBER=0 VERBOSE=0 BYDATE=0 A=""
+  export OUTFILE="-" VERBOSITY=1
+  while [[ "$1" =~ ^- ]]; do
+    if [[ "$1" =~ = ]]; then
+      A="${1/*=/}"
+    fi
+    case "$1" in
+      -h|--help|-help       ) Same_help; exit 0 ;;
+      -d|--date=*|-date=*   ) 
+        if   [[ "${2}" =~ ^new(est)?$ ]]; then BYDATE=1; shift;
+        elif [[ "${2}" =~ ^old(est)?$ ]]; then BYDATE=2; shift;
+        elif [[ "${A}" =~ ^new(est)?$ ]]; then BYDATE=1;
+        elif [[ "${A}" =~ ^old(est)?$ ]]; then BYDATE=2;
+        else BYDATE=1;
+        fi
+        ;;
+      -N|--newest|-newest   ) BYDATE=1 ;;
+      -O|--oldest|-oldest   ) BYDATE=2 ;;
+      -md|--markdown        ) MD=1 ;;
+      -n|--number|-number   ) NUMBER=1 ;;
+      -o|--output|-out      ) 
+        OUTFILE="$2"
+        shift
+        ;;
+      -v|--verbose|-verbose ) VERBOSE=1 ;;
+      -q|--quiet|-quiet     ) VERBOSE=0 ;;
+       *) Report_warning "Ignoring unknown option $1" ;;
+    esac
+    shift
+  done
+
+  if [[ $# == 0 ]]; then
+    Report_warning "No file specified"
+    return
+  fi
+  
+  # Establish output file
+  if [[ "${OUTFILE}" != "-" ]]; then
+    if [[ ${MD} == 1 ]]; then
+      if [[ ! "${OUTFILE}" =~ [.][a-zA-Z]+$ ]]; then
+        OUTFILE="${OUTFILE}".md
+      fi
+    else
+      if [[ ! "${OUTFILE}" =~ [.][a-zA-Z]+$ ]]; then
+        OUTFILE="${OUTFILE}".txt
+      fi
+    fi
+    local TIMESTAMP
+    TIMESTAMP="$(date)"
+    rm -f "${OUTFILE}"
+    Output "%s" "\
+# List of identical files
+
+##### ${TIMESTAMP}
+
+"
+  fi
+
+  # Expand directories
+  local -a l=()
+  for f in "$@"; do
+    if [[ -d "${f}" ]]; then
+      l=( "${l[@]}" "${f}"/* )
+    else
+      l=( "${l[@]}" "${f}" )
+    fi
+  done
+  set - "${l[@]}"
+
+  # Process list
+  local KEY VAL
+  local -a LIST=( "$@" )
+  if [[ ${BYDATE} == 1 ]]; then
+    # shellcheck disable=SC2016,SC2207
+    LIST=( $(perl -'Msort(stable)' -le '@s=sort {return (-M $a)<=>(-M $b)} @ARGV; for(@s){print}' "$@") )
+  elif [[ ${BYDATE} == 1 ]]; then
+    # shellcheck disable=SC2016,SC2207
+    LIST=( $(perl -'Msort(stable)' -le '@s=sort {return (-M $b)<=>(-M $a)} @ARGV; for(@s){print}' "$@") )
+  fi
+  declare -A DICT
+  local TOTAL_FILES=0
+  for VAL in "${LIST[@]}"; do
+    if [[ ! -e "${VAL}" ]]; then
+      Report_error "No such file '${VAL}'"
+      continue
+    elif [[ ! -f "${VAL}" ]]; then
+      Report_error "Ignoring non-file '${VAL}'"
+      continue
+    fi
+    (( ++TOTAL_FILES ))
+    KEY="$(git hash-object "${VAL}")"
+    DICT["${KEY}"]+="${VAL};"
+  done
+  local UNIQUE_FILES=${#DICT[@]}
+  local W
+  if [[ $# -gt 999 ]]; then
+    W=4
+  elif [[ $# -gt 99 ]]; then
+    W=3
+  elif [[ $# -gt 99 ]]; then
+    W=2
+  else
+    W=1
+  fi
+  local DUPLICATES
+  (( DUPLICATES=TOTAL_FILES - UNIQUE_FILES ))
+  local -a VALS
+  local I=0
+  VALS=()
+  for KEY in "${!DICT[@]}"; do
+    (( ++I ))
+    # shellcheck disable=SC2207
+    VALS=( $(perl -le 'for(split(";","@ARGV")){print}' "${DICT[${KEY}]}") )
+    if [[ ${MD} == 1 ]]; then
+      if [[ ${NUMBER} == 1 ]]; then
+        Output "%${W}d. [ ] %s\n" "${I}" "${VALS[*]}"
+      else
+        Output "%s%s\n" "- [ ] " "${VALS[*]}"
+      fi
+    else
+      if [[ ${NUMBER} == 1 ]]; then
+        Output "%${W}d %s\n" "${I}" "${VALS[*]}"
+      else
+        Output "%s\n" "${VALS[*]}"
+      fi
+    fi
+  done
+  Output "\n"
+  Output "##### The end\n"
+  if [[ "${OUTFILE}" != '-' ]]; then
+    local N
+    N="$(wc -l <"${OUTFILE}")"
+    (( N = N - 6 ))
+    Report_info -v "Created ${OUTFILE} with ${UNIQUE_FILES} unique files + ${DUPLICATES} duplicates out of ${TOTAL_FILES} total files."
+  elif [[ ${VERBOSE} == 1 ]]; then
+    Report_info -v "Found ${UNIQUE_FILES} unique files + ${DUPLICATES} duplicates out of ${TOTAL_FILES} total files."
+  fi
+}
+
+if [[ ${SOURCED} == 0 ]]; then
+  if [[ "$0" =~ same ]]; then
+    # shellcheck disable=SC2312
+    Same_files "$(Realpath "$0")" "$@"
+  else
+    Same_files "$@"
+  fi
+fi
