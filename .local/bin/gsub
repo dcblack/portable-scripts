@@ -72,7 +72,7 @@ Do nothing, just report statistics as if changes were made.
 
 =item B<-nobackup>
 
-No backup file should be created. For the adventerous.
+No backup file should be created. For the adventerous. Aka -nbu.
 
 =item B<-nore>
 
@@ -187,7 +187,8 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
    our $auth = 'dcblack';
 
 
-   if (@ARGV>0 and $ARGV[0] eq '-h') {
+   if (scalar(@ARGV)>0 and $ARGV[0] eq '-h') {
+     # Help requested
      exec "perldoc $0";
    }#endif
 
@@ -218,7 +219,7 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
      exit 1;
    }#endsub REPORT_FATAL
 
-   exec "perldoc $0" if @ARGV == 0;
+   REPORT_FATAL "Missing arguments" unless scalar(@ARGV);
 
    # Defaults
    our $sep = '\s*=\s*';
@@ -312,7 +313,7 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
    my $indx = 0;
    $sep =~ s/[\-\+\/\[\]\(\)\*\.\?\^\$\\]/\\$&/g if exists $OPT{-nore};
    my @oldWords = ();
-   PAIR: while (@ARGV>0 and $ARGV[0] =~ qr/$sep/) {
+   PAIR: while (scalar(@ARGV)>0 and $ARGV[0] =~ qr/$sep/) {
       $oldnew = shift;
       @oldnew = split(/$sep/,$oldnew);
       #------------------------------------------------------------------
@@ -376,9 +377,9 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
       }#endif
    }#endforeach
 
-   REPORT_FATAL "Nothing to substitute!\n" if $ignored and scalar(@oldWords) < 1;
-   exec "perldoc $0" if scalar(@oldWords) < 1;
-   exec "perldoc $0" unless scalar(@ARGV) > 0;
+   REPORT_FATAL("Nothing to substitute!\n") if $ignored and scalar(@oldWords) < 1;
+   REPORT_FATAL("No substitutions specified") if scalar(@oldWords) < 1;
+   REPORT_FATAL("No files specified") unless scalar(@ARGV) > 0;
 
    #======================================================================
    #
