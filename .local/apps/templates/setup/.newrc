@@ -1,0 +1,6 @@
+#!new # vim:syntax=sh
+#--require {:DIR:}$
+#! Creates setup.profile
+#: Creates setup.profile
+
+# @(#)$Id$

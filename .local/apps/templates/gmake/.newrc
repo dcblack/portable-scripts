@@ -1,0 +1,6 @@
+#!new # vim:syntax=sh
+#--require {:DIR:}$
+#! Create new GNUmakefile
+#: Create new GNUmakefile
+
+# @(#)$Id$
