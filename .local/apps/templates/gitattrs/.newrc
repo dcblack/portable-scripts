@@ -1,0 +1,5 @@
+#!new # vim:syntax=sh
+#! Provides a crucial file to add to your git repositories.
+#: Provides a crucial file to add to your git repositories.
+
+# @(#)$Id$

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+#$Info: docx2txt - Convert word to text. $
+#
+# Requires docx2txt.pl from https://sourceforge.net/projects/docx2txt
+# On macos, `brew install docx2txt`
+
+if [[ -n "${DOCX2TXT}" ]]; then
+  if builtin command -v docx2txt.pl 1>/dev/null 2>&1; then
+    "${DOCX2TXT}" "$1" -
+  else
+    echo "Error: Nonexistant DOCX2TXT=${DOCX2TXT}" 1>&2
+    exit 1
+  fi
+else
+  if builtin command -v docx2txt.pl 1>/dev/null 2>&1; then
+    docx2txt.pl "$1" -
+  else
+    echo "Error: Missing docx2txt.pl" 1>&2
+    exit 1
+  fi
+fi

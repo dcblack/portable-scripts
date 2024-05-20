@@ -1,0 +1,71 @@
+# For more information on this file see <https://docs.github.com/en/get-started/getting-started-with-git/configuring-git-to-handle-line-endings>
+# For information on file formats see <https://fileinfo.com>
+
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.c text
+*.h text
+
+# Declare files that will always have CRLF line endings on checkout.
+*.sln text eol=crlf
+
+#-------------------------------------------------------------------------------
+# Denote all files that are truly binary and should not be modified.
+#-------------------------------------------------------------------------------
+
+# Graphics
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.tiff binary
+*.tif binary
+*.psd binary
+*.heic binary
+*.svg binary
+*.vsdx
+
+# Office Documents
+*.ppt[mxs] binary
+*.ppt binary
+*.docx diff=word
+*.doc binary
+*.xlsx binary
+*.xls binary
+*.numbers binary
+*.ods binary
+*.odt binary
+
+# Archives
+*.zip binary
+*.tgz binary
+*.pkg binary
+*.dmg
+*.iso
+
+# Audio/Visual
+*.mp3 binary
+*.mp4 binary
+*.mpeg binary
+*.wav binary
+*.mpg binary
+*.wma binary
+*.wmv binary
+
+# Database
+*.sql
+*.db
+
+# SSH
+*_dsa
+*_rsa
+*_ed25519
+
+# Executables & artifacts
+*.exe
+*.so
+*.dll
+*.a
