@@ -80,6 +80,11 @@ alias rehash='hash -r'
 alias Apt='sudo apt'
 alias Dpkg='sudo dpkg'
 alias Yum='sudo yum'
+alias sinstall='sudo apt install -y'
+alias supdate='sudo apt update -y'
+alias supgrade='sudo apt upgrade -y'
+alias sremove='sudo apt remove -y'
+alias ssearch='sudo apt search'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
