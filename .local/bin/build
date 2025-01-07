@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.7
+BUILD_TOOL_VERSION=1.8
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 
@@ -59,11 +59,13 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -clean           | Remove all build files and other output bits
 | -DVAR=VAL        | Specify a configuration definition (i.e., passed to cmake -B)
 | -G "GEN"         | Specify generator (defaults to Ninja if available)
+| -gcc             | Use GNU compiler chain (i.e., g++ and gcc)
 | -gdb             | Run under gdb
 | -info            | Output information to help debug CMakeLists.txt etc.
 | -install [DIR]   | When done building, install in DIR or PREFIX directory
 | -list-extensions | See EXTENSIONS description following.
 | -lldb            | Run under lldb
+| -llvm            | Use LLVM compiler chain (i.e., clang++ and clang)
 | --loadrc=FILE    | Load switches from FILE
 | -noisy           | Some extra info is displayed
 | -norc            | Ignore .buildrc
@@ -523,6 +525,12 @@ function Build()
     #...........................................................................
     elif [[ "$1" =~ ^-V$ ]]; then
       CTEST_OPTS=("-VV")
+    #...........................................................................
+  elif [[ "$1" =~ ^-(gcc|GCC|gnu|GNU)$ ]]; then
+      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCXX=g++" "-DCC=gcc")
+    #...........................................................................
+  elif [[ "$1" =~ ^-(llvm|LLVM|clang)$ ]]; then
+      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCXX=clang++" "-DCC=clang")
     #...........................................................................
     else
       TEST_OPTS=("${TEST_OPTS[@]}" "$1")
