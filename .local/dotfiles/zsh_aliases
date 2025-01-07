@@ -7,13 +7,26 @@ if [[ ${SOURCED} == 0 ]]; then
 fi
 export SHELLNAME=zsh
 
+bindkey -M viins '^[h' run-help
+bindkey -M vicmd '^[h' run-help
+if ((${+aliases[run-help]})); then
+  unalias run-help
+fi
+autoload -Uz run-help
+
 alias ez='exec zsh'
 alias 1p=op
+
+alias Arm='open "${HOME}/Drives/Arm-Training.sparsebundle"; sleep 2; open /Volumes/Arm-Training'
+
 alias 0p='eval $(op signin family_tx512)'
-alias bc='shellcheck -s bash -xa -o all'
+alias Bc='shellcheck -s bash -xa -o all'
+alias Clion='jb clion'
+alias Rover='jb rust'
 alias myip='ipconfig getifaddr en0'
 alias font-sample="echo '#=0123456789_=-^+@auvwxy/\B&8b6ijl1|L_?9gqQO0op2Z75S'"
 alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
+
 alias week='date +%W'
 alias tab='it tab'
 alias flow=git-flow
@@ -23,7 +36,7 @@ if [[ "${CPU}" == "arm" ]]; then
   alias oldbrew=/usr/local/bin/brew
 fi
 alias nvim='gvim -ngp'
-export VI='vim'
+export VI='gvim'
 export LOCAL EDITOR
 alias view-systemc='"${EDITOR}" "${LOCAL}/src/systemc/src"'
 function ViSrc() {
@@ -32,10 +45,12 @@ function ViSrc() {
   shift
   echo "${VI} -f $* ${FILE}"
   "${VI}" -f "$@" "${FILE}"
-  if [[ ! -d "${FILE}" && -x "${FILE}" ]]; then
+  if [[ -x "${FILE}" && -f "${FILE}" ]]; then
     echo "source \"${FILE}\""
     # shellcheck disable=SC1090
     source "${FILE}"
+  else
+    echo 1>&2 "Not executable ${FILE}"
   fi
 }
 function viscr() {
@@ -74,6 +89,55 @@ alias ag.='ag --depth=0 --hidden'
 function agh() {
   ag -t -s -w --hidden --depth 1 "$@"
 }
+function ssh2openssh() {
+  if [[ "$*" =~ ^-{1,2}h(elp)?$ ]]; then
+    echo "
+NAME
+----
+
+ssh2openssh - convert multiple line ssh2 public key to single line openssh format
+
+SYNOPSIS
+--------
+
+ssh2openssh [KEYPATH/]KEYFILE
+
+"
+    return 0
+  fi
+  if [[ $# != 1 ]]; then
+    Report_warning "Syntax requires specifying an ssh key"
+    return 1
+  fi
+  local f
+  if [[ "${f}" =~ .pub$ ]]; then
+    f="${1/.pub}"
+  else
+    f="${1}"
+  fi
+  if [[ "${f}" =~ / ]]; then
+    if [[ ! -r "${f}.pub" ]]; then
+      Report_error "Missing '${f}.pub'"
+      return 1
+    fi
+  else
+    if [[ ! -r "${f}.pub" ]]; then
+      f="${HOME}/.ssh/${f}"
+    fi
+    if [[ ! -r "${f}.pub" ]]; then
+      Report_error "Missing '${f}.pub'"
+      return 1
+    fi
+  fi
+  local n=0
+  n="$(wc -l "${f}.pub")"
+  if [[ ${n} -gt 1 ]]; then
+    ssh-keygen -i -f "${f}.pub" > "${f}-openssh.pub"
+  else
+    Report_warning "'${f}.pub' is already a single line - skipping"
+    return 1
+  fi
+}
 
 alias threagile='docker run --rm -it -v "$(pwd)":/app/work threagile/threagile'
 
@@ -90,7 +154,7 @@ function new() {
   fi
   if [[ $# -gt 0 ]]; then
     rm -f "${NEWEST}"
-    if [[ ! ( "$*" =~ -q ) ]]; then
+    if [[ ! ( "$*" =~ -[Pq] ) ]]; then
       echo "${LOCAL}/bin/new" "$@"
     fi
     # shellcheck disable=SC2312
@@ -109,10 +173,27 @@ function new() {
 #PS2='\[\e[1;`pws2`m\]\!>\[\e[0m\] '
 #PS1='\u@\h:\w$(__git_ps1 " (%s)") $ '
 #PROMPT_DIRTRIM=2
+#-------------------------------------------------------------------------------
+function Columns()
+{
+  # shellcheck disable=SC2312
+  stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
+}
+alias Cols=Columns
+
+#-------------------------------------------------------------------------------
+function Rows()
+{
+  # shellcheck disable=SC2312
+  stty -a || true | /usr/bin/perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
+}
+alias Lines=Rows
+#-------------------------------------------------------------------------------
 alias sane='reset; stty erase ^H'
 function hclr() {
   cat /dev/null >~/"saved$1.history";
 }
+#-------------------------------------------------------------------------------
 function hput() {
   history -a >~/"saved$1.history";
 }
@@ -122,6 +203,12 @@ function hget() {
 function hreduce() {
   hunique -o ~/"saved$1.history";
 }
+#-------------------------------------------------------------------------------
+function Ps()
+{
+  ps -p $$
+}
+
 function m() {
   if [[ "$1" == '-nc' ]]; then
     env NOCOLOR=1 less "$@"
@@ -129,13 +216,32 @@ function m() {
     less "$@"
   fi
 }
+#-------------------------------------------------------------------------------
 alias W='command -V';
 alias F='file'
 alias I='lipo -info'
 alias info='info --vi-keys';
 alias cls='/usr/bin/clear; ';
 alias .bashrc='. ~/.bashrc';
-alias dcblack='. ~/dcblack.bash'
+function UserInit()
+{
+  case $# in
+    0) Report_Error "Must supply username" ; return 1 ;;
+    1) if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then Report_info "Syntax: $0 USERNAME"; return 0; fi ;;
+    *) Report_Error "Too many arguments" ; return 1 ;;
+  esac
+  local D F U="$1"
+  for F in "${U}.bash" "setup.${U}"; do
+    for D in "${HOME}" "${HOME}/bin"; do
+      if [[ -x "${D}/${F}" ]]; then
+        # shellcheck disable=SC1090
+        source "${D}/${F}"
+      fi
+    done
+  done
+}
+alias dcblack='UserInit dcblack'
+
 alias 7za='7za a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on'
 
 export LS_OPTS=-bhCF
