@@ -37,6 +37,7 @@ Options
 
 Opt        | Alt  | Description
 ---        | ---  | -----------
+--dups     | -dup | List only the duplicates
 --help     | -h   | Provide this text
 --markdown | -md  | Markdown
 --newest   | -N   | Sort files by date with newest first
@@ -95,7 +96,7 @@ function Same_files()
   done
 
   # Parse options
-  local MD=0 NUMBER=0 VERBOSE=0 BYDATE=0 A=""
+  local MD=0 DUPS=0 NUMBER=0 VERBOSE=0 BYDATE=0 A=""
   export OUTFILE="-" VERBOSITY=1
   while [[ "$1" =~ ^- ]]; do
     if [[ "$1" =~ = ]]; then
@@ -111,6 +112,7 @@ function Same_files()
         else BYDATE=1;
         fi
         ;;
+      -D|--dups|-dups|-dup  ) DUPS=1 ;;
       -N|--newest|-newest   ) BYDATE=1 ;;
       -O|--oldest|-oldest   ) BYDATE=2 ;;
       -md|--markdown        ) MD=1 ;;
@@ -208,6 +210,9 @@ function Same_files()
     (( ++I ))
     # shellcheck disable=SC2207
     VALS=( $(perl -le 'for(split(";","@ARGV")){print}' "${DICT[${KEY}]}") )
+    if [[ ${DUPS} == 1 ]]; then
+      unset VALS[0]
+    fi
     if [[ ${MD} == 1 ]]; then
       if [[ ${NUMBER} == 1 ]]; then
         Output "%${W}d. [ ] %s\n" "${I}" "${VALS[*]}"
