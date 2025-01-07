@@ -1,6 +1,11 @@
 The portable-scripts collection
 ===============================
 
+TLDR
+----
+
+Scripts created by David C Black (dcblack@mac.com or david.black@doulos.com) to simplify tasks on macos/*nix.
+
 Quick install
 -------------
 
