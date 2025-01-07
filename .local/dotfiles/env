@@ -39,6 +39,7 @@ function portable-env() {
   PSCR="$(Realpath ~/.local)"
   APPS="$(Realpath "${PSCR}/apps")"
   DOTBIN="$(Realpath "${PSCR}/bin")"
+  DOULOSBIN="$(Realpath "${PSCR}/Doulos/bin")"
   APPSBIN="${PSCR}/apps/bin"
   SCREENDIR=~/.screen
   SYSTEMC_HOME="${PSCR}/apps/systemc"
@@ -58,6 +59,7 @@ function portable-env() {
   Prepend_path PATH "/opt/homebrew/bin"
   Prepend_path PATH "${APPSBIN}"
   Prepend_path PATH "${DOTBIN}"
+  Prepend_path PATH "${DOULOSBIN}"
   Prepend_path PATH ~/bin
   PERL5LIB="$(Realpath "${PSCR}/lib")"
   TEMPLATEPATH="$(Realpath ~/templates)"
