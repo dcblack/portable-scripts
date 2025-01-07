@@ -78,7 +78,9 @@ function _do()
   export NOTREALLY TRASH_DIR
   if [[ -n "${NOTREALLY}" ]]; then NX="-"; fi
   if [[ "$1" == "-n" ]]; then NX="-"; shift;
-  elif [[ "$1" == "-q" ]]; then Q=1; shift; fi
+  elif [[ "$1" == "-q" ]]; then Q=1; shift;
+  elif [[ -z "$1" ]]; then shift;
+  fi
   if [[ "${NX}" == "-" ]]; then
     echo "# $*"
   # return 0;
@@ -193,6 +195,7 @@ function Clean()
   NEW_LOG="$(mktemp /tmp/clean_log.XXXX)"
   TRASH_DIR="${NEW_LOG/_log./_dir}"
 
+  set noglob
   echo "# $0 $*" >"${NEW_LOG}"
   # shellcheck disable=SC2312
   echo "# $(date) $(pwd)" >>"${NEW_LOG}"
