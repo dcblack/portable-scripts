@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#$Info: lmstart - {:ONE_LINE_DESCRIPTION_HERE:}. $
+#$Info: lmstart - Start flex license manager. $
 
 function Realpath()
 {
