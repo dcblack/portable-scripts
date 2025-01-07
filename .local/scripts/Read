@@ -1,5 +1,30 @@
 #!/usr/bin/env bash
+#
+#$Info: Read - get a response to a prompt
 
+if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+  cat <<'HELPTEXT'
+Name
+----
+Read - get a response to a prompt
+
+Synopsis
+--------
+Read --help|-h # produces this text
+Read PROMPT TEXT
+
+Description
+-----------
+Displays the prompt and returns REPLY.
+
+HELPTEXT
+  exit 0;
+fi
+
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+
+export REPLY
 function Read()
 {
   export REPLY
@@ -14,3 +39,7 @@ function Read()
     read -r -p "${PROMPT} "
   fi
 }
+
+if [[ ${SOURCED} == 0 ]]; then
+  Read "$@"
+fi

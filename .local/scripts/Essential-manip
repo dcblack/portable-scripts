@@ -206,12 +206,12 @@ function Run()
 #-------------------------------------------------------------------------------
 function Load()
 {
-  export Load_VERSION=1.4
+  export Load_VERSION=1.5
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     echo "
 NAME
 ----
-Load - source scripts from ~/.local/scripts directory
+Load - source scripts from \~/.local/scripts directory
 
 SYNOPSIS
 --------
@@ -229,8 +229,8 @@ Load [-v|-q][-n] SCRIPTNAME(S)
     Report_info "Loading $1"
     while [[ "$1" =~ ^- ]]; do
       case "$1" in
-        -n) NOTREALLY=1 ;;
-        -v) VERBOSITY=1 ; Report_info "Verbosity ${VERBOSITY}";;
+        -n) NOTREALLY=1 VERBOSITY=1;;
+        -v) VERBOSITY=1 ;;
         -q) VERBOSITY=0 ;;
          *) return 1 ;;
       esac

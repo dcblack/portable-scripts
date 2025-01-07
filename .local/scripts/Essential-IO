@@ -92,22 +92,23 @@ function Columns()
 {
   stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
 }
+alias Cols=Columns
 
 #-------------------------------------------------------------------------------
 function Rows()
 {
   stty -a | /usr/bin/perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
 }
+alias Lines=Rows
 
 #-------------------------------------------------------------------------------
 function _C()
 {
-  export NOCOLOR
+  export NOCOLOR COLOR_SET COLOR_FG
   if [[ ${NOCOLOR} == 1 ]]; then
     return
   fi
   if [[ $# == 0 ]]; then set none; fi
-  export COLOR_SET COLOR_FG
   local ESC PRF
   if [[ -z "${COLOR_SET}" ]]; then # default
     COLOR_SET=10
@@ -389,9 +390,23 @@ function _do()
 
   # Process command-line
   while [[ "$1" =~ ^[^./_0-9a-zA-Z] ]]; do
-    if [[ "$1" == "-q" ]]; then Q=1 V=0;
+    if [[ "$1" == "-h" ]]; then
+      printf "
+NAME
+----
+
+_do - Displays and (unless suppressed) executes a command
+
+SYNOPSIS
+--------
+_do -h
+_do [-q|-v][-n][-l LOGFILE] COMMAND ARGS...
+
+"
+    elif [[ "$1" == "-q" ]]; then Q=1 V=0;
     elif [[ "$1" == "-v" ]]; then V=1 Q=0;
     elif [[ "$1" == "-n" ]]; then NX="-";
+    elif [[ "$1" == "-l" ]]; then LOGFILE="$2"; shift
     else Report_warning "Dropping '$1'"
     fi
     shift
@@ -420,7 +435,7 @@ function _do()
     return "${EXIT_STATUS}"
   else
     local EXIT_STATUS
-    "$@"
+    "$@" 2>&1 | tee -a "${LOGFILE}"
     EXIT_STATUS=$?
     if [[ ${EXIT_STATUS} != 0 ]]; then Report_error "'$*' failed"; fi
     # shellcheck disable=SC2086

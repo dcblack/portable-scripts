@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 #
+# Dependencies: Firstreal, FindScript, Report_info, Report_warning, Report_error
 # Load a script (do NOT execute)
 
 export LOADED
 
+#-------------------------------------------------------------------------------
 function Run()
 {
   Load "$1"
   "$@"
 }
 
+#-------------------------------------------------------------------------------
 function Load()
 {
-  export Load_VERSION=1.4
+  export Load_VERSION=1.5
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     echo "
 NAME
@@ -22,66 +25,99 @@ Load - source scripts from \~/.local/scripts directory
 SYNOPSIS
 --------
 Load --help|-h
-Load [-v|-q][-n] SCRIPTNAME(S)
+Load [-v|-q][-n][-m] SCRIPTNAME(S)
 "
     return
   fi
   # Dependencies: Firstreal, FindScript, Report_info, Report_warning, Report_error
-  local VERBOSITY NOTREALLY DIR SCRIPT STATUS prev_NOAUTORUN
-  VERBOSITY=0
-  NOTREALLY=0
-  STATUS=0
+  local LOADS=0 PASS=0 VERBOSITY=0 NOTREALLY=0 MULTIPLE=0 STATUS=0 FOUND=0 DIR SCRIPT prev_NOAUTORUN
   while [[ $# -gt 0 ]]; do
     Report_info "Loading $1"
     while [[ "$1" =~ ^- ]]; do
       case "$1" in
-        -n) NOTREALLY=1 ;;
-        -v) VERBOSITY=1 ; Report_info "Verbosity ${VERBOSITY}";;
+        -m) MULTIPLE=1  ;;
+        -n) NOTREALLY=1 VERBOSITY=1 ;;
+        -v) VERBOSITY=1 ;;
+        -V) VERBOSITY=2 ;;
         -q) VERBOSITY=0 ;;
          *) return 1 ;;
       esac
       shift
     done
+    (( PASS++ ))
+    if [[ "${PASS}" == 1 ]]; then
+      if [[ "${VERBOSITY}"   == 2 ]]; then
+        test "${MULTIPLE}"  -eq 1 && Report_info Multiple
+        test "${NOTREALLY}" -eq 1 && Report_info NotReally
+        Report_info Verbosity "${VERBOSITY}"
+      fi
+    fi
     if [[ -n "${ZSH_VERSION}" ]]; then
       set -o shwordsplit
     fi
-    SCRIPT="$(FindScript "$1")"
-    SCRIPT="$(Firstreal "${SCRIPT}")"
-    if [[ -z "${SCRIPT}" ]]; then
-      Report_error "Unable to find suitable script '$1'"
-      return 1
-    fi
-    prev_NOAUTORUN=""
-    if [[ -n "${NOAUTORUN}" ]]; then prev_NOAUTORUN="${NOAUTORUN}" ; fi
-    NOAUTORUN=1
-    export NOAUTORUN
-    if [[ ${NOTREALLY} == 1 ]]; then
-      Report_info -tag % "source ${SCRIPT}" ;
-      return 0
-    fi
-    # shellcheck disable=SC1090
-    if ! source "${SCRIPT}"; then
-      (( STATUS=STATUS | $? ))
-      Report_warning "Failed to load ${SCRIPT}"
-    elif [[ ${VERBOSITY} -gt 0 ]]; then
-      Report_info "Loaded ${SCRIPT}"
-    fi
-    if [[ -n "${prev_NOAUTORUN}" ]]; then NOAUTORUN="${prev_NOAUTORUN}" ; else unset NOAUTORUN ; fi
+
+    local NAME="$1" FOUND=0
+    local prev_IFS="${IFS}"
+    IFS=':'
+    for DIR in "${SCRIPTDIRS[@]}"; do
+      test "${VERBOSITY}" -eq 2 && Report_info "Searching for ${NAME} in ${DIR}"
+      SCRIPT="${DIR}/${NAME}"
+      if [[ -x "${SCRIPT}" ]]; then
+        if [[ "${FOUND}" == 0 ]]; then
+          FOUND=1
+        elif [[ "${MULTIPLE}" == 1 ]]; then
+          (( FOUND++ ))
+        else
+          break
+        fi
+        (( LOADS++ ))
+        if [[ "${VERBOSITY}" -gt 0 ]]; then
+          Report_info "Loading ${SCRIPT}"
+        fi
+        # shellcheck disable=SC1090
+        source "${SCRIPT}"
+      elif [[ -r "${SCRIPT}" ]]; then
+        Report_warning "Ignoring non-executable ${SCRIPT}"
+      fi
+
+      if [[ -z "${SCRIPT}" ]]; then
+        Report_error "Unable to find suitable script '${NAME}'"
+        return 1
+      fi
+      prev_NOAUTORUN=""
+      if [[ -n "${NOAUTORUN}" ]]; then prev_NOAUTORUN="${NOAUTORUN}" ; fi
+      NOAUTORUN=1
+      export NOAUTORUN
+      if [[ "${NOTREALLY}" == 1 ]]; then
+        Report_info -tag % "source ${SCRIPT}" ;
+        return 0
+      fi
+      # shellcheck disable=SC1090
+      if ! source "${SCRIPT}"; then
+        (( STATUS=STATUS | $? ))
+        Report_warning "Failed to load ${SCRIPT}"
+      elif [[ "${VERBOSITY}" -gt 0 ]]; then
+        Report_info "Loaded ${SCRIPT}"
+      fi
+      if [[ -n "${prev_NOAUTORUN}" ]]; then NOAUTORUN="${prev_NOAUTORUN}" ; else unset NOAUTORUN ; fi
+    done
+    IFS="${prev_IFS}"
     shift
   done
   return "${STATUS}"
 }
 
+#-------------------------------------------------------------------------------
 function Unload()
 {
   true
 }
 
+#-------------------------------------------------------------------------------
 function Reload()
 {
   #|Usage "$1" "Reload [-v]" || return
-  local VERBOSITY DIR NAME SCRIPT
-  VERBOSITY=0
+  local LOADS=0 VERBOSITY=0 DIR NAME SCRIPT
   if [[ "$1" == "-v" ]]; then
     VERBOSITY=1
     shift
@@ -102,8 +138,7 @@ function Reload()
     done
   fi
   export SCRIPTDIRS
-  local prev_IFS
-  prev_IFS="${IFS}"
+  local prev_IFS="${IFS}"
   IFS=':'
   local prev_NOAUTORUN
   prev_NOAUTORUN=""
@@ -112,19 +147,39 @@ function Reload()
   fi
   NOAUTORUN=1
   export NOAUTORUN
-  for DIR in ${SCRIPTDIRS}; do
-    IFS="${prev_IFS}"
-    for NAME in ${FUNCS}; do
+  for NAME in "${FUNCS[@]}"; do
+    FOUND=0
+    for DIR in "${SCRIPTDIRS[@]}"; do
+      test "${VERBOSITY}" -eq 2 && Report_info "Searching for ${NAME} in ${DIR}"
       SCRIPT="${DIR}/${NAME}"
       if [[ -x "${SCRIPT}" ]]; then
-        if [[ ${VERBOSITY} -gt 0 ]]; then
+        if [[ "${FOUND}" == 0 ]]; then
+          FOUND=1
+        elif [[ "${MULTIPLE}" == 1 ]]; then
+          (( FOUND++ ))
+        else
+          break
+        fi
+        (( LOADS++ ))
+        if [[ "${VERBOSITY}" -gt 0 ]]; then
           Report_info "Loading ${SCRIPT}"
         fi
         # shellcheck disable=SC1090
         source "${SCRIPT}"
+      elif [[ -r "${SCRIPT}" ]]; then
+        Report_warning "Ignoring non-executable ${SCRIPT}"
       fi
     done
+    IFS="${prev_IFS}"
+    if [[ "${FOUND}" == 0 ]]; then
+      Report_warning "Nothing found for ${NAME}"
+    elif [[ "${FOUND}" -gt 1 ]]; then
+      Report_warning "Loaded ${NAME} more than once"
+    fi
   done
+  if [[ "${VERBOSITY}" == 1 ]]; then
+    Report_info "Loaded ${LOADED} files"
+  fi
   if [[ -n "${prev_NOAUTORUN}" ]]; then
     NOAUTORUN="${prev_NOAUTORUN}"
   else

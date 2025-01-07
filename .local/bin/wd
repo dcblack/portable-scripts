@@ -13,10 +13,18 @@
 #
 # shellcheck disable=SC2312
 
-function Realpath ()
-{
-  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
-}
+if builtin command -v "realpath" 1>/dev/null; then
+  # Faster version in Linux
+  function Realpath ()
+  {
+    realpath "$@"
+  }
+else
+  function Realpath ()
+  {
+    /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+  }
+fi
 
 function Firstreal() {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
@@ -308,8 +316,10 @@ function wds() # wds_func
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
   wd_favs="$(Realpath "${real_favs}")"
   local p n r h t l
+  declare -a favs
   h="$(Realpath .)"
-  for p in $(find "${wd_favs}" -name 'wd-*' | sort -t- -k 2n,3n)
+  mapfile -t favs < <(find "${wd_favs}" -name 'wd-*' | sort -t- -k 2n,3n)
+  for p in "${favs[@]}"
   do
     if [[ ${#FILTER[@]} != 0 ]]; then
       local found
@@ -356,7 +366,8 @@ function wds() # wds_func
   done
   # Check for other matches
   local max=10
-  for p in $(find "${wd_favs}" -type l ! -name 'wd-*' | sort -n -t - -k 2)
+  mapfile -t favs < <(find "${wd_favs}" -type l ! -name 'wd-*' | sort -n -t - -k 2)
+  for p in "${favs[@]}"
   do
     n="${p//*\//}"
     r="$(Realpath "${p}")"

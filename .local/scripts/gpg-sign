@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+#-------------------------------------------------------------------------------
+function Gpg-sign()
+{
+  LOCAL f t
+  for f in "$@"; do
+    if [[ -r "${f}" ]]; then
+      if [[ "${f}" =~ [.][[:word:]]+$ ]]; then
+        t="${f/.*/_sig.asc}"
+      else
+        t="${f}_sig.asc"
+      fi
+      gpg --detach-sign --output "${t}" "${f}"
+    else
+      Report_error "Skipping non-existant file '${f}'"
+    fi
+  done
+}
+
+#-------------------------------------------------------------------------------
+function Gpg-verify()
+{
+  LOCAL f sig
+  for f in "$@"; do
+    sig=""
+    if [[ -r "${f}" ]]; then
+      if [[ "${f}" =~ _sig[.]asc$ ]]; then
+        sig="${f}"
+        f="${f/_sig.asc/}"
+      elif [[ "${f}" =~ [.][[:word:]]+$ ]]; then
+        sig="${f/.*/_sig.asc}"
+      else
+        sig="${f}_sig.asc"
+      fi
+    fi
+    if [[ -r "${f}" && -r "${sig}" ]]; then
+      gpg --verify "${sig}" "${f}"
+    else
+      Report_error "Skipping non-existant pair '${f}'"
+    fi
+  done
+}

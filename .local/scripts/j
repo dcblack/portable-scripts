@@ -17,11 +17,16 @@ function j() {
   #-----------------------------------------------------------------------------
   export ACTION lwd nwd lws cws nws
   local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK
-  #local FAV FAV1
+# local J_NOUSER J_NOPROJ
+# local FAV FAV1
+# local J_RE
   J_VERBOSE=0
+# J_NOUSER=0
+# J_NOPROJ=0
   J_NOSCRIPT=0
   J_SHOW=0
   J_DEBUG=0
+# J_RE=0
   # Setup favorites list if not defined via exported FAVS variable
   if [[ -z "${FAVS}" ]]; then
     local FAV
@@ -37,7 +42,7 @@ function j() {
     while [[ "$1" =~ ^-. ]]; do
       Report_debug "$1" -if "${J_DEBUG:-0}"
       case "$1" in
-      -h | -help | --help) cat 1>&2 <<EOT
+      -h | -help | --help) grep -v '^#' 1>&2 <<EOT
 Synopsis
 --------
 
@@ -65,11 +70,15 @@ Description
 
   Option  | Description
   ------  | -----------
-  --debug | Turns on debugging of *this* script
-  -help   | Displays this help text
+  --debug | Turns on debugging of *this* script (aka -d)
+  -help   | Displays this help text (aka -h, --help)
   -list   | Briefly lists all favorites
   -lns    | Lists all favorites exanding their targets
   -mk FAV | Adds a symbolic links to the favorites directory
+# -nu     | No user-specific setup scripts
+# -nl     | No local setup scripts
+  -ns     | No setup scripts (aka --noscript)
+  -re PAT | List all matching favorites
   -rm FAV | Removes a symbolic links from the favorites directory
   -show   | Pass to setup.profile
   -v      | Verbosely provide information on operation
@@ -86,9 +95,23 @@ EOT
       -d | -debug | --debug )
         J_DEBUG=1
         ;;
+#     -nu | -nouser | --nouser )
+#       # {:TODO:}
+#       J_NOUSER=1
+#       ;;
+#     -np | -noproj | --noproj )
+#       # {:TODO:}
+#       J_NOPROJ=1
+#       ;;
       -ns | -noscript | --noscript )
         J_NOSCRIPT=1
         ;;
+#     -re | --re )
+#       # {:TODO:}
+#       shift
+#       J_RE="$1"
+#       return 0
+#       ;;
       -show | --show )
         J_SHOW=1
         ;;
