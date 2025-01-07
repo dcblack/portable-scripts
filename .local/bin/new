@@ -31,6 +31,7 @@ use File::Path qw(mkpath rmtree);
 use Sys::Hostname;
 use Cwd qw(getcwd realpath);
 our $orig_dir = &getcwd();
+our $target_dir = &getcwd();
 use FindBin qw($RealBin $RealScript);
 our @if;
 our @for; # LIFO stack for current for-loop list-name
@@ -861,6 +862,14 @@ sub check_default { #<<<2
 }#endsub check_default
 
 ###############################################################################
+sub incr_OPTIONAL {
+  my $ph = shift @_;
+  $ph =~ s{.*:}{}g;
+  REPORT_DEBUG(__LINE__,"Optional $ph");
+  ++$OPTIONAL{$ph};
+}#endsub incr_OPTIONAL
+
+###############################################################################
 sub incr_USED {
   my $ph = shift @_;
   $ph =~ s{.*:}{}g;
@@ -875,7 +884,7 @@ sub replace_placeholder { #<<<2
   #----------------------------------------------------------------------------
   # Zap if inside false if-clause and not ending
   #----------------------------------------------------------------------------
-  if (@if and $if[$#if] =~ m{$ifs[0!]$} and $line !~ m{$lhe(?:if|elsif|else|endif)$ifs}) {
+  if (@if and $if[$#if] =~ m{[${ifs}][0!]$} and $line !~ m{$lhe(?:if|elsif|else|endif)$ifs}) {
     $line = '';
     goto SKIP;
   }#endif
@@ -966,10 +975,10 @@ sub replace_placeholder { #<<<2
       }#endif
       &incr_USED($ph);
       $truth = (defined $truth and $truth)?1:0;
-      $truth = '!' if $#if > 0 and $if[$#if-1] =~ m{:[0!]$}; # nested false
+      $truth = '!' if $#if > 0 and $if[$#if-1] =~ m{[${ifs}][0!]$}; # nested false
       #------------------------------------------------------------------------
       if ($fn eq 'if') {
-        $truth = '!' if $#if >= 0 and $if[$#if] =~ m{:[0!]$}; # nested false
+        $truth = '!' if $#if >= 0 and $if[$#if] =~ m{[${ifs}][0!]$}; # nested false
         push @if,$ph.':'.$truth;
       #------------------------------------------------------------------------
       } elsif ($fn eq 'elsif') {
@@ -977,7 +986,7 @@ sub replace_placeholder { #<<<2
           printf "ERROR: unexpected {:$fn:-clause! Template missing clause for $ph?\n";
           $errors++;
         } else {
-          $truth = '!' if $if[$#if] =~ m{:[1!]$};
+          $truth = '!' if $if[$#if] =~ m{[${ifs}][1!]$};
           $if[$#if] = $ph.':'.$truth;
         }#endif
       #------------------------------------------------------------------------
@@ -990,7 +999,7 @@ sub replace_placeholder { #<<<2
           $errors++;
         } else {
           $truth = $1 ? 0 : 1 unless $truth eq '!';
-          $truth = '!' if $#if > 0 and $if[$#if-1] =~ m{:[0!]$}; # nested
+          $truth = '!' if $#if > 0 and $if[$#if-1] =~ m{[${ifs}][0!]$}; # nested
           $if[$#if] = $ph.':'.$truth;
         }#endif
       #------------------------------------------------------------------------
@@ -1442,6 +1451,12 @@ sub addargs { # Parses command-line arguments <<<2
 }#endsub addargs
 
 ###############################################################################
+sub add_repl { # <<<2
+  my ($var,$val) = @_;
+  $REPL{$var} = $val if not exists $REPL{$var};
+}#end_repl help
+
+###############################################################################
 sub readargs { # Parse .newrc files <<<2
   my $file = shift(@_);
   my @args = ();
@@ -1547,6 +1562,11 @@ NAMES: for my $name (@name) {
       $install_dir = $OPT{-dir}.'/'.$install_dir;
     }#endif
   }#endif
+  $target_dir = $install_dir;
+  if (! -d $target_dir) {
+    &System("mkdir -p $target_dir");
+  }#endif
+  # Compute local variables
   my $now = localtime;
   our $year = $now->year;
   our $mm = $now->mon;
@@ -1596,20 +1616,23 @@ NAMES: for my $name (@name) {
   our $eday = $last->fullday;
   our $dates = sprintf("%04d-%02d%02dto%02d%02d",$yr,$bmm,$bdd,$emm,$edd);
   $dates = sprintf("%04d-%02d-%02dto%02d",$yr,$bmm,$bdd,$edd) if $bmm == $emm;
-  $REPL{'WEEK' } = $week  if not exists $REPL{'WEEK' };
-  $REPL{'DAYS' } = $days  if not exists $REPL{'DAYS' };
-  $REPL{'START'} = $start if not exists $REPL{'START'};
-  $REPL{'DATES'} = $dates if not exists $REPL{'DATES'};
-  $REPL{'BMM'  } = sprintf("%02d",$bmm) if not exists $REPL{'BMM'  };
-  $REPL{'BDD'  } = sprintf("%02d",$bdd) if not exists $REPL{'BDD'  };
-  $REPL{'EMM'  } = sprintf("%02d",$emm) if not exists $REPL{'EMM'  };
-  $REPL{'EDD'  } = sprintf("%02d",$edd) if not exists $REPL{'EDD'  };
-  $REPL{'BMON' } = $bmon                if not exists $REPL{'BMON' };
-  $REPL{'BDAY' } = $bday                if not exists $REPL{'BDAY' };
-  $REPL{'EMON' } = $emon                if not exists $REPL{'EMON' };
-  $REPL{'EDAY' } = $eday                if not exists $REPL{'EDAY' };
-  $REPL{'YR'   } = sprintf("%04d",$yr ) if not exists $REPL{'YR'   };
-  for my $t ( qw{WEEK DAYS START DATES BMM BDD EMM EDD} ) {
+  &add_repl( 'WEEK',       $week                );
+  &add_repl( 'DAYS',       $days                );
+  &add_repl( 'START',      $start               );
+  &add_repl( 'DATES',      $dates               );
+  &add_repl( 'TARGET_DIR', $target_dir          );
+  &add_repl( 'BMM',        sprintf("%02d",$bmm) );
+  &add_repl( 'BDD',        sprintf("%02d",$bdd) );
+  &add_repl( 'EMM',        sprintf("%02d",$emm) );
+  &add_repl( 'EDD',        sprintf("%02d",$edd) );
+  &add_repl( 'BMON',       $bmon                );
+  &add_repl( 'BDAY',       $bday                );
+  &add_repl( 'EMON',       $emon                );
+  &add_repl( 'EDAY',       $eday                );
+  &add_repl( 'YR',         sprintf("%04d",$yr ) );
+
+  # TODO: Why is this here? Should all of the predefined do this?
+  for my $t ( qw{WEEK DAYS START DATES BMM BDD EMM EDD TARGET_DIR} ) {
     &incr_USED($t);
   }
 
@@ -1688,11 +1711,6 @@ NAMES: for my $name (@name) {
   #------------------------------------------------------------------------------
   # Apply template #<<<2
   #------------------------------------------------------------------------------
-  our $target_dir = '';
-  $target_dir = $install_dir;
-  if (! -d $target_dir) {
-    &System("mkdir -p $target_dir");
-  }#endif
   chdir $target_dir;
   our $this_tdir = &getcwd();
   #------------------------------------------------------------------------------
@@ -2242,6 +2260,8 @@ event.
 =item ETIME is the end time (e.g., 15:00am CDT)
 
 =item DATES combines these to produce either: YYYY-DDtoDD or YYYY-MMDDtoMMDD
+
+=item TARGET_DIR is the name of the target directory where the template is installed
 
 =back
 
