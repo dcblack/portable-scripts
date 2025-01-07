@@ -40,9 +40,9 @@ This script was written to simplify using _cmake_ and educate along the way. It 
 
 ```bash
 clean -a # OPTIONAL
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --config Debug
-ctest --test-dir build -C Debug -VV # OPTIONAL -OR- run
+cmake -B BUILD -DCMAKE_BUILD_TYPE=Debug
+cmake --build BUILD --config Debug
+ctest --test-dir BUILD -C Debug -VV # OPTIONAL -OR- run
 ```
 If you're skeptical, just run with the `-n` option.
 
@@ -54,7 +54,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | ------           | -----------
 | -help            | Display this text (or -h)
 | -n               | Don not actually do anything except show commands that would have been done
-| -B DIR           | Name of build directory -- defaults to \"build\"
+| -B BLD_DIR       | Name of the build directory -- defaults to \"BUILD\"
 | -C DIR           | Change to specified directory before doing anything else
 | -clean           | Remove all build files and other output bits
 | -DVAR=VAL        | Specify a configuration definition (i.e., passed to cmake -B)
@@ -146,6 +146,7 @@ function Build()
     # Check first argument for possible build-TARGET
     case "$1" in
       clean)
+        # shellcheck disable=SC2310
         if Confirm "Did you mean -clean?"; then
           shift
           set - -clean "$@"
@@ -185,7 +186,7 @@ function Build()
 
   # If not yet defined
   if [[ -z "${SCRIPTS_DIR}" ]]; then
-    # Try the directory where build is located
+    # Try the directory where the build script is located
     SCRIPTS_DIR="$(dirname "${BUILD_TOOL_DIR}")/scripts"
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
@@ -245,7 +246,7 @@ function Build()
   local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY SQUEEZE HAS_NINJA
   SRC_DIR="."
   CMAKE_BUILD_TYPE="Debug"
-  BLD_DIR="build"
+  BLD_DIR="BUILD"
   SUBPROJ_DIR="$(pwd)"
   HAS_NINJA="$(command -v ninja)"
   if [[ -n "${HAS_NINJA}" ]]; then
@@ -643,8 +644,8 @@ function Build()
   #------------------------------------------------------------------------------
   if [[ ${CLEAN} == 1 ]]; then
     # Preserve log
-    local TEMP_LOG
-    TEMP_LOG="$(mktemp -t build.XXXXXX.log)"
+    local TEMP_LOG BLD_NAM="${BLD_DIR/\//_}"
+    TEMP_LOG="$(mktemp -t "${BLD_NAM}.XXXXXX.log")"
     Report_info -f "Cleaning ${SUBPROJ_DIR}"
     _do -n rm -fr "${BLD_DIR}"
     mv "${BLD_DIR}/${BUILD_LOG}" "${TEMP_LOG}"
@@ -732,7 +733,7 @@ function Build()
         ( _do "${EXECUTABLE}" "${TEST_OPTS[@]}" ) 2>&1 | tee run.log
       done
     else
-      Report_fatal "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under build."
+      Report_fatal "Not sure what to run! Probably sub-directories. Please run manually. Look for executable under ${BLD_DIR}."
     fi
   elif [[ "${ACTION}" == "test" ]]; then
     Report_info -f "Testing ${SUBPROJ_DIR}"
