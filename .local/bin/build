@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.8
+BUILD_TOOL_VERSION=1.8.1
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 
@@ -295,6 +295,18 @@ function Build()
       Build_help
       return 0
     #...........................................................................
+    elif [[ "$1" =~ ^-(gcc)|(GCC)|(gnu)|(GNU)$ ]]; then
+      export CXX CC
+      CXX="$(command -v g++)"
+      CC="$(command -v gcc)"
+      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_CXX_COMPILER=${CXX}" "-DCC=${CC}")
+    #...........................................................................
+    elif [[ "$1" =~ ^-(llvm)|(LLVM)|(clang)$ ]]; then
+      export CXX CC
+      CXX="$(command -v clang++)"
+      CC="$(command -v clang)"
+      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_CXX_COMPILER=${CXX}" "-DCC=${CC}")
+    #...........................................................................
     elif [[ "$1" == "-B" ]]; then
       if [[ $# -lt 2 ]]; then
         Report_fatal "-B requires a directory argument" ; exit 1
@@ -525,12 +537,6 @@ function Build()
     #...........................................................................
     elif [[ "$1" =~ ^-V$ ]]; then
       CTEST_OPTS=("-VV")
-    #...........................................................................
-  elif [[ "$1" =~ ^-(gcc|GCC|gnu|GNU)$ ]]; then
-      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCXX=g++" "-DCC=gcc")
-    #...........................................................................
-  elif [[ "$1" =~ ^-(llvm|LLVM|clang)$ ]]; then
-      CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCXX=clang++" "-DCC=clang")
     #...........................................................................
     else
       TEST_OPTS=("${TEST_OPTS[@]}" "$1")
