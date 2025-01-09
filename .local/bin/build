@@ -84,7 +84,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -sq              | Squeeze out blank lines from test
 | -std=NN          | Specify C++ standard version
 | -t TGT           | Passed to cmake to specify the target (TGT) and limit ctest
-| -toolchain NAME  | Specify a toolchain for cmake (cmake/toolchain-${NAME}.cmake must exist)
+| -toolchain PATH  | Specify a toolchain for cmake (cmake/toolchain-${NAME}.cmake must exist)
 | -test            | When done building, run the tests verbosely unless -q supplied
 | -type BT         | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
 | -verbose         | Adds more information to output. Opposite of quiet.
@@ -283,7 +283,7 @@ function Build()
   # Scan for command-line options
   #------------------------------------------------------------------------------
   export WORKTREE_DIR
-  WORKTREE_DIR="" ;#< Do not allow environment in
+  WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
 
   local -a ORIG_ARGS=()
   ORIG_ARGS=( "$@" )
@@ -296,12 +296,16 @@ function Build()
       Build_help
       return 0
     #...........................................................................
-    elif [[ "$1" =~ ^-(toolchain)|(chain)$ ]]; then
+    elif [[ "$1" =~ ^-(toolchain)|(tc)$ ]]; then
       if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z] ]]; then
         shift
-        local TOOLCHAIN="toolchain-$1.cmake"
-        if [[ ! -r "cmake/${TOOLCHAIN}" ]]; then # ?possibly search for it ?
-          Report_fatal "Missing ${TOOLCHAIN}"
+        local TOOLCHAIN
+        TOOLCHAIN="$(Realpath "$1")"
+        if [[ -z "${TOOLCHAIN}" ]]; then
+          TOOLCHAIN="$(Realpath "${WORKTREE_DIR}/cmake/toolchain-$1.cmake")"
+          if [[ -z "${TOOLCHAIN}" ]]; then
+            Report_fatal "Missing $1"
+          fi
         fi
         CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN}")
       else
