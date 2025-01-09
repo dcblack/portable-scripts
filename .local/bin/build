@@ -296,7 +296,7 @@ function Build()
       Build_help
       return 0
     #...........................................................................
-    elif [[ "$1" =~ ^-(toolchain)|(chain)$ ]]; then
+  elif [[ "$1" =~ ^-(tc)|(toolchain)|(chain)$ ]]; then
       if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z] ]]; then
         shift
         local TOOLCHAIN="toolchain-$1.cmake"
