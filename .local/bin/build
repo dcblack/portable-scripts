@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.8.1
+BUILD_TOOL_VERSION=1.9
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 
@@ -84,6 +84,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -sq              | Squeeze out blank lines from test
 | -std=NN          | Specify C++ standard version
 | -t TGT           | Passed to cmake to specify the target (TGT) and limit ctest
+| -toolchain NAME  | Specify a toolchain for cmake (cmake/toolchain-${NAME}.cmake must exist)
 | -test            | When done building, run the tests verbosely unless -q supplied
 | -type BT         | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
 | -verbose         | Adds more information to output. Opposite of quiet.
@@ -294,6 +295,18 @@ function Build()
       shift
       Build_help
       return 0
+    #...........................................................................
+    elif [[ "$1" =~ ^-(toolchain)|(chain)$ ]]; then
+      if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z] ]]; then
+        shift
+        local TOOLCHAIN="toolchain-$1.cmake"
+        if [[ ! -r "cmake/${TOOLCHAIN}" ]]; then # ?possibly search for it ?
+          Report_fatal "Missing ${TOOLCHAIN}"
+        fi
+        CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN}")
+      else
+        Report_fatal "-toolchain requires an argument starting with a letter"
+      fi
     #...........................................................................
     elif [[ "$1" =~ ^-(gcc)|(GCC)|(gnu)|(GNU)$ ]]; then
       export CXX CC
