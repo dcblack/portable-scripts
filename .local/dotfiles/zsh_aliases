@@ -16,6 +16,7 @@ autoload -Uz run-help
 
 alias ez='exec zsh'
 alias 1p=op
+alias db=defaultbrowser
 
 alias Arm='open "${HOME}/Drives/Arm-Training.sparsebundle"; sleep 2; open /Volumes/Arm-Training'
 
@@ -39,7 +40,9 @@ alias nvim='gvim -ngp'
 export VI='gvim'
 export LOCAL EDITOR
 alias view-systemc='"${EDITOR}" "${LOCAL}/src/systemc/src"'
-function ViSrc() {
+
+function ViSrc()
+{
   local FILE
   FILE="$(Realpath "$1")"
   shift
@@ -53,7 +56,9 @@ function ViSrc() {
     echo 1>&2 "Not executable ${FILE}"
   fi
 }
-function viscr() {
+
+function viscr()
+{
   # shellcheck disable=SC2154,SC2312
   ViSrc "$(Firstreal ~/"scripts/$1" "${LOCAL}/scripts/$1")";
 }
@@ -71,7 +76,9 @@ alias .zsh='. ~/.zshrc'
 alias .env='. ~/.zsh_env'
 alias .funcs='. ~/.zsh_functions'
 alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
-function funcs() {
+
+function funcs()
+{
   # shellcheck disable=SC2312
   declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]' | fmt
 }
@@ -86,10 +93,23 @@ function agL()
 alias ag0='ag --depth=0'
 alias ag1='ag --depth=0'
 alias ag.='ag --depth=0 --hidden'
-function agh() {
+function agh()
+{
   ag -t -s -w --hidden --depth 1 "$@"
 }
-function ssh2openssh() {
+
+function Mapfile()
+{
+  local -n arr=$1
+  if [ -z "$2" ]; then
+    arr=("${(@f)$(</dev/stdin)}")
+  else
+    arr=("${(@f)$(<$2)}")
+  fi
+}
+
+function ssh2openssh()
+{
   if [[ "$*" =~ ^-{1,2}h(elp)?$ ]]; then
     echo "
 NAME
@@ -141,7 +161,8 @@ ssh2openssh [KEYPATH/]KEYFILE
 
 alias threagile='docker run --rm -it -v "$(pwd)":/app/work threagile/threagile'
 
-function new() {
+function new() 
+{
   NEWEST=~"/.newest"
   local e=0
   if [[ $# == 0 ]]; then
@@ -190,17 +211,21 @@ function Rows()
 alias Lines=Rows
 #-------------------------------------------------------------------------------
 alias sane='reset; stty erase ^H'
-function hclr() {
+function hclr()
+{
   cat /dev/null >~/"saved$1.history";
 }
 #-------------------------------------------------------------------------------
-function hput() {
+function hput()
+{
   history -a >~/"saved$1.history";
 }
-function hget() {
+function hget()
+{
   history -n >~/"saved$1.history";
 }
-function hreduce() {
+function hreduce()
+{
   hunique -o ~/"saved$1.history";
 }
 #-------------------------------------------------------------------------------
@@ -209,7 +234,8 @@ function Ps()
   ps -p $$
 }
 
-function m() {
+function m()
+{
   if [[ "$1" == '-nc' ]]; then
     env NOCOLOR=1 less "$@"
   else
@@ -280,13 +306,15 @@ done
 alias Mktree='mkdir -p a a/b1 a/b2 a/bin; touch a/b3.txt a/b1/c1.txt a/b1/c2.txt a/b2/c3.txt a/bin/dummy; chmod a+rx a/bin/dummy'
 alias Mkvar='export A=a/bin:a/b1:a:a/b2:a/b1:a/b2/c3.txt:a:a/bin:a/bin/dummy'
 
-function serialize() {
+function serialize()
+{
   for var in "$@"; do
     typeset -p "${var}" > "./serialized_${var}.sh"
   done
 }
 
-# function deserialize() {
+# function deserialize()
+# {
 #   declare() { builtin declare -g "$@"; }
 #   typeset() { builtin typeset -g "$@"; }
 #   for var in "$@"; do
