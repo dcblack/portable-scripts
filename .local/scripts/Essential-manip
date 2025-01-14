@@ -39,6 +39,31 @@ function SafeVar()
 }
 
 #-------------------------------------------------------------------------------
+function Add_prefix()
+{
+  if [[ $# -lt 2 ]]; then Report_error "$0 needs at least two arguments"; return; fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  local prefix="$1"
+  shift
+  for element in "$@"; do
+    echo "${prefix}${element}"
+  done
+}
+
+#-------------------------------------------------------------------------------
+function Add_suffix()
+{
+  #| Usage "$# -gt 1" Add_suffix PREFIX LIST
+  if [[ $# -lt 2 ]]; then Report_error "$0 needs at least two arguments"; return; fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  local suffix="$1"
+  shift
+  for element in "$@"; do
+    echo "${element}${suffix}"
+  done
+}
+
+#-------------------------------------------------------------------------------
 function Append_path() # only if 2nd arg does not exist in first
 {
   export Append_path_VERSION=1.4
