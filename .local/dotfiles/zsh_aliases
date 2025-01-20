@@ -244,6 +244,8 @@ function m()
 }
 #-------------------------------------------------------------------------------
 alias W='command -V';
+function WL() { command -V "$@" | perl -lane 'print $F[$#F];' ; }
+function f() { j "$@" ; realpath "${$#}"; }
 alias F='file'
 alias I='lipo -info'
 alias info='info --vi-keys';
