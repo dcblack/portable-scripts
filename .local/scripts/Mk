@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-Load Read
-Load Confirm
-
 function Die() { echo "FAILED to build! $*" 1>&2; return 1; }
 
 #-------------------------------------------------------------------------------

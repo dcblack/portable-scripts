@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+#
+# shellcheck disable=SC2312
 
 #-------------------------------------------------------------------------------
 # Essential building blocks
@@ -20,6 +22,9 @@
 # Remove_path Removes a directory path from a variable (e.g., PATH)
 # Unique_path
 # SafeVar VAR - tests for dangerous variable names (e.g., path)
+
+#-------------------------------------------------------------------------------
+function Nargs() { echo $#; }
 
 #-------------------------------------------------------------------------------
 function SafeVar()
@@ -352,8 +357,6 @@ function Reload()
     unset NOAUTORUN
   fi
 }
-
-# vim:nospell
 
 #-------------------------------------------------------------------------------
 function Prepend_path() # only if 2nd arg does not exist in first
