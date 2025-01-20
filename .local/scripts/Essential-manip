@@ -5,23 +5,26 @@
 #-------------------------------------------------------------------------------
 # Essential building blocks
 #-------------------------------------------------------------------------------
+# Add_prefix()
+# Add_suffix()
 # Append_path # only if 2nd arg does not exist in first
+# Car()
+# Cdr()
 # Expand_path [-n] [-v] VAR
-# Car
-# Cdr
 # FindScript - locates a script similar to which but using the scripts
 # Firstreal - returns the first real path in the argument list
-# Has_path
-# Run
+# Has_path()
 # Load - sources a script from the scripts/ directory
-# Unload
-# Reload
+# Nargs()
 # Prepend_path # only if 2nd arg does not exist in first
 # Realpath expands a file specification to it's full pathname
-# Remove_missing
+# Reload()
+# Remove_missing()
 # Remove_path Removes a directory path from a variable (e.g., PATH)
-# Unique_path
+# Run()
 # SafeVar VAR - tests for dangerous variable names (e.g., path)
+# Unique_path()
+# Unload()
 
 #-------------------------------------------------------------------------------
 function Nargs() { echo $#; }
