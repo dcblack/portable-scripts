@@ -31,6 +31,16 @@ function Firstreal() {
   /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }
 
+function read_into_array() {
+    local arr_name=$1
+    local cmd="$2"
+
+    eval "${arr_name}=()"
+    while IFS= read -r line; do
+        eval "${arr_name}+=(\"${line}\")"
+    done < <(eval "${cmd}")
+}
+
 SCRIPTDIR="${HOME}/.local/scripts"
 #if [[ "$0" == /bin/bash ]]; then
 #  SCRIPTDIR="${HOME}/.local/scripts"
@@ -318,7 +328,8 @@ function wds() # wds_func
   local p n r h t l
   declare -a favs
   h="$(Realpath .)"
-  mapfile -t favs < <(find "${wd_favs}" -name 'wd-*' | sort -t- -k 2n,3n)
+  read_into_array favs "find '${wd_favs}' -name 'wd-*' | sort -t- -k 2n,2n -k 3n,3n"
+  
   for p in "${favs[@]}"
   do
     if [[ ${#FILTER[@]} != 0 ]]; then
@@ -366,7 +377,7 @@ function wds() # wds_func
   done
   # Check for other matches
   local max=10
-  mapfile -t favs < <(find "${wd_favs}" -type l ! -name 'wd-*' | sort -n -t - -k 2)
+  read_into_array favs "find '${wd_favs}' -name 'wd-*' | sort -t- -k 2n,2n -k 3n,3n"
   for p in "${favs[@]}"
   do
     n="${p//*\//}"
