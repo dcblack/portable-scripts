@@ -1552,7 +1552,7 @@ ARGV: {
 
 NAMES: for my $name (@name) {
 
-  our $install_dir = '.';
+  our $install_dir = realpath '.';
   if ($name =~ m{.*/}) {
     ($install_dir,$name) = ($&,$');
     chop $install_dir;

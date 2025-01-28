@@ -98,14 +98,16 @@ function agh()
   ag -t -s -w --hidden --depth 1 "$@"
 }
 
-function Mapfile()
-{
-  local -n arr=$1
-  if [ -z "$2" ]; then
-    arr=("${(@f)$(</dev/stdin)}")
-  else
-    arr=("${(@f)$(<$2)}")
-  fi
+function read_into_array() {
+  # Usage: read_into_array ARRAY "COMMAND"
+    local arr_name=$1
+    local cmd="$2"
+
+    eval "${arr_name}=()"
+    # shellcheck disable=SC2312
+    while IFS= read -r line; do
+        eval "${arr_name}+=(\"${line}\")"
+    done < <(eval "${cmd}")
 }
 
 function ssh2openssh()
@@ -244,8 +246,17 @@ function m()
 }
 #-------------------------------------------------------------------------------
 alias W='command -V';
-function WL() { command -V "$@" | perl -lane 'print $F[$#F];' ; }
-function f() { j "$@" ; realpath "${$#}"; }
+function WL()
+{
+  # Returns the path of a file reported by command -V
+  # shellcheck disable=SC2312
+  command -V "$@" | perl -lane 'print $F[$#F];' ;
+}
+function f()
+{
+  # Returns the path of a j(ump) command
+  ( j "$@" ; realpath "${!#}" );
+}
 alias F='file'
 alias I='lipo -info'
 alias info='info --vi-keys';
