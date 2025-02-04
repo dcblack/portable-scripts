@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.9
+BUILD_TOOL_VERSION=1.10
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
+export BUILDRC
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
@@ -103,13 +104,17 @@ For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
 ## DEFAULT OPTIONS
 
-If a the file ~/.buildrc or ./.buildrc exists, their contents will be used for initial command-line options. It will be as if invoked with:
+If a the file `~/.buildrc` or `./.buildrc` exists, their contents will be used for initial command-line options.
+
+Comments (#) and blank lines are allowed and ignored.
+
+If the environment variable `BULDRC` exists, it will be used as command-line options following the above files.
+
+Effectively, the above describes:
 
 ```bash
-build "$(cat ~/.buildrc ./.buildrc)" "$@"
+build "$(cat ~/.buildrc ./.buildrc)" "${BUILDRC}" "$@"
 ```
-
-Except that comments and blank lines are removed.
 
 ## EXAMPLES
 
@@ -143,6 +148,7 @@ function Confirm()
 
 function Build()
 {
+  export BUILDRC
   # Handle extensions
   #------------------------------------------------------------------------------
   if [[ $# -ge 1 ]]; then
@@ -205,7 +211,7 @@ function Build()
   # Add .buildrc if present
   #------------------------------------------------------------------------------
   local NORC RC_PERLSCRIPT
-  local -a BUILDRC=()
+  local -a BUILDRC_ARGS=()
   local RCARG
   local -a RCARGS=()
   NORC=0
@@ -225,19 +231,24 @@ function Build()
   if [[ ${NORC} == 0 ]]; then
     if [[ -r ~/.buildrc ]]; then
       # shellcheck disable=SC2207
-      BUILDRC+=( $(perl -pe "${RC_PERLSCRIPT}" ~/.buildrc) )
+      BUILDRC_ARGS+=( $(perl -pe "${RC_PERLSCRIPT}" ~/.buildrc) )
     fi
     if [[ -r "./.buildrc" ]]; then
       # shellcheck disable=SC2207
-      BUILDRC+=( $(perl -pe "${RC_PERLSCRIPT}" "./.buildrc") )
+      BUILDRC_ARGS+=( $(perl -pe "${RC_PERLSCRIPT}" "./.buildrc") )
     fi
     RCARGS=()
-    for RCARG in "${BUILDRC[@]}"; do
+    for RCARG in "${BUILDRC_ARGS[@]}"; do
       if [[ "${RCARG}" =~ ^\ *$ ]]; then
-        continue;
+        continue; # Skip blank lines
       fi
       RCARGS+=( "${RCARG}" )
     done
+    if [[ -n "${BUILDRC}" ]]; then
+      for RCARG in "${BUILDRC[@]}"; do
+        RCARGS+=( "${RCARG}" )
+      done
+    fi
     RCARGS+=( "$@" )
     set - "${RCARGS[@]}"
     Report_info -f "build ${RCARGS[*]}"
@@ -301,13 +312,15 @@ function Build()
         shift
         local TOOLCHAIN
         TOOLCHAIN="$(Realpath "$1")"
+        echo "Debug: TOOLCHAIN=${TOOLCHAIN}"
         if [[ -z "${TOOLCHAIN}" ]]; then
           TOOLCHAIN="$(Realpath "${WORKTREE_DIR}/cmake/toolchain-$1.cmake")"
           if [[ -z "${TOOLCHAIN}" ]]; then
             Report_fatal "Missing $1"
           fi
         fi
-        CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN}")
+        echo "Debug: TOOLCHAIN=${TOOLCHAIN}"
+        CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_TOOLCHAIN_FILE='${TOOLCHAIN}'")
       else
         Report_fatal "-toolchain requires an argument starting with a letter"
       fi
@@ -447,9 +460,9 @@ function Build()
         continue
       fi
       # shellcheck disable=SC2207
-      BUILDRC=( $(perl -pe "${RC_PERLSCRIPT}" "${RCFILE}") )
+      BUILDRC_ARGS=( $(perl -pe "${RC_PERLSCRIPT}" "${RCFILE}") )
       RCARGS=()
-      for RCARG in "${BUILDRC[@]}"; do
+      for RCARG in "${BUILDRC_ARGS[@]}"; do
         if [[ "${RCARG}" =~ ^\ *$ ]]; then
           continue;
         fi
