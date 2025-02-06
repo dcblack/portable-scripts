@@ -7,37 +7,11 @@ LOCAL=~/.local
 # shellcheck disable=SC1091
 source "${LOCAL}/scripts/Essential-IO"
 # shellcheck disable=SC1091
-source "${LOCAL}/scripts/Append_path"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Expand_path"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/FindScript"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Firstreal"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Has_path"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Load"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Prepend_path"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Realpath"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Remove_missing"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Remove_path"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Unique_path"
+source "${LOCAL}/scripts/Essential-manip"
 
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC1091
-source "${LOCAL}/scripts/Nargs"
-# shellcheck disable=SC1091
 source "${LOCAL}/scripts/Find"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Add_prefix"
-# shellcheck disable=SC1091
-source "${LOCAL}/scripts/Add_suffix"
 # shellcheck disable=SC1091
 source "${LOCAL}/scripts/Unique_list"
 
