@@ -1,13 +1,30 @@
 #!/usr/bin/env bash
 
 function dotfile() {
+  local help='
+Name
+----
+
+dotfile - Locate one or more dot files.
+
+Synopsis
+--------
+
+```sh
+dotfile -h
+dotfile [-a] {FILE...}
+```
+
+'
   local p a
   a=0
   while [[ "$1" =~ ^- ]]; do
     case "$1" in
       -a) a=1 ;;
+      -h) echo "${help}"; return 0 ;;
        *) ;;
     esac
+    shift
   done
   for p in ~/".$1" ~/.local/dotfiles/"$1"; do
     if [[ -f "${p}" ]]; then
