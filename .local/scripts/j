@@ -350,4 +350,25 @@ EOT
   fi
 
 }
+
+# compdef j
+function _j() {
+  local -a args
+  args=(
+    '--debug[Turns on debugging of *this* script (aka -d)]::'
+    '-help   [Displays this help text (aka -h, --help)]::'
+    '-list   [Briefly lists all favorites]::'
+    '-lns    [Lists all favorites exanding their targets]::'
+    '-mk FAV [Adds a symbolic links to the favorites directory]::'
+    '-ns     [No setup scripts (aka --noscript)]::'
+    '-re PAT [List all matching favorites]::'
+    '-rm FAV [Removes a symbolic links from the favorites directory]::'
+    '-show   [Pass to setup.profile]::'
+    '-v      [Verbosely provide information on operation]::'
+  )
+  _arguments "${args[@]}" '1:file:_files'
+}
+
+compdef _j j
+
 # vim:nospell
