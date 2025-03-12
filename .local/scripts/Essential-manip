@@ -11,6 +11,7 @@
 # Car()
 # Cdr()
 # Expand_path [-n] [-v] VAR
+# FindExe() NAME PATH... # Find first (best) path in a series
 # FindScript - locates a script similar to which but using the scripts
 # Firstreal - returns the first real path in the argument list
 # Has_path()
@@ -531,6 +532,71 @@ function Unique_path()
   if [[ ${NOEXECUTE} == 0 ]]; then
     eval "${EVAL_TEXT}"
   fi
+}
+
+function FindExe()
+{
+  # Choose the first real
+  local RAW EXE NAH='' VERBOSE=0
+  local RED="\033[1;91m" GRN="\033[1;92m" YLW="\033[1;93m" NONE="\033[0m" 
+  if [[ $# == 0 ]]; then
+    set - --help
+  fi
+  for EXE in "$@"; do
+    if [[ "${EXE}" =~ ^- ]]; then
+      if [[ "${EXE}" =~ ^-{1,2}h(elp)?$ ]]; then
+        echo 1>&2 '
+NAME
+----
+FindExe - returns the first real executable found
+
+SYNOPSIS
+--------
+```sh
+FindExe [OPTIONS][NAME] PATH...
+```
+
+OPTIONS
+-------
+
+| Short | Long      | Description                         |
+| ----- | --------- | ----------------------------------- |
+| -h    | --help    | Show this text                      |
+| -n    | --nah     | Do not actually execute. Just show. |
+| -v    | --verbose | Display what is skipped or found.   |
+
+EXAMPLE
+-------
+```bash
+FindExe clear ~/bin/clear /opt/local/bin/clear /usr/bin/clear /bin/clear
+```
+'
+      return 0
+      elif [[ "${EXE}" =~ ^-{1,2}v(erbose)?$ ]]; then
+        VERBOSE=1
+      elif [[ "${EXE}" =~ ^-{1,2}n(ah)?$ ]]; then
+        NAH=1
+        VERBOSE=1
+      fi
+    else
+      if [[ -z "${RAW}" ]]; then
+          RAW="$(basename "${EXE}")"
+      fi
+      if [[ -n "$(Realpath "${EXE}")" ]]; then
+        if [[ -e "${EXE}" ]]; then
+          test "${VERBOSE}" = 1 && echo 1>&2 "${GRN}#FOUND ${EXE}${NONE}";
+          if [[ -z "${NAH}" ]]; then
+            echo "${EXE}";
+          fi
+          return 0;
+        fi
+      elif [[ "${VERBOSE}" == 1 ]]; then
+        echo 1>&2 "${YLW}#SKIPPING ${EXE}${NONE}";
+      fi
+    fi
+  done
+  test "${VERBOSE}" = 1 && echo 1>&2 "${RED}#FAIL Did not find ${RAW}${NONE}"
+  if [[ -z "${NAH}" ]]; then echo "${RAW}"; fi
 }
 
 # vim:nospell

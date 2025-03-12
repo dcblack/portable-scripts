@@ -1,0 +1,48 @@
+.SS NAME
+FindExe \- returns the first real executable found
+.SS SYNOPSIS
+.IP
+.EX
+FindExe [OPTIONS][NAME] PATH...
+.EE
+.SS OPTIONS
+.PP
+.TS
+tab(@);
+l l l.
+T{
+Short
+T}@T{
+Long
+T}@T{
+Description
+T}
+_
+T{
+\-h
+T}@T{
+\-\-help
+T}@T{
+Show this text
+T}
+T{
+\-n
+T}@T{
+\-\-nah
+T}@T{
+Do not actually execute.
+Just show.
+T}
+T{
+\-v
+T}@T{
+\-\-verbose
+T}@T{
+Display what is skipped or found.
+T}
+.TE
+.SS EXAMPLE
+.IP
+.EX
+FindExe clear \[ti]/bin/clear /opt/local/bin/clear /usr/bin/clear /bin/clear
+.EE
