@@ -245,6 +245,7 @@ function m()
   fi
 }
 #-------------------------------------------------------------------------------
+alias Find='find 2>/dev/null'
 alias W='command -V';
 function WL()
 {
@@ -259,8 +260,11 @@ function f()
 }
 alias F='file'
 alias I='lipo -info'
-alias info='info --vi-keys';
-alias cls='/usr/bin/clear; ';
+alias info='info --vi-keys'
+export CLEAR_EXE
+CLEAR_EXE="$(FindExe clear '/opt/local/bin/clear' /usr/bin/clear /bin/clear)"
+alias clear='${CLEAR_EXE} -x'
+alias cls='clear; '
 alias .bashrc='. ~/.bashrc';
 function UserInit()
 {
