@@ -369,6 +369,6 @@ function _j() {
   _arguments "${args[@]}" '1:file:_files'
 }
 
-compdef _j j
+if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; compdef _j j; fi
 
 # vim:nospell
