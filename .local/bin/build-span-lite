@@ -8,16 +8,16 @@ while [[ "$1" =~ ^- ]]; do
       cat <<'HELPTEXT'
 Name
 ----
-build-crc - Install CRC++ under current project.
+build-span-lite - Install span-lite under current project.
 
 Synopsis
 --------
-build-crc --help|-h # produces this text
-build-crc [-v|-q]
+build-span-lite --help|-h # produces this text
+build-span-lite [-v|-q]
 
 Description
 -----------
-Installs the header-only CRC++ code under the directory `extern/include`, which is located based on the top-level git repository's location.
+Installs the header-only span-lite code under the directory `extern/include`, which is located based on the top-level git repository's location.
 
 IMPORTANT
 ---------
