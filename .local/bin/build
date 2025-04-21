@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.10
+BUILD_TOOL_VERSION=1.11
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
@@ -85,7 +85,7 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 | -sq              | Squeeze out blank lines from test
 | -std=NN          | Specify C++ standard version
 | -t TGT           | Passed to cmake to specify the target (TGT) and limit ctest
-| -toolchain PATH  | Specify a toolchain for cmake (cmake/toolchain-${NAME}.cmake must exist)
+| -toolchain NAME  | Specify a toolchain for cmake (cmake/${NAME}-toolchain.cmake must exist)
 | -test            | When done building, run the tests verbosely unless -q supplied
 | -type BT         | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
 | -verbose         | Adds more information to output. Opposite of quiet.
@@ -307,19 +307,26 @@ function Build()
       Build_help
       return 0
     #...........................................................................
-    elif [[ "$1" =~ ^-(toolchain)|(tc)$ ]]; then
-      if [[ $# -gt 1 && "$2" =~ ^[a-zA-Z] ]]; then
+    elif [[ "${1}" =~ ^-(toolchain)|(tc)$ ]]; then
+      if [[ $# -gt 1 && "${2}" =~ ^[a-zA-Z] ]]; then
         shift
-        local TOOLCHAIN
-        TOOLCHAIN="$(Realpath "$1")"
-        echo "Debug: TOOLCHAIN=${TOOLCHAIN}"
-        if [[ -z "${TOOLCHAIN}" ]]; then
-          TOOLCHAIN="$(Realpath "${WORKTREE_DIR}/cmake/toolchain-$1.cmake")"
-          if [[ -z "${TOOLCHAIN}" ]]; then
-            Report_fatal "Missing $1"
-          fi
+        local TOOLCHAIN="${1}-toolchain" TOOLDIR TOOLPATH
+        local -a TOOLDIRS=("." "${WORKTREE_DIR}/cmake" "${HOME}/.local/apps/cmake")
+        if [[ "${1}" =~ / ]]; then
+          TOOLDIRS=("$(dirname "${1}")" "${TOOLDIRS[@]}")
+          TOOLCHAIN="$(basename "${1}" ".cmake")"
+        else
+          TOOLCHAIN="${1}-toolchain"
         fi
-        echo "Debug: TOOLCHAIN=${TOOLCHAIN}"
+        for TOOLDIR in "${TOOLDIRS[@]}"; do
+          TOOLPATH="$(Realpath "${TOOLDIR}/${TOOLCHAIN}.cmake")"
+          echo "Debug: trying TOOLPATH=${TOOLDIR}/${TOOLCHAIN}.cmake"
+          if [[ -n "${TOOLPATH}" ]]; then break; fi
+        done
+        if [[ -z "${TOOLCHAIN}" ]]; then
+          Report_fatal "Missing $1"
+        fi
+        echo "Found: TOOLCHAIN=${TOOLCHAIN}"
         CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_TOOLCHAIN_FILE='${TOOLCHAIN}'")
       else
         Report_fatal "-toolchain requires an argument starting with a letter"
@@ -475,14 +482,14 @@ function Build()
       Report_info -f -blu "
  -------------------------------------------------------------------------------
  ${BUILD_TOOL_NAME} version ${BUILD_TOOL_VERSION}
- Copyright 2024 by Doulos Inc. All rights reserved.
-
+ Copyright 2025 by Doulos Inc. All rights reserved.
+ 
  Licensed under the Apache License, Version 2.0 (the \"License\");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
-
+  
      http://www.apache.org/licenses/LICENSE-2.0
-
+ 
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an \"AS IS\" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -520,6 +527,22 @@ function Build()
         Report_warning "Ignoring unknown build type $2"
         shift
       fi
+    #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}Debug$ ]]; then
+      shift
+      set - X -type Debug "$@"
+    #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}Release$ ]]; then
+      shift
+      set - X -type Release "$@"
+    #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}RelWithDebInfo$ ]]; then
+      shift
+      set - X -type RelWithDebInfo "$@"
+    #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}MinSizeRel$ ]]; then
+      shift
+      set - X -type MinSizeRel "$@"
     #...........................................................................
     elif [[ "$1" =~ ^-{1,2}(list-)?targets$ ]]; then
       ACTION="list"
