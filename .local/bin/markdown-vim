@@ -1,4 +1,10 @@
 #!/usr/bin/env perl -i
+#
+# $Info: markdown-vim Adds yaml front-matter and updates timestamps in markdown. $
+#
+# Uses environment variables to determine TITLE, SUBJECT, AUTHOR, and EMAIL
+# Date must be formatted as a triplet
+# Time must be formatted [0-9]{1,2}:[0-9][0-9] with optional AM/PM
 
 require 5.4.0;
 use strict;
@@ -12,6 +18,9 @@ my $mm = sprintf("%02d",$mon+1);
 my $dd = sprintf("%02d",$mday);
 my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
 my @months = qw(January February March April May June July August September October November December);
+my $ampm = ( $hour >= 12 ) ? "PM" : "AM";
+my $hr12 = ($hour==0)?12:($hour>12)?$hour-12:$hour;
+my $time = sprintf("%02d:%02d %s",$hr12,$min,$ampm);
 
 my $date = "$year-".$months[$mon]."-$mday";
 my $title   = '{:TITLE:}';
@@ -19,8 +28,10 @@ $title = $ENV{TITLE} if exists $ENV{TITLE};
 my $subject = '{:SUBJECT:}';
 $subject = $ENV{SUBJECT} if exists $ENV{SUBJECT};
 my $author  = '{:AUTHOR:}';
-$author = $ENV{AUTHOR_NAME} if exists $ENV{AUTHOR_NAME};
+$author = $ENV{USER} if exists $ENV{USER};
+$author = $ENV{NAME} if exists $ENV{NAME};
 $author = $ENV{AUTHOR} if exists $ENV{AUTHOR};
+$author = $ENV{AUTHOR_NAME} if exists $ENV{AUTHOR_NAME};
 my $email   = '{:EMAIL:}';
 $email = $ENV{HOME_EMAIL} if exists $ENV{HOME_EMAIL};
 $email = $ENV{WORK_EMAIL} if exists $ENV{WORK_EMAIL};
@@ -32,13 +43,14 @@ subject: ${subject}
 author: ${author}
 contacts: ${email}
 ---
-[Updated ${date}]
+[Updated ${date} ${time}]
 ";
 
 while(<>) {
   next if $INPUT_LINE_NUMBER > 50;
-  $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 4 and m{^\[(frontmatter|yaml)\]};
-  s{\[Update[d]? \S+-\S+-\S+\]}{[Updated ${date}]}i;
+  $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and m{^\[(frontmatter|yaml|yml)\]};
+  s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:][0-9A-Za-z]+}{[$1 ${date}}i;
+  s{\[((Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+) \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${time}}i;
 } continue {
   print $_;
 }
