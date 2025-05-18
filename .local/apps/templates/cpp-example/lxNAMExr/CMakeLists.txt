@@ -4,7 +4,12 @@
 
 cmake_minimum_required( VERSION 3.20 )
 
-project( {:NAME:} VERSION {:VERS:} DESCRIPTION "{:DESC:}" LANGUAGES C CXX )
+project( {:NAME:}
+  VERSION {:VERS:}
+  DESCRIPTION "{:DESC:}"
+  LANGUAGES CXX
+)
+set( USE_CXX_VERSION 17 )
 
 #-------------------------------------------------------------------------------
 # Find project directory containing defaults
@@ -32,7 +37,9 @@ set_target( {:lc:NAME:} )
 add_executable( "${Target}" )
 target_sources( "${Target}"
   PRIVATE
+  {:lc:NAME:}.hpp
   {:lc:NAME:}.cpp
+  main.cpp
   )
 if( fmt_FOUND )
   target_link_libraries( "${Target}" PRIVATE fmt::fmt )
@@ -41,6 +48,6 @@ endif()
 #> target_compile_features(    "${Target}" PUBLIC cxx_std_11 )
 add_test(
   NAME test-"${Target}"
-  COMMAND "${Target}" {:OPTIONS:} )
+  COMMAND "${Target}" )
 
 # vim:syntax=cmake:nospell

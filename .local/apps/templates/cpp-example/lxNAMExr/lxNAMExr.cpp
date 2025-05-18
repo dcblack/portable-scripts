@@ -1,4 +1,3 @@
-#include <fmt/format.h>
+#include "{:NAME:}.hpp"
 
-int main() {
-}
+{:TODO:}
