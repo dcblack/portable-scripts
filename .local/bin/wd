@@ -90,6 +90,7 @@ wd -init
 swd [SET] [DIR]
 lwd [OPTIONS] [SET]
 wds
+rwd SET
 
 | Option | Description
 | :----  | :----------
@@ -338,6 +339,7 @@ function wds() # wds_func
       for f in "${FILTER[@]}"; do
         if [[ "${p}" =~ ${f} ]]; then
           found=1
+          break
         fi
       done
       if [[ ${found} == 0 ]]; then
