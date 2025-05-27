@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+
 function h() { # Display most recent N history lines
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
-  local N
-  (( N = 4 - $(Rows) ))
-  if [[ "$1" =~ ^-[0-9]+ ]]; then
+  local N ROWS
+  ROWS=$(Rows)
+  (( N=4 - ROWS ))
+  if [[ "$1" =~ ^-[0-9]+$ ]]; then
     N="$1"
+    shift
+  elif [[ "$1" =~ ^[0-9]+$ ]]; then
+    N="-$1"
     shift
   fi
   history | perl -e 'for(reverse <>){next unless m/^ *\d+ +(.+)/;next if exists $p{$1};unshift @o,$_;$p{$1}++};for(@o){print}' | tail "${N}"
 }
+
+if [[ ${SOURCED} == 0 ]]; then
+  h "$@"
+fi
