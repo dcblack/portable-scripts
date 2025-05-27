@@ -44,6 +44,7 @@ function portable-env() {
   SCREENDIR=~/.screen
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   SYSTEMC_SRC="${PSCR}/src/systemc"
+  Prepend_path PATH "${HOME}/.platformio/penv/bin"
   Prepend_path PATH ~/".rvm/bin"
   Prepend_path PATH "/sbin"
   Prepend_path PATH "/bin"
@@ -98,8 +99,9 @@ function portable-env() {
   # Change following if have and prefer clang
   CC="clang"
   CXX="clang++"
+  # Change to reflect your favorite editor
   EDITOR="vim"
-  VISUAL="vim"
+  VISUAL="gvim"
 
 }
 
