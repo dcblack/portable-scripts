@@ -8,7 +8,7 @@ while [[ "$1" =~ ^- ]]; do
       cat <<'HELPTEXT'
 Name
 ----
-build-date - Install Toni Neubert's Embedded I/O (emio) library under current project.
+build-emio - Install Toni Neubert's Embedded I/O (emio) library under current project.
 
 Synopsis
 --------
@@ -38,7 +38,7 @@ HELPTEXT
   shift
 done
 
-LIBNAME="emio"
+LIBNAME="Toni Neubert's Embedded I/O (emio) library"
 GIT_URL="https://github.com/Viatorus/emio.git"
 HEADERS=( "include/" )
 

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#
+# install_glow - install the glow command line markdown renderer
+#
+# IMPORTANT: This installer limited to Linux and MacOS.
+#
+# For more information, see README.md at https://github.com/charmbracelet/glow
+
+# Determine architecture
+arch=$(uname -m)
+if [[ "${arch}" == "arm64" ]]; then
+    glow_arch="arm64"
+else
+    glow_arch="x86_64"
+fi
+
+# Determine platform
+platform=$(uname -s)
+if [[ "${platform}" == "Darwin" ]]; then
+    plat="darwin"
+else
+    plat="linux"
+fi
+
+# Function to install Glow
+Install_glow() {
+    API_URL="https://api.github.com/repos/charmbracelet/glow/releases/latest"
+    # shellcheck disable=SC2312 
+    DL_URL="$(curl --silent "${API_URL}" | jq --raw-output '.assets | .[]?.browser_download_url' | grep "_${plat}_${glow_arch}.tar.gz$")"
+
+    if [[ -n "${DL_URL}" ]]; then
+        TEMP_TGZ="$(mktemp --suffix=.tar.gz)"
+        wget --quiet -O "${TEMP_TGZ}" "${DL_URL}"
+        chmod 644 "${TEMP_TGZ}"
+        mkdir /tmp/glow$$
+        tar -C /tmp/glow$$ -xzf "${TEMP_TGZ}"
+        if [[ -f /tmp/glow$$/glow ]]; then
+            mkdir -p "${HOME}"/.local/bin
+            cp /tmp/glow$$/glow "${HOME}"/.local/bin/glow
+            chmod 755 "${HOME}"/.local/bin/glow
+        fi
+        rm -f "${TEMP_TGZ}"
+        rm -rf /tmp/glow$$
+    else
+        have_brew=$(type -p brew)
+        if [[ -n "${have_brew}" ]]; then
+            brew install glow &>/dev/null
+        else
+            have_glow=$(type -p glow)
+            if [[ -n "${have_glow}" ]]; then
+                if [[ -x /usr/local/go/bin/go ]]; then
+                    /usr/local/go/bin/go install github.com/charmbracelet/glow@latest
+                fi
+            fi
+        fi
+    fi
+}
+
+# GitHub token for API rate limiting
+if [[ -n "${GH_TOKEN}" ]]; then
+    export GH_TOKEN="${GH_TOKEN}"
+else
+    export GH_TOKEN="__GITHUB_API_TOKEN__"
+fi
+
+# Check if the token is set correctly
+# shellcheck disable=SC2312 
+echo "${GH_TOKEN}" | grep __GITHUB_API | grep __TOKEN__ &> /dev/null && {
+    export GH_TOKEN=
+}
+
+export AUTH_HEADER
+if [[ -n "${GH_TOKEN}" ]]; then
+    AUTH_HEADER="-H \"Authorization: Bearer ${GH_TOKEN}\""
+else
+    AUTH_HEADER=
+fi
+
+export PATH="${HOME}/bin:${HOME}/.local/bin:${PATH}"
+Install_glow
+
