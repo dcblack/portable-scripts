@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -i
+#!/usr/bin/env perl
 #
 # $Info: markdown-vim Adds yaml front-matter and updates timestamps in markdown. $
 #
@@ -44,13 +44,29 @@ author: ${author}
 contacts: ${email}
 ---
 [Updated ${date} ${time}]
+[Version 0.0]
 ";
 
-while(<>) {
+my $inp_name = "@ARGV";
+my $new_name = $inp_name;
+$new_name =~ s{[.]}{-new.};
+my $old_name = $inp_name;
+$old_name =~ s{[.]}{-old.};
+open my $inp_file, '<', $inp_name or die "Unable to open $inp_name";
+open my $new_file, '>', $new_name or die "Unable to open $new_name";
+while(<$inp_file>) {
   next if $INPUT_LINE_NUMBER > 50;
-  $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and m{^\[(frontmatter|yaml|yml)\]};
+  $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and s{^\[(frontmatter|yaml|yml)\]}{};
   s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:][0-9A-Za-z]+}{[$1 ${date}}i;
   s{\[((Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+) \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${time}}i;
+  if(m{\[Version (\d+)[.](\d+)}i) {
+    my ($maj,$min) = ($1,$2);
+    ++$min;
+    s{\[(Version) \d+[.]\d+}{[$1 ${maj}.${min}}i;
+  }
 } continue {
-  print $_;
+  print $new_file $_;
 }
+rename $inp_name, $old_name;
+rename $new_name, $inp_name;
+unlink $old_name;
