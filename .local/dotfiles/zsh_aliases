@@ -31,6 +31,7 @@ alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
 alias week='date +%W'
 alias tab='it tab'
 alias flow=git-flow
+alias changed='git changed'
 alias %=_do
 CPU=$(uname -p)
 if [[ "${CPU}" == "arm" ]]; then
@@ -82,13 +83,17 @@ function funcs()
   # shellcheck disable=SC2312
   declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]' | fmt
 }
+function aga()
+{
+  ag 2>/dev/null -a -u --hidden "$@" || true
+}
 function agl()
 {
-  ag -l --nocolor "$@" | sort || true
+  ag 2>/dev/null -l --nocolor "$@" | sort || true
 }
 function agL()
 {
-  ag -L --nocolor "$@" | sort || true
+  ag 2>/dev/null -L --nocolor "$@" | sort || true
 }
 alias ag0='ag --depth=0'
 alias ag1='ag --depth=0'
@@ -208,7 +213,7 @@ alias Cols=Columns
 function Rows()
 {
   # shellcheck disable=SC2312
-  stty -a || true | /usr/bin/perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
+  stty -a | /usr/bin/perl -lne 'if((m{rows ([[:digit:]]+)})or(m{([[:digit:]]+) rows})){print $1;last}'
 }
 alias Lines=Rows
 #-------------------------------------------------------------------------------
