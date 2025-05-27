@@ -37,19 +37,23 @@ OPTION                | DESCRIPTION
 -/_HASHBANG_          | Specify an alternate hashbang line
 -LANGUAGE             | Select a language: bash (default), csh, lua, make, perl, python2, python3, zsh
 --bin\-b              | Place in $HOME/bin
---edit[=_editor_\|-e  | Enter the specified editor after creation
+-dir=_DIRECTORY_      | Place EXECUTABLE under DIRECTORY
+--doulos\-d           | Place in $HOME/.local/doulos/bin
+--edit[=_EDITOR_\|-e  | Enter the specified EDITOR after creation
 --extern              | Place in $WORKTREE_DIR/extern/bin, where WORKTREE_DIR is the git working directory
 --help\|-h            | Display this text
 --local\-l            | Place in $HOME/.local/bin
+--mkdir\-m            | Make missing directories
+--noedit|-ne          | Don't edit
+--noraw               | Not raw
 --notreally|-n        | Show what would be done
 --quiet|-q            | Quiet
 --raw|-r              | Raw (without more than hashbang line)
 --script\|-s          | Place in scripts
 --tail\|-t            | Add tail text
---TEXT TEXT\|-T TEXT  | Place text into script -- may be repeated
+--TEXT TEXT\|-T TEXT  | Place TEXT into script -- may be repeated
 --utils|-u            | Add utils.bash
 --verbose|-v          | Verbose
--dir=_DIRECTORY_      | Place EXECUTABLE under DIRECTORY
 
 DOCUMENTATION
 }
@@ -158,7 +162,7 @@ function Mkbin()
 # CCYN="$(_C bright cyan)"
   CBLU="$(_C bright blue)"
   NONE="$(_C none)"
-  local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH
+  local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH TARGET_DIR MKDIR
   local OPTION CMNT KIND IS_NEW ADD_TAIL ADD_UTILS FIRST_LINE V N DEBUG
   local -a T
   ADD_TAIL=1
@@ -169,6 +173,7 @@ function Mkbin()
   EDIT=""
   CMNT="#"
   DEBUG=0
+  MKDIR=1
   N=0
   RAW=0
   V=1
@@ -179,28 +184,37 @@ function Mkbin()
     Debug "Parsing $1"
     shift
     if [[ "${OPTION}" =~ ^-{1,2}h(elp)?$ ]]; then
+      # --help
       mkbin_help
       exit 1
     elif [[ "${OPTION}" =~ ^-{2}DEBUG?$ ]]; then
+      # --DEBUG
       DEBUG=1
     elif Regex "${OPTION}" "^/" ; then
+      # /
       HASHBANG="${OPTION}"
     elif [[ "${OPTION}" =~ ^-{1,2}lua$ ]]; then
+      # --lua
       KIND="lua"
       HASHBANG="/usr/bin/env lua"
     elif [[ "${OPTION}" =~ ^-{1,2}make$ ]]; then
+      # --make
       KIND="make"
       HASHBANG="/usr/bin/env make -f"
     elif [[ "${OPTION}" =~ ^-{1,2}perl[45]?$ ]]; then
+      # --perl
       KIND="perl"
       HASHBANG="/usr/bin/env perl"
     elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?2$ ]]; then
+      # --python2
       KIND="python"
       HASHBANG="/usr/bin/env python2"
     elif [[ "${OPTION}" =~ ^-{1,2}py(thon)?3?$ ]]; then
+      # --python3
       KIND="python"
       HASHBANG="/usr/bin/env python3"
     elif [[ "${OPTION}" =~ ^-{1,2}zsh$ ]]; then
+      # --zsh
       KIND="zsh"
       HASHBANG="/usr/bin/env zsh"
     elif [[ "${OPTION}" =~ ^-{1,2}t?csh$ ]]; then
@@ -211,6 +225,9 @@ function Mkbin()
       # --bash|--sh
       KIND="bash"
       HASHBANG="/usr/bin/env bash"
+    elif [[ "${OPTION}" =~ ^-{1,2}(noedit|ne)$ ]]; then
+      # --noedit
+      EDIT=""
     elif [[ "${OPTION}" =~ ^-{1,2}e(dit)?$ ]]; then
       # --edit
       if [[ -n "${VISUAL}" ]]; then
@@ -220,22 +237,47 @@ function Mkbin()
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}b(in)?$ ]]; then
       # --bin
+      TARGET_DIR="${HOME}/bin"
       if [[ -z "${DIRECTORY}" ]]; then
-        if [[ -d ${HOME}/bin ]]; then
-          DIRECTORY="${HOME}/bin"
+        if [[ -d "${TARGET_DIR}" ]]; then
+          DIRECTORY="${TARGET_DIR}"
         else
           Report_error "Unable to determine where the bin directory is located!"; return 1
         fi
       elif [[ -d "${DIRECTORY}/bin" ]]; then
-        DIRECTORY="${DIRECTORY}/bin"
+        DIRECTORY="${TARGET_DIR}"
+      elif [[ ${MKDIR} == 1 ]]; then
+        DIRECTORY="${TARGET_DIR}"
+        mkdir -p "${DIRECTORY}"
       else
-        Report_error "Missing ${DIRECTORY}/bin ?!"; return 1
+        Report_error "Missing ${TARGET_DIR}?!"; return 1
+      fi
+    elif [[ "${OPTION}" =~ ^-{1,2}d(oulos)?$ ]]; then
+      # --doulos
+      TARGET_DIR="${HOME}/.local/doulos/bin"
+      if [[ -z "${DIRECTORY}" ]]; then
+        if [[ -d "${TARGET_DIR}" ]]; then
+          DIRECTORY="${TARGET_DIR}" 
+        elif [[ ${MKDIR} == 1 ]]; then
+          DIRECTORY="${TARGET_DIR}"
+          mkdir -p "${DIRECTORY}"
+        else
+          Report_error "Unable to determine where the bin directory is located!"; return 1
+        fi
+      elif [[ -d "${TARGET_DIR}" ]]; then
+        DIRECTORY="${TARGET_DIR}"
+      elif [[ ${MKDIR} == 1 ]]; then
+        DIRECTORY="${TARGET_DIR}"
+        mkdir -p "${DIRECTORY}"
+      else
+        Report_error "Missing ${TARGET_DIR} ?!"; return 1
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}extern$ ]]; then
       # --extern
       WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
+      TARGET_DIR="${WORKTREE_DIR}/extern/bin"
       if [[ -z "${DIRECTORY}" ]]; then
-        DIRECTORY="${WORKTREE_DIR}/extern/bin"
+        DIRECTORY="${TARGET_DIR}"
         mkdir -p "${DIRECTORY}"
       else
         if [[ "${DIRECTORY}" =~ ^/ ]]; then
@@ -245,55 +287,86 @@ function Mkbin()
         fi
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)?$ ]]; then
+      # --local
+      TARGET_DIR="${HOME}/.local/bin"
       if [[ -z "${DIRECTORY}" ]]; then
-        if [[ -d ${HOME}/.local/bin ]]; then
-          DIRECTORY="${HOME}/.local/bin"
+        if [[ -d "${TARGET_DIR}" ]]; then
+          DIRECTORY="${TARGET_DIR}"
+        elif [[ ${MKDIR} == 1 ]]; then
+          DIRECTORY="${TARGET_DIR}"
+          mkdir -p "${DIRECTORY}"
         else
           Report_error "Unable to determine where the bin directory is located!"; return 1
         fi
       elif [[ -d "${DIRECTORY}/.local/bin" ]]; then
-        DIRECTORY="${DIRECTORY}/.local/bin"
+        DIRECTORY="${TARGET_DIR}"
+      elif [[ ${MKDIR} == 1 ]]; then
+        DIRECTORY="${TARGET_DIR}"
+        mkdir -p "${DIRECTORY}"
       else
         Report_error "Missing ${DIRECTORY}/.local/bin ?!"; return 1
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}s(cript)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}s(cript)?$ ]]; then
+      # --script
+      TARGET_DIR="${HOME}/scripts"
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d ${HOME}/scripts ]]; then
-          DIRECTORY="${HOME}/scripts"
+          DIRECTORY="${TARGET_DIR}"
+        elif [[ ${MKDIR} == 1 ]]; then
+          DIRECTORY="${TARGET_DIR}"
+          mkdir -p "${DIRECTORY}"
         elif [[ -d ${HOME}/.local/scripts ]]; then
           DIRECTORY="${HOME}/.local/scripts"
         else
           Report_error "Unable to determine where the scripts directory is located!" ; return 1
         fi
-      elif [[ -d "${DIRECTORY}/scripts" ]]; then
-        DIRECTORY="${DIRECTORY}/scripts"
+      elif [[ -d "${TARGET_DIR}" ]]; then
+        DIRECTORY="${TARGET_DIR}"
+      elif [[ ${MKDIR} == 1 ]]; then
+        DIRECTORY="${TARGET_DIR}"
+        mkdir -p "${DIRECTORY}"
       else
-        Report_error "Missing ${DIRECTORY}/scripts ?!"; return 1
+        Report_error "Missing ${TARGET_DIR} ?!"; return 1
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}d(ir)? ]]; then
+      # --dir
       if Regex "${OPTION}" "=" ; then
         DIRECTORY="${1:s/.*=/}"
       elif [[ $# -gt 0 ]]; then
         DIRECTORY="$1"
         shift
+      elif [[ ${MKDIR} == 1 ]]; then
+        DIRECTORY="$1"
+        mkdir -p "${DIRECTORY}"
       else
         Report_error "-dir must specify a directory"; return 1
       fi
-    elif [[ "${OPTION}" =~ ^-{1,2}t(ail)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}t(ail)?$ ]]; then
+      # --tail
       ADD_TAIL=1
-    elif [[ "${OPTION}" =~ ^-{1,2}u(tils)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}u(tils)?$ ]]; then
+      # --utils
       ADD_UTILS=1
-    elif [[ "${OPTION}" =~ ^-{1,2}n(otreally)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}mkdir$ ]]; then
+      # --mkdir
+      MKDIR=1
+    elif [[ "${OPTION}" =~ ^-{1,2}n(otreally)?$ ]]; then
+      # --notreally
       N=1
-    elif [[ "${OPTION}" =~ ^-{1,2}noraw ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}(noraw|nr)$ ]]; then
+      # --noraw
       RAW=0
-    elif [[ "${OPTION}" =~ ^-{1,2}r(aw)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}r(aw)?$ ]]; then
+      # --raw
       RAW=1
-    elif [[ "${OPTION}" =~ ^-{1,2}q(uiet)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}q(uiet)?$ ]]; then
+      # --quiet
       V=0
-    elif [[ "${OPTION}" =~ ^-{1,2}v(erbose)? ]]; then
+    elif [[ "${OPTION}" =~ ^-{1,2}v(erbose)?$ ]]; then
+      # --verbose
       V=1
     elif [[ "${OPTION}" =~ ^-{1,2}T(EXT)?$ ]]; then
+      # --TEXT
       Debug "Processing -text '$1'"
       T=( "${T[@]}" "$1" )
       shift
@@ -356,32 +429,6 @@ function Mkbin()
     case "${KIND}" in
 
       ##########################################################################
-      #  #     #    #    #    #  #####                                          
-      #  ##   ##   # #   #   #   #                                              
-      #  # # # #  #   #  #  #    #                                              
-      #  #  #  # #     # ###     #####                                          
-      #  #     # ####### #  #    #                                              
-      #  #     # #     # #   #   #                                              
-      #  #     # #     # #    #  #####                                          
-      ##########################################################################
-      make) #-------------------------------------------------------------------
-        Verbose_info "${V}" "Added essentials"
-        cat >> "${SCRIPT}" <<'HEAD'
-          --> 
-          --> # Find path to THIS file
-          --> THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
-          --> PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
-          --> .DEFAULT_GOAL := help
-          --> .PHONY: $(PHONIES)
-          --> 
-          --> 
-          --> #| * help - display documentation
-          --> help:
-          --> 	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
-HEAD
-        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
-        ;;
-      ##########################################################################
       #  #####     #     ####  #    #                                           
       #  #    #   # #   #    # #    #                                           
       #  #    #  #   #  #      #    #                                           
@@ -442,6 +489,34 @@ HEAD
 HEAD
         perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
+
+      ##########################################################################
+      #  #     #    #    #    #  #####                                          
+      #  ##   ##   # #   #   #   #                                              
+      #  # # # #  #   #  #  #    #                                              
+      #  #  #  # #     # ###     #####                                          
+      #  #     # ####### #  #    #                                              
+      #  #     # #     # #   #   #                                              
+      #  #     # #     # #    #  #####                                          
+      ##########################################################################
+      make) #-------------------------------------------------------------------
+        Verbose_info "${V}" "Added essentials"
+        cat >> "${SCRIPT}" <<'HEAD'
+          --> 
+          --> # Find path to THIS file
+          --> THIS_MAKEFILE := $(realpath $(lastword ${MAKEFILE_LIST}))
+          --> PHONIES := $(shell perl -lane 'print $$1 if m{^([a-zA-Z][-a-zA-Z0-9_]*):[^=]*$$};' ${THIS_MAKEFILE})
+          --> .DEFAULT_GOAL := help
+          --> .PHONY: $(PHONIES)
+          --> 
+          --> 
+          --> #| * help - display documentation
+          --> help:
+          --> 	@grep '^#|' ${THIS_MAKEFILE} | cut -c 3-
+HEAD
+        perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
+        ;;
+
       ##########################################################################
       #  #####  ##### #####  #                                                  
       #  #    # #     #    # #                                                  
@@ -470,11 +545,32 @@ HEAD
 HEAD
         perl -pi -e 's/^(  )+--> //' "${SCRIPT}"
         ;;
+
+      ###############################################################################
+      #
+      #  #####  #     # ####### #    #  ####  #     #                                 
+      #  #    #  #   #     #    #    # #    # ##    #                                 
+      #  #    #   # #      #    #    # #    # # #   #                                 
+      #  #####     #       #    ###### #    # #  #  #                                 
+      #  #         #       #    #    # #    # #   # #                                 
+      #  #         #       #    #    # #    # #    ##                                 
+      #  #         #       #    #    #  ####  #     #                                 
+      #
+      ###############################################################################
+      python) #-------------------------------------------------------------------
+        Verbose_info "${V}" "Added wrapper"
+        cat >> "${SCRIPT}" <<'HEAD'
+          --> # TODO - see doulos-extract-kwd for example
+HEAD
+        ;;
+
+      ##########################################################################
       *)
         ;;
     esac
   fi
 
+  #-----------------------------------------------------------------------------
   # Add utilities if requested
   if [[ ${ADD_UTILS} == 1 ]]; then
     case "${KIND}" in
