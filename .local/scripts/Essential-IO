@@ -473,32 +473,45 @@ SYNOPSIS
   if [[ -n "${NOTREALLY}" ]]; then
     TAG="# Info: ";
   fi
-  while [[ "$1" =~ ^-[[:alpha:]]{1,3}$ ]]; do
+  while [[ "$1" =~ ^-[[:alpha:]]{1,6}$ ]]; do
     case "$1" in
-      -f)   FORCE=1; shift ;;
-      -h)   Echo "${SYNTAX}"; return 0 ;;
-      -n)   EOL="-n"            ; shift ;;
-      -clr) PRE="$(_C none)"    ; shift  ; shift ;;
-      -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
-      -cyn) PRE="${PRE}$(_C cyn)" ; shift ;;
-      -red) PRE="${PRE}$(_C red)" ; shift ;;
-      -grn) PRE="${PRE}$(_C grn)" ; shift ;;
-      -ylw) PRE="${PRE}$(_C ylw)" ; shift ;;
-      -blu) PRE="${PRE}$(_C blu)" ; shift ;;
-      -mag) PRE="${PRE}$(_C mag)" ; shift ;;
-      -wht) PRE="${PRE}$(_C wht)" ; shift ;;
-      -bld) PRE="${PRE}$(_C bold)" ; shift ;;
-      -tag) TAG="${2}";
+      -f)      FORCE=1; shift ;;
+      -h)      Echo "${SYNTAX}"; return 0 ;;
+      -n)      EOL="-n"            ; shift ;;
+      -clr)    PRE="$(_C none)"    ; shift  ; shift ;;
+      -pre)    PRE="${PRE}${2}"    ; shift  ; shift ;;
+      -cyn)    PRE="${PRE}$(_C cyn)" ; shift ;;
+      -red)    PRE="${PRE}$(_C red)" ; shift ;;
+      -grn)    PRE="${PRE}$(_C grn)" ; shift ;;
+      -ylw)    PRE="${PRE}$(_C ylw)" ; shift ;;
+      -blu)    PRE="${PRE}$(_C blu)" ; shift ;;
+      -mag)    PRE="${PRE}$(_C mag)" ; shift ;;
+      -wht)    PRE="${PRE}$(_C wht)" ; shift ;;
+      -bld)    PRE="${PRE}$(_C bold)" ; shift ;;
+      -fg)     PRE="${PRE}$(_C fg)" ; shift ;;
+      -bg)     PRE="${PRE}$(_C bg)" ; shift ;;
+      -bright) PRE="${PRE}$(_C bright)" ; shift ;;
+      -normal) PRE="${PRE}$(_C normal)" ; shift ;;
+      -raw)    TAG=""; shift ;;
+      -tag)    TAG="${2}";
             if [[ "${#TAG}" -gt 1 ]]; then TAG="${TAG}:" ; fi
             if [[ "${#TAG}" -gt 0 ]]; then TAG="${TAG} " ; fi
             shift ; shift ;;
       *) PRE="$(_C none)" ; shift ;;
     esac
   done
-  if [[ -z "${EOL}" || ${FORCE} == 1 ]]; then
-    Echo "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
+  if [[ -n "${TAG}" ]]; then
+    if [[ -z "${EOL}" || ${FORCE} == 1 ]]; then
+      Echo "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
+    else
+      Echo -n "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
+    fi
   else
-    Echo -n "$(_C grn)$(_C bold)${TAG}$(_C none)${PRE}$*$(_C none)"
+    if [[ -z "${EOL}" || ${FORCE} == 1 ]]; then
+      Echo "${PRE}$*$(_C none)"
+    else
+      Echo -n "${PRE}$*$(_C none)"
+    fi
   fi
 }
 
