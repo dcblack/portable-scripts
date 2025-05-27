@@ -25,6 +25,7 @@ function portable-env() {
   export\
     APPS\
     CDPATH\
+    LD_LIBRARY_PATH\
     MANPATH\
     ORIGPATH\
     PATH\
@@ -58,16 +59,20 @@ function portable-env() {
   Prepend_path PATH "/opt/homebrew/opt/ccache/libexec"
   Prepend_path PATH "/opt/homebrew/sbin"
   Prepend_path PATH "/opt/homebrew/bin"
+  Prepend_path PATH "${HOME}/.local/usr/local/bin"
   Prepend_path PATH "${APPSBIN}"
   Prepend_path PATH "${DOTBIN}"
   Prepend_path PATH "${DOULOSBIN}"
   Prepend_path PATH ~/bin
+  Append_path LD_LIBRARY_PATH "${HOME}/.local/usr/local/lib"
+  Append_path LD_LIBRARY_PATH "${HOME}/.local/lib"
   PERL5LIB="$(Realpath "${PSCR}/lib")"
   TEMPLATEPATH="$(Realpath ~/templates)"
   TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath ~/.local/templates)"
   TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath ~/.local/apps/templates)"
 
   Unique_path PATH
+  Unique_path LD_LIBRARY_PATH
   Unique_path MANPATH
   Unique_path TEMPLATEPATH
 
