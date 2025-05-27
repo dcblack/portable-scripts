@@ -37,9 +37,9 @@ set_target( {:lc:NAME:} )
 add_executable( "${Target}" )
 target_sources( "${Target}"
   PRIVATE
-  {:lc:NAME:}.hpp
-  {:lc:NAME:}.cpp
-  main.cpp
+  "{:lc:NAME:}.hpp"
+  "{:lc:NAME:}.cpp"
+  "main.cpp"
   )
 if( fmt_FOUND )
   target_link_libraries( "${Target}" PRIVATE fmt::fmt )
