@@ -5,9 +5,7 @@
 # Requirements for this script:
 # - bash
 # - uname
-# - perl
-# - grep
-# - sed
+# - perl5
 
 export CC CXX
 
@@ -72,6 +70,29 @@ EOT
     esac
     shift
   done
+
+  local PERL5 SED TAR UNAME
+  PERL5="perl"
+  # shellcheck disable=SC2312
+  if [[ -n "$(builtin command -v perl5 )" ]]; then
+    PERL5="perl5"
+  fi
+  SED="sed"
+  # shellcheck disable=SC2312
+  if [[ -n "$(builtin command -v gsed )" ]]; then
+    SED="gsed"
+  fi
+  TAR="tar"
+  # shellcheck disable=SC2312
+  if [[ -n "$(builtin command -v gtar )" ]]; then
+    TAR="gtar"
+  fi
+  UNAME="uname"
+  # shellcheck disable=SC2312
+  if [[ -n "$(builtin command -v guname )" ]]; then
+    UNAME="guname"
+  fi
+
       
   # Default tools
   local -a TOOLS EXTRAS
@@ -89,7 +110,7 @@ EOT
       lldb
       bash
       zsh
-      perl
+      "${PERL5}"
       python
       python3
     )
@@ -100,24 +121,17 @@ EOT
     clang-tidy
     git
     grep
-    sed
+    "${SED}"
     tree
-    uname
     rsync
     shellcheck
+    "${TAR}"
+    gzip
+    zip
+    unzip
+    "${UNAME}"
+    croc
   )
-
-  local PERL5 UNAME
-  PERL5="perl"
-  # shellcheck disable=SC2312
-  if [[ -n "$(command -v perl5 )" ]]; then
-    PERL5="perl5"
-  fi
-  UNAME="uname"
-  # shellcheck disable=SC2312
-  if [[ -n "$(command -v guname )" ]]; then
-    UNAME="guname"
-  fi
 
   if [[ ${EXTRA} == 1 ]]; then
     TOOLS=("${TOOLS[@]}" "${EXTRAS[@]}")
@@ -126,28 +140,29 @@ EOT
   #-------------------------------------------------------------------------------
   # Filters
   #-------------------------------------------------------------------------------
-  local FILTER
-  FILTER='AUTHORS'
-  FILTER+='|Capabilities'
-  FILTER+='|Copyright'
-  FILTER+='|Features'
-  FILTER+='|internal'
-  FILTER+='|Install'
-  FILTER+='|License'
-  FILTER+='|Licence'
-  FILTER+='|licenses'
-  FILTER+='|lzma'
-  FILTER+='|maintained'
-  FILTER+='|rsync.samba'
-  FILTER+='|ShellCheck'
-  FILTER+='|Swift'
-  FILTER+='|There'
-  FILTER+='|This'
-  FILTER+='|Thread'
-  FILTER+='|Target'
-  FILTER+='|website'
-  FILTER+='|welcome'
-  FILTER+='|Written'
+  local FILTER_OUT
+  FILTER_OUT='AUTHORS'
+  FILTER_OUT+='|Capabilities'
+  FILTER_OUT+='|Copyright'
+  FILTER_OUT+='|Features'
+  FILTER_OUT+='|free.software'
+  FILTER_OUT+='|internal'
+  FILTER_OUT+='|Install'
+  FILTER_OUT+='|License'
+  FILTER_OUT+='|Licence'
+  FILTER_OUT+='|licenses'
+  FILTER_OUT+='|lzma'
+  FILTER_OUT+='|maintained'
+  FILTER_OUT+='|rsync.samba'
+  FILTER_OUT+='|rsync.version'
+  FILTER_OUT+='|ShellCheck'
+  FILTER_OUT+='|Swift'
+  FILTER_OUT+='|There'
+  FILTER_OUT+='|Thread'
+  FILTER_OUT+='|Target'
+  FILTER_OUT+='|website'
+  FILTER_OUT+='|welcome'
+  FILTER_OUT+='|Written'
 
   echo "----------------------------------------"
   export NODATE
@@ -172,7 +187,7 @@ EOT
     *)
       "${UNAME}" -smoprv
       # shellcheck disable=SC2312
-      if [[ -n "$(command -v wsl.exe )" ]]; then
+      if [[ -n "$(builtin command -v wsl.exe )" ]]; then
         echo -n "WSL "
       fi
       if [[ -r /etc/os-release ]]; then
@@ -188,22 +203,33 @@ EOT
   #-------------------------------------------------------------------------------
   # Display each of the tools
   #-------------------------------------------------------------------------------
-  local TOOL EXISTS PATTERN
+  local TOOL EXISTS PATTERN SUBST VERSION_OPTION
   for TOOL in "${TOOLS[@]}"; do
-    EXISTS="$(command -v "${TOOL}")"
+    VERSION_OPTION=--version
+    EXISTS="$(builtin command -v "${TOOL}")"
     PATTERN=""
     SUBST="s/This is perl/Perl/"
     if [[ -n "${EXISTS}" ]]; then
       case "${TOOL}" in
         g[+][+]|clang|bash|zsh) PATTERN="${TOOL}" ;;
-        make|gmake) PATTERN="Make" ;;
-        clang-tidy|git|perl|rsync|shellcheck) PATTERN="version" ;;
-        *)   PATTERN+="" ;;
+        make)  PATTERN="Make" ;;
+        gmake) PATTERN="Make" ;;
+        clang-tidy) PATTERN="version" ;;
+        git)   PATTERN="version" ;;
+        gsed)  PATTERN="gsed" ;;
+        perl)  PATTERN="version" ;;
+        rsync) PATTERN="version" ;;
+        shellcheck) PATTERN="version" ;;
+        tar)   PATTERN="bsdtar" ;;
+        gzip)  PATTERN="gzip" ;;
+        unzip) PATTERN="modifications" VERSION_OPTION=-v ;;
+        zip)   PATTERN="This is " SUBST="s/This is //" ;;
+        *)     PATTERN+="" ;;
       esac
       echo -n "${CGRN}${TOOL}${NONE} - "
       # shellcheck disable=SC2312
-      "${TOOL}" --version 2>/dev/null \
-      | "${PERL5}" -ne "${SUBST}; print if m/${PATTERN}/ and not m/(${FILTER})/ and not m/^$/" \
+      "${TOOL}" "${VERSION_OPTION}" 2>/dev/null \
+      | "${PERL5}" -ne "next unless m/${PATTERN}/; next if m/(${FILTER_OUT})/ or m/^$/; ${SUBST}; print" \
       ;
     elif [[ ${QUIET} != 1 ]]; then
       echo "${CRED}${TOOL} - ${BOLD}MISSING${NONE}"
