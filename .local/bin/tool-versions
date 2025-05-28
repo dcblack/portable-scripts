@@ -64,7 +64,7 @@ EOT
       -l|--loud)    QUIET=0 ;;
       -N|--nocolor) NOCOLOR=1 CRED=""       CGRN=""       BOLD=""      NONE="" ;;
       -q|--quiet)   QUIET=1 ;;
-      -v|--version) echo "version 1.1" ; exit ;;
+      -v|--version) echo "version 1.2" ; exit ;;
       -*)           echo "Error: Uknown option: $1"; exit 1 ;;
        *)           TOOLS+=("$1") ;;
     esac
@@ -153,8 +153,9 @@ EOT
   FILTER_OUT+='|licenses'
   FILTER_OUT+='|lzma'
   FILTER_OUT+='|maintained'
+  FILTER_OUT+='|Packaged by Debian'
   FILTER_OUT+='|rsync.samba'
-  FILTER_OUT+='|rsync.version'
+  FILTER_OUT+='|rsync version'
   FILTER_OUT+='|ShellCheck'
   FILTER_OUT+='|Swift'
   FILTER_OUT+='|There'
