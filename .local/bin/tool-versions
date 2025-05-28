@@ -217,12 +217,12 @@ EOT
         shellcheck) PATTERN="version" ;;
         git)   PATTERN="version" ;;
         gmake) PATTERN="Make" ;;
-        gsed)  PATTERN="GNU sed" ;;
+        gsed)  PATTERN="[(]GNU sed[)]" ;;
         gzip)  PATTERN="gzip" ;;
         make)  PATTERN="Make" ;;
         perl)  PATTERN="version" ;;
         rsync) PATTERN="version" ;;
-        sed)   PATTERN="GNU sed" ;;
+        sed)   PATTERN="[(]GNU sed[)]" ;;
         tar)   PATTERN="bsdtar" ;;
         unzip) PATTERN="modifications" VERSION_OPTION=-v ;;
         zip)   PATTERN="This is " SUBST="s/This is //" ;;
