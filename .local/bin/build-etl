@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+#
+
+export VERBOSITY
+
+LIBNAME="John Wellbelove's Embedded Template (etl) library"
+GIT_URL="https://github.com/ETLCPP/etl"
+INFO_URL="https://www.etlcpp.com/home.html"
+
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -h|-help|--help)
+      cat <<'HELPTEXT'
+Name
+----
+build-etl - Install John Wellbelove's Embedded Template (etl) library under current project.
+
+Synopsis
+--------
+build-etl --help|-h # produces this text
+build-etl [-v|-q]
+
+Description
+-----------
+Installs the header-only etl code under the directory `extern/include`, which is located based on the top-level git repository's location.
+
+For more information see https://www.etlcpp.com/home.html
+
+IMPORTANT
+---------
+Must be run inside project git repository.
+
+HELPTEXT
+      exit 0;
+      ;;
+    -q|--quiet)
+      VERBOSITY=0
+      ;;
+    -v|--verbose)
+      VERBOSITY=1
+      ;;
+    *)
+      ;;
+  esac
+  shift
+done
+
+HEADERS=( "include/" )
+
+function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+# Using Essential-IO
+SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath ~/.local/scripts)"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+fi
+if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+  crash
+fi
+# shellcheck disable=SC2250,SC1091
+source "$SCRIPTDIR/Essential-IO"
+
+TOOL_PATH="$(Realpath "$0")"
+Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
+HERE="$(Realpath ".")"
+if [[ "${HERE}" =~ .*/extern ]]; then
+  _do cd "${HERE/extern*/}" || Report_fatal "Trying to escape extern sub-directory failed"
+fi
+WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
+REPO_DIR="$(basename "${GIT_URL}" .git)"
+INSTALL_DIR="${WORKTREE_DIR}/extern"
+_do mkdir -p "${INSTALL_DIR}"
+_do cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
+Report_info "Building under ${INSTALL_DIR}"
+if [[ -d "${REPO_DIR}/.git" ]]; then
+  _do git -C "${REPO_DIR}" pull
+  Report_info "Successfully updated ${LIBNAME}"
+else
+  _do rm -fr "${REPO_DIR}"
+  _do git clone "${GIT_URL}" || Report_fatal "Unable to clone"
+  Report_info "Successfully installed ${LIBNAME}"
+fi
+
+_do cd "${REPO_DIR}" || Report_fatal "Trying to enter repo"
+_do cmake -B build
+_do cmake --install build --prefix "$(realpath ..)"
+Report_info "Successfully built ${LIBNAME}"
+
+# vim:nospell
