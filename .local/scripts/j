@@ -6,20 +6,73 @@ function Realpath() {
 }
 
 # l=last c=current n=next wd=working_directory ws=working_script
-export ACTION lwd nwd lws cws nws
+export ACTION lwd nwd lws cws nws ITERM2_TAB
 function j() {
-  export j_VERSION=1.5 FAVS
+  export j_VERSION=1.6 FAVS
   # Synopsis
   #   j - more powerful alternative to cd (aka jump)
   # Syntax
   #   j DIR(S)
   # Begin parsing options
   #-----------------------------------------------------------------------------
+  local HELP_TEXT
+  HELP_TEXT=$(perl -ne "next if m{^#};print" <<'HELP_TEXT'
+Name
+--------
+
+j - slightly more flexible alternative to change directory 'cd' command (uses cd internally).
+
+Synopsis
+--------
+
+```sh
+j -help
+j [OPTIONS] PATH {DIR_OR_FILE}...
+j -list
+j -rm FAV
+```
+
+Description
+-----------
+
+For each argument, j uses case-insensitive globbing to locate that element.
+
+If it finds a directory, then *j* moves to that directory (cd) and processes the next argument.
+
+If the result is a path to a non-directory element, then it jumps to the directory containing that element.
+
+| Option    | Description
+| ------    | -----------
+| -–debug   | Turns on debugging of this script (aka -d)
+| –help     | Displays this help text (aka -h, --help)
+| –list     | Briefly lists all favorites
+| –lns      | Lists all favorites exanding their targets
+| –mk FAV   | Adds a symbolic links to the favorites directory
+| –lwd      | Go to last working directory (uses ~/.lwd or ~/.lwd-${ITERM2_TAB})
+# –nu       | No user-specific setup scripts
+# –nl       | No local setup scripts
+| –ns       | No setup scripts (aka --noscript)
+| –re PAT   | List all matching favorites
+| –rm FAV   | Removes a symbolic links from the favorites directory
+| –show     | Pass to setup.profile
+| –v        | Verbosely provide information on operation
+| –-version | Display the version
+
+Examples
+--------
+
+  j tlm-? answers EX01
+  j ~/syscfund/ex01/ex01.cpp
+
+HELP_TEXT
+)
+
   export ACTION lwd nwd lws cws nws
-  local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK
+  local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK J_LWD
 # local J_NOUSER J_NOPROJ
 # local FAV FAV1
 # local J_RE
+  J_LWD=0
   J_VERBOSE=0
 # J_NOUSER=0
 # J_NOPROJ=0
@@ -42,58 +95,19 @@ function j() {
     while [[ "$1" =~ ^-. ]]; do
       Report_debug "$1" -if "${J_DEBUG:-0}"
       case "$1" in
-      -h | -help | --help) grep -v '^#' 1>&2 <<EOT
-Synopsis
---------
-
-  j - slightly more flexible alternative to change directory 'cd' command (uses cd internally).
-
-Syntax
-------
-
-  j -help
-  j [OPTIONS] PATH {DIR_OR_FILE}...
-  j -list
-  j -rm FAV
-
-Description
------------
-
-  For each argument, j uses case-insensitive globbing to
-  locate that element.
-
-  If it finds a directory, then *j* moves to that directory
-  (cd) and processes the next argument.
-
-  If the result is a path to a non-directory element, then
-  it jumps to the directory containing that element.
-
-  Option  | Description
-  ------  | -----------
-  --debug | Turns on debugging of *this* script (aka -d)
-  -help   | Displays this help text (aka -h, --help)
-  -list   | Briefly lists all favorites
-  -lns    | Lists all favorites exanding their targets
-  -mk FAV | Adds a symbolic links to the favorites directory
-# -nu     | No user-specific setup scripts
-# -nl     | No local setup scripts
-  -ns     | No setup scripts (aka --noscript)
-  -re PAT | List all matching favorites
-  -rm FAV | Removes a symbolic links from the favorites directory
-  -show   | Pass to setup.profile
-  -v      | Verbosely provide information on operation
-
-Examples
---------
-
-  j tlm-? answers EX01
-  j ~/syscfund/ex01/ex01.cpp
-
-EOT
+      -h | -help | --help)
+        if builtin command -v glow; then
+          echo "${HELP_TEXT}" | glow -p
+        else
+          Report_info "${HELP_TEXT}"
+        fi
         return 0
         ;;
       -d | -debug | --debug )
         J_DEBUG=1
+        ;;
+      -lwd | --lwd )
+        J_LWD=1
         ;;
 #     -nu | -nouser | --nouser )
 #       # {:TODO:}
@@ -114,6 +128,10 @@ EOT
 #       ;;
       -show | --show )
         J_SHOW=1
+        ;;
+      -V | --version )
+        echo "j version ${j_VERSION}" 1>&2
+        return 0
         ;;
       -v | --verbose )
         J_VERBOSE=1
@@ -178,6 +196,9 @@ EOT
         return 0
         ;;
       -[1-9])
+        local n
+        (( n=-$1 ))
+        lwd "${n}"
         ;;
       * ) 
         echo 1>&2 "ERROR: Unknown option $1"
@@ -192,6 +213,16 @@ EOT
   # End parsing options
   #-----------------------------------------------------------------------------
   local working_script='setup.profile'
+
+  if [[ ${J_LWD} == 1 ]]; then
+    local pwd_file="${HOME}/.lwd"
+    if [[ -n "${ITERM2_TAB}" ]]; then
+      pwd_file="${pwd_file}-${ITERM2_TAB}"
+    fi
+    if [[ -r "${pwd_file}" ]]; then
+      set - "$(tail -n -1 "${pwd_file}")" "$@"
+    fi
+  fi
 
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
 
@@ -244,6 +275,13 @@ EOT
   cd "${lwd}" 2>/dev/null 1>/dev/null
   # shellcheck disable=SC2164
   cd "${next_wd}"
+
+  # Record jump
+  local lwd_file="${HOME}/.lwd"
+  if [[ -n "${ITERM2_TAB}" ]]; then
+    lwd_file="${lwd_file}-${ITERM2_TAB}"
+  fi
+  echo "${next_wd}" >"${lwd_file}"
 
   if [[ -n "${prev_lwd}" && "${next_wd}" != "${prev_lwd}" ]]; then
     lwd="${prev_lwd}"
@@ -341,11 +379,11 @@ EOT
     fi
   fi
   TMP1="$(pwd)"
-  if command -v set_title 1>/dev/null; then
+  if builtin command -v set_title 1>/dev/null; then
     set_title "${TMP1}"
   fi
   TMP2="$(basename "${TMP1}")"
-  if command -v set_icon 1>/dev/null; then
+  if builtin command -v set_icon 1>/dev/null; then
     set_icon "${TMP2}"
   fi
 
