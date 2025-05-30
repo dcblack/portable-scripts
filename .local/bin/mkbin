@@ -442,8 +442,15 @@ function Mkbin()
         cat >> "${SCRIPT}" <<'HEAD'
           --> (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
           --> 
-          --> if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
-          -->   cat <<'HELPTEXT'
+          --> function Realpath ()
+          --> {
+          -->   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+          --> }
+          --> 
+          --> function {:wc:NAME:}()
+          --> {
+          -->   local HELP_TEXT
+          -->   HELP_TEXT=$(cat <<'HELP_TEXT'
           --> Name
           --> ----
           --> {:TOOLNAME:} - {:BRIEF:}
@@ -457,17 +464,17 @@ function Mkbin()
           --> -----------
           --> {:DESCRIPTION:}
           --> 
-          --> HELPTEXT
-          -->   exit 0;
-          --> fi
+          --> HELP_TEXT
+          --> )
+          -->   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+          -->     if builtin command -v glow; then
+          -->       echo "${HELP_TEXT}" | glow -p
+          -->     else
+          -->       Report_info "${HELP_TEXT}"
+          -->     fi
+          -->     return 0;
+          -->   fi
           --> 
-          --> function Realpath ()
-          --> {
-          -->   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
-          --> }
-          --> 
-          --> function {:wc:NAME:}()
-          --> {
           -->   local SCRIPTDIR SCRIPT
           -->   local -a REQUIRED=( Essential-IO Essential-manip )
           -->   SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
