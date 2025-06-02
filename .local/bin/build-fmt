@@ -3,6 +3,7 @@
 
 function Build_fmt()
 {
+  local VERSION=1.2
   export VERBOSITY
   if [[ -z "${VERBOSITY}" ]]; then VERBOSITY=0; fi
   local SHARED=0 PIE=0
@@ -17,6 +18,7 @@ build-fmt - Install {fmt} library under current project.
 Synopsis
 --------
 build-fmt --help|-h # produces this text
+build-fmt --version
 build-fmt [-v|-q] [-pie] [-shared|-static] [-clean]
 
 Description
@@ -32,6 +34,10 @@ HELPTEXT
         ;;
       -q|--quiet)
         VERBOSITY=0
+        ;;
+      --version)
+        printf "build-fmt version %s\n" "${VERSION}"
+        return 0
         ;;
       -v|--verbose)
         VERBOSITY=1
@@ -53,11 +59,6 @@ HELPTEXT
 
   LIBNAME="{fmt} library"
   GIT_URL="https://github.com/fmtlib/fmt.git"
-
-  function Realpath() {
-    if [[ $# == 0 ]]; then set - .; fi
-    /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
-  }
 
   # Using Essential-IO
   SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
@@ -92,12 +93,16 @@ HELPTEXT
     shift
     _do rm -fr "${REPO_DIR}"
   fi
+  local MBRANCH
   if [[ -d "${REPO_DIR}/.git" ]]; then
+    MBRANCH="$(Git_main)"
+    _do git checkout "${MBRANCH}"
     _do git -C "${REPO_DIR}" pull
     Report_info "Successfully updated ${LIBNAME}"
   else
     rm -fr "${REPO_DIR}"
     _do git clone "${GIT_URL}" || Report_fatal "Unable to clone"
+    MBRANCH="$(Git_main)"
     Report_info "Successfully cloned ${LIBNAME}"
   fi
 
@@ -117,6 +122,31 @@ HELPTEXT
   _do cmake --build "${BUILD_DIR}" || Report_fatal "Failed to compile and link"
   _do cmake --install build || Report_fatal "Failed to install"
   Report_info "Successfully built ${LIBNAME}"
+}
+
+function Realpath() {
+  if [[ $# == 0 ]]; then set - .; fi
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function Git_main()
+{
+  local MBRANCH
+  if [[ -d "${REPO_DIR}/.git" ]]; then
+    local BRANCH
+    for BRANCH in $(git branch --no-color); do
+      case "${BRANCH}" in
+        main|master) echo "${BRANCH}"; return 0 ;;
+        [*]) ;;
+        *)
+          if [[ -z "${MBRANCH}" ]]; then
+            MBRANCH="${BRANCH}"
+          fi
+          ;;
+      esac
+    done
+  fi
+  echo "${MBRANCH}"
 }
 
 Build_fmt "$@"
