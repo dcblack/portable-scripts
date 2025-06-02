@@ -186,11 +186,11 @@ function Build()
         fi
         ;;
       [A-Za-z]*)
-        if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
-          echo "extensions"
+        if [[ "$1" =~ ^[A-Za-z][-A-Za-z0-9_]+$ ]]; then
           if command -v "build-$1" 1>/dev/null; then
             UTILITY="build-$1"
             shift
+	    printf "\033[1;96m%% \033[94m%s\033[0m\n" "${UTILITY}"
             # shellcheck disable=SC2093
             exec "${UTILITY}" "$@"
             return 0
