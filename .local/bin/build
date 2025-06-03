@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.12
+BUILD_TOOL_VERSION=1.13
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
