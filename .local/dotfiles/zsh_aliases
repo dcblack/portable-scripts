@@ -251,13 +251,14 @@ function m()
 }
 #-------------------------------------------------------------------------------
 alias Find='find 2>/dev/null'
-alias W='command -V';
+alias W='builtin command -V';
 function WL()
 {
   # Returns the path of a file reported by command -V
   # shellcheck disable=SC2312
-  command -V "$@" | perl -lane 'print $F[$#F];' ;
+  builtin command -V "$@" 2>/dev/null | perl -lne 'print qq{$1} if m{ (/\S+)$}'
 }
+
 function f()
 {
   # Returns the path of a j(ump) command
