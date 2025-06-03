@@ -9,7 +9,7 @@ function Build_fmt()
 Name
 ----
 
-build-fmt (VERSION) - Install {fmt} library under current project.
+build-fmt (vVERSION) - Install {fmt} library under current project.
 
 Synopsis
 --------
