@@ -73,7 +73,7 @@ fi
 #-------------------------------------------------------------------------------
 function Wd_help() # internal
 {
-  cat <<EOT
+  HELP_TEXT=$(cat <<'HELP_TEXT'
 Name
 ----
 
@@ -92,6 +92,9 @@ lwd [OPTIONS] [SET]
 wds
 rwd SET
 
+Options
+-------
+
 | Option | Description
 | :----  | :----------
 | -help  | This text
@@ -101,7 +104,13 @@ rwd SET
 | -vers  | Display version
 | -print | Display path instead of going there
 
-EOT
+HELP_TEXT
+)
+  if builtin command -v glow 1>/dev/null 2>&1; then
+    glow -p <<<"${HELP_TEXT}"
+  else
+    less <<<"${HELP_TEXT}"
+  fi
 }
 
 #-------------------------------------------------------------------------------
