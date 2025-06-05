@@ -10,7 +10,7 @@ function Git_alias_help()
 {
   local HELPTEXT
   # shellcheck disable=SC2016
-  HELPTEXT=$(cat <<'HELPTEXT'
+  HELPTEXT='
 Name
 ----
 
@@ -21,11 +21,12 @@ Synopsis
 
 ```sh
 TOOLNAME --help
-TOOLNAME list ['GLOB']
-TOOLNAME dump ['GLOB']
-TOOLNAME show ['GLOB']
-TOOLNAME add NAME 'VALUE'
+TOOLNAME list [:sq:GLOB:sq:]
+TOOLNAME dump [:sq:GLOB:sq:]
+TOOLNAME show [:sq:GLOB:sq:]
+TOOLNAME add NAME :sq:VALUE:sq:
 TOOLNAME rm NAME
+TOOLNAME exists NAME
 ```
 
 Options
@@ -35,27 +36,25 @@ Options
 | -------- | --- | ----------------------------- |
 | --help   | -h  | Display this text             |
 
-HELPTEXT
-)
-  HELPTEXT="$(Repl "${HELPTEXT}" "TOOLNAME" "${TOOLNAME}")"
-  HELPTEXT="$(Repl "${HELPTEXT}" "VERSION" "${VERSION}")"
+'
+  HELPTEXT="$( Repl "${HELPTEXT}" ":sq:" "'" )"
+  HELPTEXT="$( Repl "${HELPTEXT}" "TOOLNAME" "${TOOLNAME}" )"
+  HELPTEXT="$( Repl "${HELPTEXT}" "VERSION"  "${VERSION}"  )"
   if builtin command -v glow; then
-    echo "${HELPTEXT}" | glow -p
+    glow -p <<<"${HELPTEXT}" ;#>>>
   else
-    echo "${HELPTEXT}" | less
+    less <<<"${HELPTEXT}" ;#>>>
   fi
-}#endfunction Git_alias_help
+};#endfunction Git_alias_help
 
 #-------------------------------------------------------------------------------
 function Repl()
 {
   local VAR="$1" NAME="$2" REPL="$3"
-  while [[ "${VAR}" =~ ${NAME} ]]; do
-    VAR="${VAR/${NAME}/${REPL}}"
-  done
+  # shellcheck disable=SC2001
+  VAR="$(sed <<<"${VAR}" -e "s/${NAME}/${REPL}/g")" ;#>>>
   echo "${VAR}"
-}#endfunction Repl
-
+};#endfunction Repl
 
 #-------------------------------------------------------------------------------
 function Git_alias()
@@ -71,7 +70,7 @@ function Git_alias()
           Git_alias_help
           return 0
           ;;
-        list|show|add|rm) ACTION="-$1" ;;
+        list|show|add|rm|exists) ACTION="-$1" ;;
         dump)
           if [[ $# == 0 ]]; then
             mapfile -t OUT < <(git config --global --get-regexp "alias." || true)
@@ -84,8 +83,12 @@ function Git_alias()
           ;;
         *)
           case "${ACTION}" in
+            -exists)
+              # shellcheck disable=SC2312
+              git config --global --get-regexp "alias.$1" | grep -q "$1" && return 0 || return 1
+              ;;
             -list)
-              git config --global --get-regexp "alias.$1" | perl -pe 's/^alias\.//;s/ .*//' || true
+              git config --global --get-regexp "alias.$1" | perl -pe 's/^alias\.//;s/ .*//' | fmt || true
               ;;
             -dump)
               mapfile -t OUT < <(git config --global --get-regexp "alias.$1" || true)
@@ -107,13 +110,14 @@ function Git_alias()
               fi
               ;;
             *)
+              set - "nop" "show" "$@"
               ;;
           esac
       esac
       shift
     done
   fi
-}
+};#endfunction Git_alias
 
 Git_alias "$@"
 
