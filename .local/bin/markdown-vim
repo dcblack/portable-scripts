@@ -55,14 +55,14 @@ $old_name =~ s{[.]}{-old.};
 open my $inp_file, '<', $inp_name or die "Unable to open $inp_name";
 open my $new_file, '>', $new_name or die "Unable to open $new_name";
 while(<$inp_file>) {
-  next if $INPUT_LINE_NUMBER > 50;
+  # next if $INPUT_LINE_NUMBER > 50;
   $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and s{^\[(frontmatter|yaml|yml)\]}{};
   s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:][0-9A-Za-z]+}{[$1 ${date}}i;
   s{\[((Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+) \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${time}}i;
-  if(m{\[Version (\d+)[.](\d+)}i) {
-    my ($maj,$min) = ($1,$2);
+  if(m{\[(Version |v)(\d+)[.](\d+)}i) {
+    my ($tag,$maj,$min) = ($1,$2,$3);
     ++$min;
-    s{\[(Version) \d+[.]\d+}{[$1 ${maj}.${min}}i;
+    s{\[(Version |v)\d+[.]\d+}{[${tag}${maj}.${min}}i;
   }
 } continue {
   print $new_file $_;
