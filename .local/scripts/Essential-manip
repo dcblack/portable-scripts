@@ -27,6 +27,20 @@
 # Unique_path()
 # Unload()
 
+export Essential_manip_VERSION=1.9
+
+function Essential-manip() {
+  local TOOLNAME="${0/*\//}" VERSION="${Essential_manip_VERSION}"
+  if [[ "$*" =~ ^-{1,2}version$ ]]; then
+    printf "%s v%s\n" "${TOOLNAME}" "${VERSION}"
+    return 0
+  elif [[ "$*" =~ ^-{1,2}load$ ]]; then
+    Load -v "${TOOLNAME}"
+  else
+    printf "\033[1;91mError: %s unexpected syntax\033[0m\n" "${TOOLNAME}"
+  fi
+}
+
 #-------------------------------------------------------------------------------
 function Nargs() { echo $#; }
 

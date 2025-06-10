@@ -3,11 +3,12 @@
 # Essential I/O functions for logging messages of all types including informational, warnings, errors, fatal
 # shellcheck disable=SC2312
 
-export Essential_IO_VERSION=1.8
+export Essential_IO_VERSION=1.9
 
 #-------------------------------------------------------------------------------
 function Essential-IO()
 {
+  local TOOLNAME="${0/*\//}" VERSION="${Essential_IO_VERSION}"
   if [[ $# == 1 && "$1" =~ ^-{1,2}h(elp)?$ ]]; then
     cat <<TEXT
 # Essential-IO
@@ -46,11 +47,13 @@ A collection of useful functions for output in bash/zsh.
 | _do [-n] _COMMAND_            | Displays and (unless suppressed) executes a command
 
 TEXT
-  elif [[ $# == 0 ]]; then
-    printf "$0 version %s\n" "${Essential_IO_VERSION}"
+  elif [[ $# == 0 || "$1" =~ ^-{1,2}version$ ]]; then
+    printf "%s version %s\n" "${TOOLNAME}" "${VERSION}"
+  elif [[ "$*" =~ ^-{1,2}load$ ]]; then
+    Load -v "${TOOLNAME}"
   else
     Report_error "Unexpected syntax"
-    Usage -h "Essential-IO [--help]"
+    "${TOOLNAME}" --help
   fi
 }
 
