@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 
-function Realpath()
-{
-  if [[ $# == 0 ]]; then set - .; fi
-  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
-}
-
+#@ Output the realpath name treating all arguments as a single filename specification
+#| Realpath FILENAME_SPECIFICATION
+if builtin command -v "realpath" 1>/dev/null; then
+  # Faster version in Linux
+  function Realpath ()
+  {
+    if [[ $# == 0 ]]; then set - .; fi
+    realpath -q "$@"
+  }
+else
+  function Realpath ()
+  {
+    if [[ $# == 0 ]]; then set - .; fi
+    /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+  }
+fi
