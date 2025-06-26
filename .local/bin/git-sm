@@ -112,11 +112,11 @@ function Debug()
 function SM_remove()
 {
   local REPO="$1" LOCN="$2" NAME="${1/*\/}"
-  if ! git submodule status "${LOCN}" 2>/dev/null; then
+  if ! git submodule --quiet status "${LOCN}" 2>/dev/null; then
     Report_warning "Skipping non-existant ${LOCN}"
     return
   fi
-  git submodule deinit -f -- "${LOCN}"
+  git submodule --quiet deinit -f -- "${LOCN}"
   git rm -f "${LOCN}"
   git add .gitmodules
   git commit -m "Removed submodule ${LOCN}"
@@ -362,7 +362,7 @@ function SM_main()
           if [[ ${NAH} == 1 ]]; then continue; fi
           case "${CMND}" in
             add)
-              git submodule add -- "${URL}" "${LOCN}"
+              git submodule --quiet add -- "${URL}" "${LOCN}"
               ;;
             commit)
               git add .gitmodules
@@ -370,7 +370,7 @@ function SM_main()
               git commit -m "submodule ${NAME}" .gitmodules "${LOCN}"
               ;;
             update)
-              git submodule update --init --recursive
+              git submodule --quiet update --init --recursive
               ;;
             rm|remove)
               SM_remove "${URL}" "${LOCN}"
