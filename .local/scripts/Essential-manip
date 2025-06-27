@@ -42,6 +42,76 @@ function Essential-manip() {
 }
 
 #-------------------------------------------------------------------------------
+function Rm() {
+  local TOOLNAME=Rm VERSION=1.0 HELP_TEXT='
+Name
+----
+
+Rm - Remove file to the trash bin
+
+Synopsis
+--------
+
+```sh
+Rm --help
+Rm --version
+Rm [OPTIONS] FILE(S)
+```
+
+Options
+-------
+
+Option      | Description
+------      | -----------
+--trash DIR | Specify the directory for trash. Overrides TRASH_DIR. Defaults to ~/.Trash
+-f          | For removal even if clobbering an older trashed file
+--help      | Display this text
+-v          | Verbose
+--version   | Display the version of Rm
+
+'
+  export TRASH_DIR V F
+  local RED="[1;91m" CYN="[1;95m" OFF="[0m"
+  while [[ "$1" =~ ^-{1,2} ]]; do
+    case "$1" in
+      --trash-dir|-trash|-td)
+        if [[ $# -lt 2 ]]; then
+          printf "%sError: -d requires an argument%s\n" "${RED}" "${OFF}"
+          return 1
+        elif [[ -e "$2" && ! -d "$2" ]]; then
+          printf "%sError: -d argument must be a directory%s\n" "${RED}" "${OFF}"
+          return 1
+        else
+          TRASH_DIR="$2"
+          shift
+        fi
+        ;;
+      --help|-help|-h)
+        if builtin command -v glow 1>/dev/null 2>&1; then
+          glow -p <<<"${HELP_TEXT}";#>>>
+        else
+          less -X <<<"${HELP_TEXT}";#>>>
+        fi
+        return 0
+        ;;
+      --version)
+        printf "%s%s version %s%s" "${CYN}" "${TOOLNAME}" "${VERSION}" "${OFF}"
+        return 0
+        ;;
+      *) OPTS+=( "$1" )
+        ;;
+    esac
+    shift
+  done
+  
+  if [[ -z "${TRASH_DIR}" ]]; then
+    TRASH_DIR=~/.Trash
+  fi
+  mkdir -p "${TRASH_DIR}"
+  mv "$@" "${TRASH_DIR}"
+}
+
+#-------------------------------------------------------------------------------
 function Nargs() { echo $#; }
 
 #-------------------------------------------------------------------------------

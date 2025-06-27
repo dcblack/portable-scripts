@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+#$Info: empty - empty trash. $
+
+# shellcheck disable=SC2312
+function Empty_trash()
+{
+  local TOOLNAME="empty" VERSION=1.0
+  local CMND
+  local RED="[1;91m" YLW="[1;93m" CYN="[1;96m" OFF="[0m"
+  if [[ $# == 0 || "$*" =~ -{1,2}h(elp)? ]]; then
+    local HELP_TEXT
+    HELP_TEXT='
+Name
+----
+
+empty - empty the trash
+
+Synopsis
+--------
+
+```sh
+empty trash [securely]
+```
+
+See also
+--------
+
+empty
+'
+    if builtin command -v glow 1>/dev/null 2>&1; then
+      glow -p <<<"${HELP_TEXT}";#>>>
+    else
+      less -X <<<"${HELP_TEXT}";#>>>
+    fi
+    return 0
+  elif [[ "$*" =~ ^-{1,2}version$ ]]; then
+    printf "%s%s version %s%s\n" "${CYN}" "${TOOLNAME}" "${VERSION}" "${OFF}"
+    return 0
+  elif [[ ! -d ~/.Trash ]]; then
+    printf "%sWarning: No trash to empty%s\n" "${YLW}" "${OFF}"
+  elif ! find ~/.Trash -mindepth 1 -maxdepth 1 | read -r; then
+    printf "%sWarning: Trash is empty%s\n" "${YLW}" "${OFF}"
+  elif [[ "$*" == trash ]]; then
+    printf "%sEmptying trash%s\n" "${CYN}" "${OFF}"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      CMND='tell application "Finder" to empty trash'
+      osascript -e "${CMND}"
+    else
+      rm ~/.Trash/{.,}*
+    fi
+  elif [[ "$*" == "trash securely" ]]; then
+    printf "%sSecurely emptying trash%s\n" "${CYN}" "${OFF}"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      CMND='tell application "Finder" to secure empty trash'
+      osascript -e "${CMND}"
+    elif builtin command -v srm 1>/dev/null 2>&1; then
+      srm ~/.Trash/{.,}*
+    else
+      printf "%sError: Missing srm%s\n" "${RED}" "${OFF}"
+    fi
+  else
+    printf "%sError: Unknown subcommand%s\n" "${RED}" "${OFF}"
+    exit 1
+  fi
+
+  exit 0;
+}
+
+Empty_trash "$@"
+
+#END $Id$
