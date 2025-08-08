@@ -8,7 +8,7 @@
 
 # Allow display of version
 export UTILS_VERSION
-UTILS_VERSION=1.10.0
+UTILS_VERSION=1.10.1
 if [[ "$*" == "--version" ]]; then
   echo "utils.bash version ${UTILS_VERSION}"
 fi
@@ -26,7 +26,7 @@ SYNOPSIS
 In particular, these are intended for use in scripts to build (fetch,
 configure, compile and install) various apps and libraries (e.g., SystemC).
 Note that some have been moved into the `scripts/` directory
-parallel to this directory to facilitate easier testing and maintenance.
+parallel to this script's directory facilitating easier testing and maintenance.
 
 Note: Capitalizing function names reduces collisions with scripts/executables.
 
@@ -34,10 +34,10 @@ Note: Capitalizing function names reduces collisions with scripts/executables.
 | :------------------------- | :----------
 | GetBuildOpts -b BRIEF "$@" | Parses standard _build_ command-line inputs
 | ShowBuildOpts              | Display options variables
-| ConfirmBuildOpts || exit   | Asks user to confirm build locations
+| ConfirmBuildOpts || exit   | Asks the user to confirm build locations
 | SetupLogdir _BASENAME_     | Sets up the logfile directory
 | Create_and_Cd DIR          | Creates directory and enters it
-| GetSource_and_Cd DIR URL   | Downloads souce and enters directory
+| GetSource_and_Cd DIR URL   | Downloads source and enters directory
 | Select_version VERSION     | Checks out specified or latest tagged version
 | Configure_tool [TYPE]      | Invokes cmake or autotools
 | Compile_tool               |
@@ -96,45 +96,46 @@ function Realpath()
 }
 
 # Using Essential-IO
-SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
-if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath ~/.local/scripts)"
+local SCRIPT_DIR
+SCRIPT_DIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ ! -r "${SCRIPT_DIR}/Essential-IO" ]]; then
+  SCRIPT_DIR="$(Realpath ~/.local/scripts)"
 fi
-if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
+if [[ ! -r "${SCRIPT_DIR}/Essential-IO" ]]; then
+  SCRIPT_DIR="$(Realpath "$(dirname "$0")")"
 fi
-if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/Essential-IO"
+if [[ ! -r "${SCRIPT_DIR}/Essential-IO" ]]; then
+  printf "FATAL: Missing required source file '%s'\n" "${SCRIPT_DIR}/Essential-IO"
   crash
 fi
 # shellcheck disable=SC2250,SC1091,SC1090
-source "$SCRIPTDIR/Essential-IO"
+source "$SCRIPT_DIR/Essential-IO"
 
-UTILSDIR="$(Realpath "$(dirname "$0")"/../bin)"
-UTILS_SCRIPT="${UTILSDIR}/utils.bash"
+UTILS_DIR="$(Realpath "$(dirname "$0")"/../bin)"
+UTILS_SCRIPT="${UTILS_DIR}/utils.bash"
 
-PATCHDIR="$(Realpath "$(dirname "$0")"/../patches)"
+PATCH_DIR="$(Realpath "$(dirname "$0")"/../patches)"
 
 #-------------------------------------------------------------------------------
 function Require()
 { # FILE(S) to source
-  local BINDIR SCPT REQD
+  local BIN_DIR SCRIPT_NAME REQUIRED
   if [[ $# != 1 ]]; then
     echo "Fatal: Require only allows one argument" 1>&2; exit 1
   fi
-  BINDIR="$(Realpath "$(dirname "$0")"/../bin)"
-  SCPT="$1"; shift
-  REQD="${BINDIR}/${SCPT}"
-  if [[ -f "${REQD}" ]]; then
+  BIN_DIR="$(Realpath "$(dirname "$0")"/../bin)"
+  SCRIPT_NAME="$1"; shift
+  REQUIRED="${BIN_DIR}/${SCRIPT_NAME}"
+  if [[ -f "${REQUIRED}" ]]; then
     # shellcheck disable=SC1090
-    source "${REQD}"
+    source "${REQUIRED}"
   else
-    echo "Fatal: Missing ${REQD}" 1>&2; exit 1
+    echo "Fatal: Missing ${REQUIRED}" 1>&2; exit 1
   fi
 }
 
 #-------------------------------------------------------------------------------
-# Verify existance of tools in search path
+# Verify existence of tools in search path
 
 function Needs()
 {
@@ -591,7 +592,7 @@ function GetBuildOpts()
         PATCH="${TOOL_SRC}"
       fi
       if [[ -n "${PATCH}" ]]; then
-        PATCH="${PATCHDIR}/${PATCH}"
+        PATCH="${PATCH_DIR}/${PATCH}"
       fi
       if [[ ! "${PATCH}" =~ [.]patch(es)?$ ]]; then
         PATCH="${PATCH}.patches"
@@ -708,7 +709,7 @@ function GetBuildOpts()
     BUILDER=cmake
   fi
   if [[ -z "${BUILD_DIR}" ]]; then
-    BUILD_DIR="build-${BUILDER}-${CC/*\//}"
+    BUILD_DIR="BUILD-${BUILDER}-${CC/*\//}"
   fi
   if [[ -z "${CMAKE_BUILD_TYPE}" ]]; then
     CMAKE_BUILD_TYPE="RelWithDebInfo"
@@ -839,7 +840,7 @@ function GetSource_and_Cd() # DIR URL
   fi
   if [[ "${NOFETCH}" == "-n" ]]; then
     Report_info "Skipping fetch of ${TOOL_NAME} as requested"
-    if ! _do cd "${DIR}" ; then Report_fatal "Unable to enter ${DIR}"; exit 1; fi
+    if ! _do builtin cd "${DIR}" ; then Report_fatal "Unable to enter ${DIR}"; exit 1; fi
     Step_Next && return 0 || return 1
   fi
   # Git
@@ -854,20 +855,20 @@ function GetSource_and_Cd() # DIR URL
       fi
       _do git clone "${URL}" "${DIR}" || Report_fatal "Unable to clone into ${DIR}" || exit 1
     fi
-    if ! _do cd "${DIR}" ; then Report_fatal "Unable to enter ${DIR}"; exit 1; fi
+    if ! _do builtin cd "${DIR}" ; then Report_fatal "Unable to enter ${DIR}"; exit 1; fi
     if [[ -n "${TOOL_VERS}" ]]; then
-      _do git checkout "${TOOL_VERS}"
+      _do git checkout "${TOOL_VERS}" .
     fi
     if [[ ${NOPATCH} == 0 && -n "${TOOL_PATCHES}" ]]; then
       _do git  am --empty=drop "${TOOL_PATCHES}"
     fi
   elif [[ "${URL}" =~ ^https://.+tgz$ ]]; then
-    local ARCHIVE WDIR
+    local ARCHIVE WORK_DIR
     ARCHIVE="$(basename "${URL}")"
     _do wget "${URL}" || Report_fatal "Unable to download from ${URL}" || exit 1
     _do tar xf "${ARCHIVE}" || "Unable to expand ${ARCHIVE}" || exit 1
-    WDIR="$(tar tf "${URL}" | head -1)"
-    if ! _do cd "${WDIR}" ; then Report_fatal "Unable to enter ${WDIR}"; exit 1; fi
+    WORK_DIR="$(tar tf "${URL}" | head -1)"
+    if ! _do builtin cd "${WORK_DIR}" ; then Report_fatal "Unable to enter ${WORK_DIR}"; exit 1; fi
   else
     Report_fatal "Unknown URL type - currently only handle *.git or *.tgz" || exit 1
   fi
@@ -898,7 +899,7 @@ function Select_version()
       ;;
     *) ;; # use specified version
   esac
-  _do git checkout "${SELECTED}"
+  _do git checkout "${SELECTED}" .
 }
 
 # Arguments are optional
@@ -976,8 +977,8 @@ function Configure_tool() # [TYPE]
     autotools)
       reconfigure
       _do mkdir -p "${BUILD_DIR}"
-      _do cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
-      if ! _do cd "${BUILD_DIR}" ; then Report_fatal "Unable to enter ${BUILD_DIR}"; exit 1; fi
+      _do builtin cd "${BUILD_DIR}" || Report_fatal "Unable to enter ${BUILD_DIR}"
+      if ! _do builtin cd "${BUILD_DIR}" ; then Report_fatal "Unable to enter ${BUILD_DIR}"; exit 1; fi
       _do env CXXFLAGS="-std=c++${CMAKE_CXX_STANDARD} -I/opt/local/include -I${SYSTEMC_HOME}/include"\
           ../configure --prefix="${SYSTEMC_HOME}"
       ;;
@@ -1024,7 +1025,7 @@ function Compile_tool()
       fi
       ;;
     autotools)
-      if ! _do cd "${BUILD_DIR}" ; then Report_fatal "Unable to enter ${BUILD_DIR}"; exit 1; fi
+      if ! _do builtin cd "${BUILD_DIR}" ; then Report_fatal "Unable to enter ${BUILD_DIR}"; exit 1; fi
       _do make
       if [[ ${MAKECHECK} == 1 ]]; then
         _do make -C "${BUILD_DIR}" check
@@ -1098,7 +1099,7 @@ function Cleanup()
   if [[ $# = 1 ]]; then return 1; fi # Assert
   Step_Show "Clean up"
   if [[ -n "${CLEANUP}" && "${CLEANUP}" == 1 ]]; then
-    if ! _do cd "${SRC}" ; then Report_fatal "Unable to enter ${SRC}"; exit 1; fi
+    if ! _do builtin cd "${SRC}" ; then Report_fatal "Unable to enter ${SRC}"; exit 1; fi
     rm -fr "${1}"
   fi
   Step_Next || return 1
