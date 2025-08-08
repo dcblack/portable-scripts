@@ -2,10 +2,29 @@
 
 function lx() { # Display last N files (default 30) sorted by modification time
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
-  N=-30
-  if [[ "$1" =~ ^-[0-9]+ ]]; then
-    N="$1"
+  local ls='gls' opt0="-Alht"
+  local -a opts=()
+  if ! builtin command -v 1>/dev/null 2>&1 "${ls}"; then ls='ls'; fi
+  local N=-30 opt=""
+  export DEBUG=0
+  while [[ "$1" =~ ^- ]]; do
+    opt="$1"
     shift
-  fi
-  ls -lt "$@" | head "${N}"
+    if [[ "${opt}" =~ ^-[0-9]+ ]]; then
+      N="${opt}"
+    elif [[ "${opt}" =~ ^-- ]]; then
+      opts+=("${opt}")
+    elif [[ "${opt}" =~ ^-V$ ]]; then
+      DEBUG=1
+    else
+      opt0="${opt0}${opt/-/}"
+    fi
+  done
+  # shellcheck disable=SC2016
+  #local PERL_UNIQ='my $o=shift;my $n="";my @ARGV;@o=reverse split(q{},$o);my %o;for $_ (@o){next if defined $o{$_};$o{$_}=1;$n=qq{$_$n}};print $n'
+  #opt="-$(perl -le "${PERL_UNIQ}" "${opt0}")"
+  #opt0="${opt}"
+  opts=( "${opt0}" "${opts[@]}" )
+  Report_debug  "${ls}  ${opts[*]} $* | head ${N}"
+  "${ls}" "${opts[@]}" "$@" | head "${N}"
 }
