@@ -304,6 +304,8 @@ function rwd() # rwd_func
             esac
           done
         fi
+      else
+        REPLY="y"
       fi
       if [[ "${REPLY}" == "y" ]]; then
         if rm "${wd_favs}/wd-${s}"; then
