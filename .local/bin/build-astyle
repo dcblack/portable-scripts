@@ -162,7 +162,7 @@ echo "% cd ${TOOL_NAME}"
 cd "${TOOL_NAME}" || Die "Unable to enter source directory"
 
 Report_info "Building ${TOOL_NAME}"
-BUILD_DIR="${TOOL_NAME}-build"
+BUILD_DIR="BUILD-${TOOL_NAME}"
 mkdir "${BUILD_DIR}" || Die "Unable to create ${BUILD_DIR} directory"
 cd "${BUILD_DIR}" || Die "Unable to enter ${BUILD_DIR} directory"
 cmake ..

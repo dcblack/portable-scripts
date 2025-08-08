@@ -8,77 +8,91 @@ TOOL_BRIEF="build-systemc - build and install SystemC from github source"
 TOOL_NAME="SystemC"
 TOOL_INFO='Go to <https://accellera.org/downloads/standards/systemc> for more information.'
 # ${TOOL_SRC}/${TOOL_BASE} for full path to source
-TOOL_SRC=~/.local/src
+TOOL_SRC=${HOME}/.local/src
 TOOL_BASE="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS='3.0.1' # latest or 3.0 or 2.3.4
 TOOL_CHECKOUT=""
 
-export TOOL_BRIEF TOOL_NAME TOOL_SRC TOOL_BASE TOOL_URL TOOL_INFO TOOL_VERS TOOL_CHECKOUT TOOL_PATCHES
-export SYSTEMC_HOME TOOL_SRC BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_BUILD_TYPE CMAKE_APPLE_SILICON_PROCESSOR
+function Build_systemc()
+{
+    export TOOL_BRIEF TOOL_NAME TOOL_SRC TOOL_BASE TOOL_URL TOOL_INFO TOOL_VERS TOOL_CHECKOUT TOOL_PATCHES
+    export SYSTEMC_HOME BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_BUILD_TYPE CMAKE_APPLE_SILICON_PROCESSOR
+
+    # Search for the directory containing utils.bash
+    local SCRIPT_DIR
+    SCRIPT_DIR="$(Realpath "$(dirname "$1")"/../bin)"
+    if [[ ! -r "${SCRIPT_DIR}/utils.bash" ]]; then
+      SCRIPT_DIR="$(Realpath "${HOME}/.local/bin")"
+    fi
+    if [[ ! -r "${SCRIPT_DIR}/utils.bash" ]]; then
+      SCRIPT_DIR="$(Realpath "$(dirname "$1")")"
+    fi
+    if [[ ! -r "${SCRIPT_DIR}/utils.bash" ]]; then
+      printf "FATAL: Missing required source file '%s'\n" "${SCRIPT_DIR}/utils.bash"
+      exit 1
+    fi
+    shift
+
+    export UTILS_VERSION
+    # shellcheck disable=SC2250,SC1091
+    source "${SCRIPT_DIR}/utils.bash"
+
+    export LOGFILE
+    SetupLogdir "$0"
+    local SCRIPT_PATH
+    SCRIPT_PATH="$(Realpath "$0")"
+    Report_info -cyn "Executing ${SCRIPT_PATH} with utils.bash v${UTILS_VERSION}"
+
+    GetBuildOpts "$0" "$@"
+    CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
+    ConfirmBuildOpts || exit
+
+    Create_and_Cd "${TOOL_SRC}" || exit
+    Report_info -grn "Obtaining ${TOOL_NAME} source"
+    GetSource_and_Cd "${TOOL_BASE}" "${TOOL_URL}" || exit
+    Select_version "${TOOL_VERS}" || exit
+
+    Report_info -grn "Building ${TOOL_NAME}"
+    # shellcheck disable=SC2119,SC2312
+    Configure_tool | Log
+    # shellcheck disable=SC2119,SC2312
+    Compile_tool   | Log
+
+    if [[ -z "${NOINSTALL+x}" || "${NOINSTALL}" == "no" ]]; then
+      # shellcheck disable=SC2119,SC2312
+      Install_tool | Log
+
+      # Optional clean up
+      if [[ "${CLEAN}" == 1 ]]; then
+        Report_info -red "Clean up"
+        cd "${TOOL_SRC}" || Report_fatal "Unable to enter source directory"
+        # shellcheck disable=SC2312
+        rm -fr "${TOOL_NAME}"* | Log
+      fi
+
+      Report_info -grn "Finished installation of ${TOOL_NAME} into ${SYSTEMC_HOME}"
+    else
+      Report_info -mag "Stopped shy of installing ${TOOL_NAME}"
+    fi
+
+    # Clean up
+    if [[ -n "${TMP}" ]]; then
+      rm -fr "${TMP}"
+    fi
+    if [[ -r "${LOGFILE}" ]]; then
+      if [[ -z "${TOOL_VERS}" ]]; then
+        TOOL_VERS="default"
+      fi
+      mv "${LOGFILE}" "${LOGFILE/.log/}-${TOOL_VERS}.log"
+    fi
+}
 
 function Realpath() {
   if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
-SCRIPTDIR="$(Realpath "$(dirname "$0")"/../bin)"
-if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-  SCRIPTDIR="$(Realpath ~/.local/bin)"
-fi
-if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-  SCRIPTDIR="$(Realpath "$(dirname "$0")")"
-fi
-if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-  printf "FATAL: Missing required source file '%s'\n" "${SCRIPTDIR}/utils.bash"
-  exit 1
-fi
-
-export UTILS_VERSION
-# shellcheck disable=SC2250,SC1091
-source "$SCRIPTDIR/utils.bash"
-
-export LOGFILE
-SetupLogdir "$0"
-SCRIPTPATH="$(Realpath "$0")"
-Report_info -cyn "Executing ${SCRIPTPATH} with utils.bash v${UTILS_VERSION}"
-
-GetBuildOpts "$0" "$@"
-CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
-ConfirmBuildOpts || exit
-
-Create_and_Cd "${TOOL_SRC}" || exit
-Report_info -grn "Obtaining ${TOOL_NAME} source"
-GetSource_and_Cd "${TOOL_BASE}" "${TOOL_URL}" || exit
-Select_version "${TOOL_VERS}" || exit
-
-Report_info -grn "Building ${TOOL_NAME}"
-# shellcheck disable=SC2119,SC2312
-Configure_tool | Log
-# shellcheck disable=SC2119,SC2312
-Compile_tool   | Log
-
-if [[ -z "${NOINSTALL+x}" || "${NOINSTALL}" == "no" ]]; then
-  # shellcheck disable=SC2119,SC2312
-  Install_tool | Log
-
-  # Optional clean up
-  if [[ "${CLEAN}" == 1 ]]; then
-    Report_info -red "Clean up"
-    cd "${TOOL_SRC}" || Report_fatal "Unable to enter source directory"
-    # shellcheck disable=SC2312
-    rm -fr "${TOOL_NAME}"* | Log
-  fi
-
-  Report_info -grn "Finished installation of ${TOOL_NAME} into ${SYSTEMC_HOME}"
-else
-  Report_info -mag "Stopped shy of installing ${TOOL_NAME}"
-fi
-if [[ -r "${LOGFILE}" ]]; then
-  if [[ -z "${TOOL_VERS}" ]]; then
-    TOOL_VERS="default"
-  fi
-  mv "${LOGFILE}" "${LOGFILE/.log/}-${TOOL_VERS}.log"
-fi
+Build_systemc "$0" "$@"
 
 # vim:nospell

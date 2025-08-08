@@ -103,7 +103,8 @@ HELPTEXT
     shift
   done
 
-  LIBNAME="{fmt} library"
+  TOOL_NAME="fmtlib"
+  TOOL_DESC="${TOOL_NAME} library"
   GIT_URL="https://github.com/fmtlib/fmt.git"
 
   # Display information about how this script will run
@@ -113,7 +114,7 @@ HELPTEXT
   if [[ ${PIE} == 1 ]]; then printf "position independent "; fi
   printf "library using "
   if [[ ${CLEAN} == 1 ]]; then printf "clean ";fi
-  printf "%s version of %s from %s." "${CHECKOUT}" "${LIBNAME}" "${GIT_URL}"
+  printf "%s version of %s from %s." "${CHECKOUT}" "${TOOL_DESC}" "${GIT_URL}"
   printf "\033[0m\n"
   if [[ ${NAH} == 1 ]]; then return 0; fi
 
@@ -133,16 +134,16 @@ HELPTEXT
   # shellcheck disable=SC2250,SC1091
   source "$SCRIPTDIR/Essential-IO"
 
-  local TOOL_PATH HERE WORKTREE_DIR REPO_DIR BUILD_DIR INSTALL_DIR
-  TOOL_PATH="$(Realpath "$0")"
-  Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
+  local BUILD_PATH HERE WORKTREE_DIR REPO_DIR BUILD_DIR INSTALL_DIR
+  BUILD_PATH="$(Realpath "$0")"
+  Report_info "Attempting to build ${TOOL_DESC} using ${BUILD_PATH}"
   HERE="$(pwd)"
   if [[ "${HERE}" =~ .*/extern ]]; then
     _do cd "${HERE/extern*/}" || Report_fatal "Trying to escape extern sub-directory failed"
   fi
   WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
   REPO_DIR="$(basename "${GIT_URL}" .git)"
-  BUILD_DIR="build"
+  BUILD_DIR="BUILD-${TOOL_NAME}"
   INSTALL_DIR="${WORKTREE_DIR}/extern"
   _do mkdir -p "${INSTALL_DIR}"
   _do cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
@@ -155,12 +156,12 @@ HELPTEXT
     MBRANCH="$(Git_main)"
     _do git checkout "${MBRANCH}"
     _do git -C "${REPO_DIR}" pull
-    Report_info "Successfully updated ${LIBNAME}"
+    Report_info "Successfully updated ${TOOL_DESC}"
   else
     rm -fr "${REPO_DIR}"
     _do git clone "${GIT_URL}" || Report_fatal "Unable to clone"
     MBRANCH="$(Git_main)"
-    Report_info "Successfully cloned ${LIBNAME}"
+    Report_info "Successfully cloned ${TOOL_DESC}"
   fi
   local TAG
   # shellcheck disable=SC2312
@@ -188,7 +189,7 @@ HELPTEXT
   _do cmake -B "${BUILD_DIR}" -S . "${DEFS[@]}" || Report_fatal "Unable to configure cmake"
   _do cmake --build "${BUILD_DIR}" || Report_fatal "Failed to compile and link"
   _do cmake --install build || Report_fatal "Failed to install"
-  Report_info "Successfully built ${LIBNAME}"
+  Report_info "Successfully built ${TOOL_DESC}"
 }
 
 function Realpath() {

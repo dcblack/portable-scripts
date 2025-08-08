@@ -2,10 +2,9 @@
 #
 # git-alias - List all or specified git aliases
 
-TOOLNAME=git-alias
+TOOL_NAME=git-alias
 VERSION=1.0
 
-#-------------------------------------------------------------------------------
 function Git_alias_help()
 {
   local HELPTEXT
@@ -14,19 +13,19 @@ function Git_alias_help()
 Name
 ----
 
-TOOLNAME (vVERSION) - create a directory archive.
+TOOL_NAME (vVERSION) - manipulate aliases
 
 Synopsis
 --------
 
 ```sh
-TOOLNAME --help
-TOOLNAME list [:sq:GLOB:sq:]
-TOOLNAME dump [:sq:GLOB:sq:]
-TOOLNAME show [:sq:GLOB:sq:]
-TOOLNAME add NAME :sq:VALUE:sq:
-TOOLNAME rm NAME
-TOOLNAME exists NAME
+TOOL_NAME help
+TOOL_NAME list [:sq:GLOB:sq:]
+TOOL_NAME dump [:sq:GLOB:sq:]
+TOOL_NAME show [:sq:GLOB:sq:]
+TOOL_NAME add NAME :sq:VALUE:sq:
+TOOL_NAME rm NAME
+TOOL_NAME exists NAME
 ```
 
 Options
@@ -34,11 +33,11 @@ Options
 
 | Option   | Aka | Description                   |
 | -------- | --- | ----------------------------- |
-| --help   | -h  | Display this text             |
+| help     | -h  | Display this text             |
 
 '
   HELPTEXT="$( Repl "${HELPTEXT}" ":sq:" "'" )"
-  HELPTEXT="$( Repl "${HELPTEXT}" "TOOLNAME" "${TOOLNAME}" )"
+  HELPTEXT="$( Repl "${HELPTEXT}" "TOOL_NAME" "${TOOL_NAME}" )"
   HELPTEXT="$( Repl "${HELPTEXT}" "VERSION"  "${VERSION}"  )"
   if builtin command -v glow; then
     glow -p <<<"${HELPTEXT}" ;#>>>
@@ -46,6 +45,27 @@ Options
     less <<<"${HELPTEXT}" ;#>>>
   fi
 };#endfunction Git_alias_help
+
+export DEBUG=0
+export ERROR_COUNT=0
+
+#-------------------------------------------------------------------------------
+Report_error() {
+  printf "\033[1;91mError:\033[0m %s\n" "$*"
+  (( ++ERROR_COUNT ))
+}
+
+#-------------------------------------------------------------------------------
+Report_warning() {
+  printf "\033[1;93mWarning:\033[0m %s\n" "$*"
+}
+
+#-------------------------------------------------------------------------------
+Report_debug() {
+  if [[ ${DEBUG} -gt 0 ]]; then
+    printf "\033[1;95mDebug:\033[0m %s\n" "$*"
+  fi
+}
 
 #-------------------------------------------------------------------------------
 function Repl()
@@ -57,66 +77,99 @@ function Repl()
 };#endfunction Repl
 
 #-------------------------------------------------------------------------------
+function Shift() { # Shift an array left
+  local -n arr_ref="$1" # reference variable
+  test ${#arr_ref[@]} = 0 && return 1; # nothing to shift
+  arr_ref=("${arr_ref[@]:1}")
+  return 0 # Indicate success
+}
+
+#-------------------------------------------------------------------------------
 function Git_alias()
 {
-  if [[ $# == 0 ]]; then
-    git config --get-regexp 'alias.*' | colrm 1 6 | sed -e 's/ .*//' | fmt | table || true
-  else
-    local ACTION="list"
-    local OUT ALIAS
-    while [[ $# -gt 0 ]]; do
-      case "$1" in
-        --help|-help|-h|help)
-          Git_alias_help
-          return 0
-          ;;
-        list|show|add|rm|exists) ACTION="-$1" ;;
-        dump)
-          if [[ $# == 0 ]]; then
-            mapfile -t OUT < <(git config --global --get-regexp "alias." || true)
-            for ALIAS in "${OUT[@]}"; do
-              printf "%s\n" "${ALIAS}"
-            done
-          else
-            ACTION="-dump"
-          fi
-          ;;
-        *)
-          case "${ACTION}" in
-            -exists)
-              # shellcheck disable=SC2312
-              git config --global --get-regexp "alias.$1" | grep -q "$1" && return 0 || return 1
-              ;;
-            -list)
-              git config --global --get-regexp "alias.$1" | perl -pe 's/^alias\.//;s/ .*//' | fmt || true
-              ;;
-            -dump)
-              mapfile -t OUT < <(git config --global --get-regexp "alias.$1" || true)
-              for ALIAS in "${OUT[@]}"; do
-                printf "%s => \n" "${ALIAS}"
-              done
-              ;;
-            -add)
-              git config --global --add "alias.$1" "$2" && printf "\033[1;96mAdded %s\033[0m\n" "$1"
-              shift
-              ;;
-            -rm)
-              git config --global --unset "alias.$1" && printf "\033[1;96mRemoved %s\033[0m\n" "$1"
-              ;;
-            -show)
-              mapfile -t OUT < <(git config --global --get "alias.$1" || true)
-              if [[ -n "${OUT[*]}" ]]; then
-                printf "%s => %s\n" "$1" "${OUT[*]}"
-              fi
-              ;;
-            *)
-              set - "nop" "show" "$@"
-              ;;
-          esac
-      esac
-      shift
-    done
+  local -a ARGS
+  read -ra ARGS <<<"$*"
+  local ACTION="-list" ;#< default action
+  local OUT ALIAS OPT ARG1 ARG2
+  if [[ ${#ARGS[@]} == 0 ]]; then
+    ARGS=( "list" )
   fi
+  while [[ ${#ARGS[@]} -gt 0 ]]; do
+    OPT="${ARGS[0]}"; Shift ARGS
+    Report_debug "action=${ACTION} opt = ${OPT}"
+    case "${OPT}" in
+      -help|-h|help)
+        Git_alias_help
+        return 0
+        ;;
+      --debug|-D)
+        DEBUG=1
+        Report_debug "Debugging ${TOOL_NAME}"
+        if [[ ${#ARGS} == 0 ]]; then
+          ARGS=( "list" )
+        fi
+        ;;
+      --nodebug)
+        DEBUG=0
+        Report_debug "Debugging off"
+        ;;
+      list|show|add|rm|exists|dump)
+        ACTION="-${OPT}"
+        ARGS=( "${ACTION}" "${ARGS[@]}" )
+        ;;
+      -exists)
+        if [[ ${#ARGS[@]} -lt 1 ]]; then Report_error "${ACTION} requires 1 argument"; break; fi
+        ARG1="${ARGS[0]}"; Shift ARGS
+        # shellcheck disable=SC2312
+        git config --global --get-regexp "alias.${ARG1}" |\
+         grep -q "${ARG1}" && return 0 || return 1
+        ;;
+      -list)
+        if [[ ${#ARGS[@]} -lt 1 ]]; then
+          git config --global --get-regexp "alias.*" |\
+           colrm 1 6 | sed -e 's/ .*//' | fmt | table || true
+        else
+          ARG1="${ARGS[0]}"; Shift ARGS
+          Report_debug "ARG1=${ARG1}"
+          git config --global --get-regexp "alias.${ARG1}*" |\
+           perl -pe 's/^alias\.//;s/ .*//' |\
+           colrm 1 6 | sed -e 's/ .*//' | fmt | table || true
+        fi
+        ;;
+      -dump)
+        if [[ ${#ARGS[@]} -lt 1 ]]; then Report_error "${ACTION} requires 1 argument"; break; fi
+        ARG1="${ARGS[0]}"; Shift ARGS
+        mapfile -t OUT < <(git config --global --get-regexp "alias.${ARG1}" || true)
+        for ALIAS in "${OUT[@]}"; do
+          printf "%s => %s\n" "${ARG1}" "${ALIAS}"
+        done
+        ;;
+      -add)
+        if [[ ${#ARGS[@]} -lt 2 ]]; then Report_error "${ACTION} requires at least two arguments"; break; fi
+        ARG1="${ARGS[0]}"; Shift ARGS
+        ARG2="${ARGS[*]}"; shift
+        git config --global --add "alias.${ARG1}" "${ARG2}" && printf "\033[1;96mAdded %s\033[0m\n" "$1"
+        shift
+        ;;
+      -rm)
+        if [[ ${#ARGS[@]} -lt 1 ]]; then Report_error "${ACTION} requires 1 argument"; break; fi
+        ARG1="${ARGS[0]}"; Shift ARGS
+        git config --global --unset "alias.${ARG1}" && printf "\033[1;96mRemoved %s\033[0m\n" "${ARG1}"
+        ;;
+      -show)
+        if [[ ${#ARGS[@]} -lt 1 ]]; then Report_error "${ACTION} requires 1 argument"; break; fi
+        ARG1="${ARGS[0]}"; Shift ARGS
+        mapfile -t OUT < <(git config --global --get "alias.${ARG1}" || true)
+        if [[ -n "${OUT[*]}" ]]; then
+          printf "%s => %s\n" "${ARG1}" "${OUT[*]}"
+        fi
+        ;;
+      *)
+        Report_error "Unknown option ${OPT}"
+        break
+        ;;
+    esac
+  done
 };#endfunction Git_alias
 
 Git_alias "$@"

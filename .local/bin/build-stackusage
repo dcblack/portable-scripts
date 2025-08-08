@@ -3,6 +3,7 @@
 # Install stackusage tool under current project.
 # IMPORTANT; Must be run inside project git repository.
 
+TOOL_NAME="stackusage"
 LIBNAME="stackusage tool"
 GIT_URL="https://github.com/d99kris/stackusage"
 
@@ -23,7 +24,7 @@ if [[ "${HERE}" =~ .*/extern ]]; then
 fi
 WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
 REPO_DIR="$(basename "${GIT_URL}" .git)"
-BUILD_DIR="build"
+BUILD_DIR="BUILD-${TOOL_NAME}"
 INSTALL_DIR="${WORKTREE_DIR}/extern"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Die "Unable to enter ${INSTALL_DIR}"
