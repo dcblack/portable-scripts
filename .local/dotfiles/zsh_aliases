@@ -252,6 +252,7 @@ function m()
 #-------------------------------------------------------------------------------
 alias Find='find 2>/dev/null'
 alias W='builtin command -V';
+alias WS=FindScript
 function WL()
 {
   # Returns the path of a file reported by command -V
