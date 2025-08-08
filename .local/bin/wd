@@ -338,6 +338,7 @@ function wds() # wds_func
   local p n r h t l
   declare -a favs
   h="$(Realpath .)"
+  h="${h/+/[+]}"
   read_into_array favs "find '${wd_favs}' -name 'wd-*' | sort -t- -k 2n,2n -k 3n,3n"
   
   for p in "${favs[@]}"

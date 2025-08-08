@@ -1,0 +1,407 @@
+#!/usr/bin/env bash
+
+export TOOLNAME="git-sm" VERSION=1.0
+
+function Help_sm()
+{
+  local HELP_TEXT='
+Name
+----
+
+TOOLNAME (vVERSION) - Add or remove submodules
+
+Synopsis
+--------
+
+```sh
+TOOLNAME --help
+TOOLNAME [OPTIONS] COMMAND...
+```
+
+Description
+-----------
+
+List, add or remove git submodules. Uses a file containing a list of URLs and locations (one per line).
+
+You save existing submodules and then load and remove in a single command.
+
+| Command   | Function                                  |
+| --------- | ----------------------------------------- |
+| add       | Add loaded submodules                     |
+| clear     | Clear the load list                       |
+| commit    | Commit the added submodules               |
+| dump      | Display loaded submodule info             |
+| help      | Display this text                         |
+| list      | List repositoryߴs submodules              |
+| load FILE | Read submodules from a file               |
+| remove    | Remove loaded submodules (aka rm)         |
+| save FILE | Dump repositoryߴs submodules to a file    |
+| update    | Initialize all submodules recursively     |
+
+
+Options
+-------
+
+| Option     | Explanation                                          |
+| ---------- | ---------------------------------------------------- |
+| --debug    | Debug mode for internal use (aka -d)                 |
+| --help     | Display this text                                    |
+| --markdown | Dump this text as vanilla markdown (aka -md)         |
+| --verbose  | Turn up the verbosity of messages (aka -v)           |
+| --version  | Display the version                                  |
+| -#         | Only apply to the first N items                      |
+| --nah      | Donߴt do anything, just display information (aka -n) |
+
+'
+  local SQ="'"
+  HELP_TEXT="${HELP_TEXT//TOOLNAME/${TOOLNAME}}"
+  HELP_TEXT="${HELP_TEXT//VERSION/${VERSION}}"
+  HELP_TEXT="${HELP_TEXT//:sq:/"${SQ}"}"
+  if [[ "$1" == "-md" ]]; then
+    cat <<<"${HELP_TEXT}" ;#>>>
+  elif [[ $# -gt 0 ]]; then
+    cat >"$*" <<<"${HELP_TEXT}" ;#>>>
+    Report_info "Saved '$*'"
+  elif builtin command -v glow 1>/dev/null; then
+    glow -p <<<"${HELP_TEXT}" ;#>>>
+  elif builtin command -v less 1>/dev/null; then
+    less -p <<<"${HELP_TEXT}" ;#>>>
+  else
+    cat <<<"${HELP_TEXT}" ;#>>>
+  fi
+}
+
+function Repl() {
+  local VAR="$1" NAME="$2" REPL="$3"
+  # shellcheck disable=SC2001
+  VAR="$(sed <<<"${VAR}" -e "s/${NAME}/${REPL}/g")" #>>>
+  echo "${VAR}"
+}
+
+function Report_info()
+{
+  printf "\033[1;96mInfo:\033[0m %s\n" "$*"
+}
+
+function Report_warning()
+{
+  printf "\033[1;91mWarning:\033[0m %s\n" "$*"
+}
+
+function Report_error()
+{
+  export ERRORS
+  printf "\033[1;91mError:\033[0m %s\n" "$*"
+  (( ++ERRORS ))
+}
+
+function Report_fatal()
+{
+  printf "\033[1;91mFatal: %s\033[0m\n" "$*"
+  exit 1
+}
+
+function Debug()
+{
+  export DEBUGGING
+  if [[ ${DEBUGGING} -lt 1 ]]; then return; fi
+  printf "\033[1;95mDebug:\033[0m %s\n" "$*"
+}
+
+#------------------------------------------------------------------------------
+function SM_remove()
+{
+  local REPO="$1" LOCN="$2" NAME="${1/*\/}"
+  if ! git submodule --quiet status "${LOCN}" 2>/dev/null; then
+    Report_warning "Skipping non-existant ${LOCN}"
+    return
+  fi
+  git submodule --quiet deinit -f -- "${LOCN}"
+  git rm -f "${LOCN}"
+  git add .gitmodules
+  git commit -m "Removed submodule ${LOCN}"
+  rm -rf ".git/modules/${LOCN}"
+  git config -f .gitmodules --remove-section "submodule.${LOCN}"
+  git config -f .git/config --remove-section "submodule.${LOCN}"
+  git commit -m "Removed submodule ${NAME} from .gitmodules"
+}
+
+declare -A REPO
+
+#-------------------------------------------------------------------------------
+function SM_read()
+{
+  local FILE="$1"
+  if [[ ! -r "${FILE}" ]]; then
+    Report_error "Missing or unreadable file '${FILE}'"
+    exit 1
+  fi
+  readarray -t LINES < "${FILE}"
+  export VERBOSE
+  for LINE in "${LINES[@]}"; do
+    Debug "LINE=${LINE}"
+    if [[ "${LINE}" =~ ^# ]]; then continue; fi
+    if [[ "${LINE}" =~ ^$ ]]; then continue; fi
+    read -r URL LOCN <<< "${LINE}" ;#>>>
+    if [[ ${VERBOSE} -gt 0 ]]; then
+      Report_info "Read ${URL} ${LOCN}"
+    else
+      Debug "URL=${URL} LOCN=${LOCN}"
+    fi
+    REPO["${LOCN}"]="${URL}"
+  done
+}
+
+#-------------------------------------------------------------------------------
+function SM_clear()
+{
+  local REPO
+  for LOCN in "${!REPO[@]}"; do
+    unset "REPO[${LOCN}]"
+  done
+}
+
+#-------------------------------------------------------------------------------
+function SM_urls()
+{
+  git submodule foreach -q git remote get-url origin
+}
+
+#-------------------------------------------------------------------------------
+function SM_details()
+{
+  # shellcheck disable=SC2312
+  (printf "Hash Module Tag\n--: --- ---\n"; git submodule)\
+    | perl -lne 'chomp;s{^(.[^ ]+) ([^ ]+) ([^ ]+$)}{$2 | $3 | $1};print' | table
+}
+
+#-------------------------------------------------------------------------------
+function SM_list()
+{
+  # shellcheck disable=SC2016
+  local PERLSCRIPT='chomp; print "$POSTMATCH $1" if m{^submodule[.](.+)[.]url=}'
+  # shellcheck disable=SC2312
+  git config --list | perl -MEnglish -lne "${PERLSCRIPT}"
+}
+
+###############################################################################
+#
+#   ####  #     #        #     #    #    ### #     #                             
+#  #    # ##   ##        ##   ##   # #    #  ##    #                             
+#  #      # # # #        # # # #  #   #   #  # #   #                             
+#   ####  #  #  #        #  #  # #     #  #  #  #  #                             
+#       # #     #        #     # #######  #  #   # #                             
+#  #    # #     #        #     # #     #  #  #    ##                             
+#   ####  #     # ###### #     # #     # ### #     #                             
+#
+###############################################################################
+function SM_main()
+{
+
+  export MAX_COUNT=-1
+  export DEBUGGING=0 VERBOSE=0
+  local NAH=0 OPT=""
+
+  # ----------------------------------------------------------------------------
+  if [[ $# == 0 ]]; then set - -help; fi
+  while [[ "$1" =~ ^- ]]; do
+    OPT="$1"
+    case "${OPT}" in
+      --help|-help|help|-h)
+        Help_sm
+        return 0
+        ;;
+      --markdown|-md)
+        Help_sm "${TOOLNAME}.md"
+        ;;
+      --debug|-d)
+        DEBUGGING=1
+        ;;
+      --not-realy|-nah|-n)
+        NAH=1
+        ;;
+      --verbose|-v)
+        VERBOSE=1
+        ;;
+      --version)
+        Report_info "${TOOLNAME} version${VERSION}"
+        return 0
+        ;;
+      -[0-9]*)
+        (( MAX_COUNT = -OPT ))
+        ;;
+      *)
+        Report_error "Unknown option '$1'"
+        return 1
+        ;;
+    esac
+    Debug "Option ${OPT}"
+    shift
+  done
+
+  Debug "$# ARGS=($*)"
+
+  Debug "MAX_COUNT=${MAX_COUNT}"
+
+  declare -A COMMANDS=(
+    [add]=1
+    [clear]=1
+    [commit]=1
+    [dump]=1
+    [help]=1
+    [list]=1
+    [load]=1
+    [remove]=1
+    [rm]=1
+    [save]=1
+    [update]=1
+  )
+
+
+  local CMND FILE="submodules.txt"
+  local LOCN=""
+  local COUNT=0
+  if [[ -r "${FILE}" ]]; then
+    SM_read "${FILE}"
+  fi
+
+  # ----------------------------------------------------------------------------
+  while [[ $# -gt 0 ]]; do
+    CMND="$1"
+    shift
+    Debug "CMND=${CMND}"
+
+    COUNT=-1
+    if [[ ${MAX_COUNT} -gt 0 ]]; then (( COUNT=MAX_COUNT )); fi
+
+    case "${CMND}" in
+      help)
+        Help_sm
+        return 0
+        ;;
+      list)
+        local LIST
+        # shellcheck disable=SC2311
+        LIST="$(SM_list)"
+        if [[ -n "${LIST}" ]]; then
+          echo "${LIST}"
+        else
+          echo "No submodules"
+        fi
+        ;;
+      dump)
+        if [[ "${#REPO[@]}" -gt 0 ]]; then
+          for LOCN in "${!REPO[@]}"; do
+            if [[ ${COUNT} == 0 ]]; then break; fi
+            URL="${REPO[${LOCN}]}"
+            Report_info "${URL} ${LOCN}"
+            (( --COUNT ))
+          done
+        else
+          echo "Nothing loaded"
+        fi
+        ;;
+      save)
+        if [[ $# -lt 1 ]]; then
+          FILE="submodules.txt"
+        elif [[ "$1" =~ [.] ]]; then
+          FILE="$1"
+          shift
+        elif [[ ${COMMANDS[$1]} == 1 ]]; then
+          FILE="submodules.txt"
+        else
+          Report_error "Filename must have an extension"
+          return 1
+        fi
+        Report_info "Saving to ${FILE}"
+        local LIST
+        # shellcheck disable=SC2311
+        LIST="$(SM_list)"
+        echo "${LIST}" >"${FILE}"
+        ;;
+      load)
+        if [[ $# -gt 0 ]]; then
+          if [[ ${COMMANDS[$1]} == 1 ]]; then
+            FILE="submodules.txt"
+          elif [[ -r "$1" ]]; then
+            FILE="$1"
+            shift
+          else
+            Report_error "Unable to read '$1'"
+            return 1
+          fi
+        else
+          FILE="submodules.txt"
+        fi
+        Report_info "Loading from ${FILE}"
+        SM_read "${FILE}"
+        ;;
+      clear)
+        SM_clear
+        ;;
+      http* | github@* )
+        if [[ $# -lt 1 ]]; then
+          Report_error "Must specify location."
+          return 1
+        fi
+        URL="${CMND}"
+        LOCN="$1"
+        if git submodule --quiet status  "${LOCN}"; then
+          Report_error "Submodule ${LOCN} already exists"
+          return 1
+        fi
+        shift
+        REPO["${LOCN}"]="${URL}"
+        ;;
+      *)
+        for LOCN in "${!REPO[@]}"; do
+          if [[ ${COUNT} == 0 ]]; then break; fi
+          URL="${REPO[${LOCN}]}"
+          Debug "${COUNT} URL=${URL} LOCN=${LOCN}"
+          (( --COUNT ))
+          if [[ ${NAH} == 1 ]]; then continue; fi
+          case "${CMND}" in
+            add)
+              git submodule --quiet add -- "${URL}" "${LOCN}"
+              ;;
+            commit)
+              git add .gitmodules
+              git add "${LOCN}"
+              git commit -m "submodule ${NAME}" .gitmodules "${LOCN}"
+              ;;
+            update)
+              git submodule --quiet update --init --recursive
+              ;;
+            rm|remove)
+              SM_remove "${URL}" "${LOCN}"
+              ;;
+            *)
+              Report_error "Unknown command '$1'"
+              return 1
+              ;;
+          esac
+        done
+        ;;
+    esac
+  done
+}
+
+
+###############################################################################
+#
+#  ### #     # #     #  ####  #    #  #####                                     
+#   #  ##    # #     # #    # #   #   #                                         
+#   #  # #   # #     # #    # #  #    #                                         
+#   #  #  #  # #     # #    # ###     #####                                     
+#   #  #   # #  #   #  #    # #  #    #                                         
+#   #  #    ##   # #   #    # #   #   #                                         
+#  ### #     #    #     ####  #    #  #####                                     
+#
+###############################################################################
+export ERRORS=0
+SM_main "$@"
+if [[ ${ERRORS} == 1 ]]; then
+  Report_fatal "Failed with one error."
+elif [[ ${ERRORS} -gt 0 ]]; then
+  Report_fatal "Failed with ${ERRORS} errors."
+fi

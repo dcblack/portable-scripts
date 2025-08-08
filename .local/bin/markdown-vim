@@ -49,9 +49,9 @@ contacts: ${email}
 
 my $inp_name = "@ARGV";
 my $new_name = $inp_name;
-$new_name =~ s{[.]}{-new.};
+$new_name =~ s{([.][[:word:]]+)$}{-new$1};
 my $old_name = $inp_name;
-$old_name =~ s{[.]}{-old.};
+$old_name =~ s{([.][[:word:]]+)$}{-old$1};
 open my $inp_file, '<', $inp_name or die "Unable to open $inp_name";
 open my $new_file, '>', $new_name or die "Unable to open $new_name";
 while(<$inp_file>) {
