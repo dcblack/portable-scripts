@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#
+#$Info: build-ollama - Install ollama. $
+
+sudo apt update -y
+sudo apt upgrade -y
+curl -fsSL https://ollama.com/install.sh | sh
