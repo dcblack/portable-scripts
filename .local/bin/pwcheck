@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#
+#$Info: pwcheck - check password quality. $
+
+function Pwcheck()
+{
+  local FILTEROUT='password' OPT=''
+  while [[ "$1" =~ ^- ]]; do
+    OPT="$1"; shift
+    if [[ "${OPT}" =~ ^-{1,2}v(erbose) ]]; then
+      FILTEROUT="xxxxxxx"
+    fi
+  done
+
+  #shellcheck disable=SC2312
+  zxcvbn |\
+    perl -pe "\$_=qq{} if m{\"${FILTEROUT}\":}" |\
+    perl -ne 'next unless m{(password|per_second|score|warning)":};s{"}{}g;s{^ +}{};s{,$}{};print'
+}
+
+Pwcheck "$@"
