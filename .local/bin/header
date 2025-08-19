@@ -14,8 +14,8 @@ STDOUT->autoflush(1);
 STDERR->autoflush(1);
 use vars qw($exe);
 
-our $TOOLNAME="header"
-our $VERSION="1.2.0"
+our $TOOLNAME="header";
+our $VERSION="1.2.0";
 
 ############################################################################}}}
 ## BEGIN DOCUMENTATION #####################################################{{{
