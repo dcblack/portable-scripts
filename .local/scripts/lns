@@ -1,24 +1,54 @@
 #!/usr/bin/env bash
 
-function lns() { # Display symbolic links
+function lns()
+{ # Display symbolic links
+  # Color support
+  export NOCOLOR
+  #shellcheck disable=2034
+  local CRED="" CGRN="" CYLW="" CMAG="" CCYN="" BOLD="" NONE=""
+  if [[ "${NOCOLOR}" != 1 ]]; then
+    #shellcheck disable=2034
+    CRED="[91m" CGRN="[92m" CYLW="[93m" CBLU="[94m" CMAG="[95m" CCYN="[96m" BOLD="[1m" NONE="[0m"
+  fi
+  local LIMIT=10 OPT
+  while [[ $# -gt 0 && "$1" =~ ^- ]]; do
+    OPT="$1"
+    shift
+    if [[ "${OPT}" =~ ^-[1-9][0-9]*$ ]]; then
+      OPT="${OPT/-/}"
+      LIMIT="${OPT}"
+    fi
+  done
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   if [[ $# == 0 ]]; then
     # shellcheck disable=SC2012
-    ls -lA | cut -c 40- | grep -F -- '->'
+    ls -lA | cut -c 40- | grep -F -- '->' | head -n ${LIMIT}
   else
-    for arg in "$@"; do
-      if [[ -L "${arg}" ]]; then
-        printf "%s -> %s\n" "${arg}" "$(Realpath "${arg}")"
-      elif [[ -d "${arg}" ]]; then
-        local dir
-        dir="$(Realpath "${arg}")"
-        find "${dir}" -type l -print0 | while IFS= read -r -d '' full; do 
-          link="$(/usr/bin/perl -le 'my($b,$h)=@ARGV;$h=~s{^$b/}{};print $h' "${dir}" "${full}")"
-          printf "%s -> %s\n" "${link}" "$(Realpath "${full}")"
+    local LINK TARG
+    for FILE in "$@"; do
+      LINK="?" TARG="?"
+      if [[ -L "${FILE}" ]]; then
+        TARG=$(Realpath "${FILE}")
+        if [[ -n "${TARG}" ]]; then
+          printf "%s -> %s\n" "${BOLD}${CCYN}${FILE}${NONE}" "${TARG}${NONE}"
+        else
+          printf "%s -> %s\n" "${BOLD}${CRED}${FILE}${NONE}" "${FILE}${NONE}"
+        fi
+      elif [[ -d "${FILE}" ]]; then
+        local DIR FULL
+        DIR="$(Realpath "${FILE}")"
+        find "${DIR}" -type l -print0 | while IFS= read -r -d '' FULL; do 
+          LINK="$(/usr/bin/perl -le 'my($b,$h)=@ARGV;$h=~s{^$b/}{};print $h' "${DIR}" "${FULL}")"
+          TARG="$(Realpath "${FULL}")"
+          if [[ -e "${TARG}" ]]; then
+            printf "%s -> %s\n" "${BOLD}${CGRN}${LINK}${NONE}" "${TARG}${NONE}"
+          else
+            printf "%s -> %s\n" "${BOLD}${CRED}${LINK}${NONE}" "${TARG}${NONE}"
+          fi
         done
       else
-        printf "%s -> ?\n" "${arg}"
+        printf "%s -> ?\n" "${BOLD}${CRED}${FILE}${NONE}"
       fi
-    done | sort | grep -F -- '->'
+    done | sort
   fi
 }

@@ -42,20 +42,35 @@ export VI='gvim'
 export LOCAL EDITOR
 alias view-systemc='"${EDITOR}" "${LOCAL}/src/systemc/src"'
 
+function Source()
+{
+  if [[ $# == 0 ]]; then
+    printf 1>&2 "[1;93mWarning:[0m Syntax: Source FILE [ARGS...]\n"
+    return 1
+  fi
+  FILE="$1"
+  shift
+  if [[ -x "${FILE}" && -f "${FILE}" ]]; then
+    echo "source \"${FILE}\" $*"
+    # shellcheck disable=SC1090
+    source "${FILE}" "$@"
+  else
+    printf 1>&2 "[1;91mError: Not executable [0m'%s'\n" "${FILE}"
+  fi
+}  
+
 function ViSrc()
 {
+  if [[ $# == 0 ]]; then
+    printf 1>&2 "[1;93mWarning:[0m Syntax: ViSrc FILE [ARGS...]\n"
+    return 1
+  fi
   local FILE
   FILE="$(Realpath "$1")"
   shift
   echo "${VI} -f $* ${FILE}"
   "${VI}" -f "$@" "${FILE}"
-  if [[ -x "${FILE}" && -f "${FILE}" ]]; then
-    echo "source \"${FILE}\""
-    # shellcheck disable=SC1090
-    source "${FILE}"
-  else
-    echo 1>&2 "Not executable ${FILE}"
-  fi
+  Source "${FILE}" "$@"
 }
 
 function viscr()

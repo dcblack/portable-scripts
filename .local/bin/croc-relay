@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+#
+#$Info: croc-relay - set up a croc relay server. $
+
+export HELP_TEXT
+# shellcheck disable=SC2016
+HELP_TEXT='
+Name
+----
+
+croc-relay - set up and launch croc relay locally
+
+Synopsis
+--------
+
+```sh
+croc-relay --help
+croc-relay [OPTIONS]
+```
+
+Options
+-------
+
+| Option   | Aka | Description                   |
+| -------- | --- | ----------------------------- |
+| firewall | -fw | set up firewall permanently   |
+| help     | -h  | Display this text             |
+| kill     |     | Kill croc relay processes     |
+| nohup    |     | use nohup to launch (DEFAULT) |
+| pm2      |     | Use pm2 to launch an startup  |
+| setup    | -su | open firewall until next boot |
+| status   |     | show croc relay status        |
+
+Examples
+--------
+
+```sh
+croc-relay setup # open firewall and start relay
+croc-relay # Assumes prior `setup` or `firewall`
+croc-relay firewall # establish firewall and start
+```
+
+'
+
+export ERROR_COUNT
+ERROR_COUNT=0
+
+function Report_info()
+{
+  printf "\033[1;96m%s\033[0m\n" "$*"
+  return 0
+}
+
+function Report_warning()
+{
+  printf "\033[1;93mWarning: %s\033[0m\n" "$*" 1>&2
+  return 0
+}
+
+function Report_error()
+{
+  export ERROR_COUNT
+  printf "\033[1;91mError: %s\033[0m\n" "$*" 1>&2
+  (( ++ERROR_COUNT ))
+  return 0
+}
+
+function Report_fatal()
+{
+  export ERROR_COUNT
+  printf "\033[1;91mFatal: %s\033[0m\n" "$*" 1>&2
+  if [[ ${ERROR_COUNT} == 0 ]]; then ERROR_COUNT=1; fi
+  exit 1
+}
+
+check_port()
+{
+  local port="$1"
+  local status="not"
+
+  case $(uname) in
+    Darwin)
+      # shellcheck disable=SC2312
+      if sudo pfctl -s rules | grep -q "port ${port}"; then
+          status="is"
+      fi
+      ;;
+    Linux)
+      if command -v iptables &> /dev/null; then
+        # shellcheck disable=SC2312
+        if sudo iptables -L -v -n | grep -q "dpt:${port}"; then
+            status="is"
+        fi
+      elif command -v ufw &> /dev/null; then
+        # shellcheck disable=SC2312
+        if sudo ufw status numbered | grep -q "${port}/tcp"; then
+            status="is"
+        fi
+      elif command -v firewall-cmd &> /dev/null; then
+        # shellcheck disable=SC2312
+        if sudo firewall-cmd --list-ports | grep -q "${port}/tcp"; then
+            status="is"
+        fi
+      else
+        Report_error "Unsupported firewall configuration"
+        return 1
+      fi
+      ;;
+    *)
+        Report_error "Unsupported operating system"
+        return 1
+        ;;
+  esac
+
+  Report_info "Port ${port} ${status} enabled"
+}
+
+function Croc_relay()
+{
+  local PORT_FIRST=8153 PORT_LAST=8157
+  export ERROR_COUNT
+  # Scan command-line
+  while [[ $# != 0 ]]; do
+    case "$1" in
+      --help|-help|help|-h)
+        if builtin command -v glow; then
+          echo "${HELP_TEXT}" | glow -p
+        else
+          Report_info "${HELP_TEXT}"
+        fi
+        return 0
+        ;;
+      --setup|-setup|setup)
+        sudo pfctl -a com.apple.firewall.tcp -t allow -T add "${PORT_FIRST}"
+        sudo pfctl -e
+        ;;
+      --status|-status|status|-?)
+        for PORT in $(seq "${PORT_FIRST}" "${PORT_LAST}"); do
+          check_port "${PORT}"
+        done
+        Report_info "Croc relay processes:"
+        pgrep -lf "croc relay"
+        ;;
+      --firewall|-firewall|firewall|-fw)
+        cd /tmp || true
+        cat >croc-relay.pf <<"TEXT"
+# Allow incoming traffic on ports ${PORT_FIRST} to 8157
+pass in proto tcp from any to any port ${PORT_FIRST}:8157
+TEXT
+        sudo rsync -a croc-relay.pf /etc/pf.anchors/croc-relay.pf
+        sudo pfctl -f /etc/pf.anchors/croc-relay.pf
+        sudo pfctl -e
+        ;;
+      --pm2|-pm2|pm2)
+        # Alternate if pm2 installed
+        if builtin command -v pm2; then
+          pm2 start croc-relay
+          pm2 save
+          return 0
+        else
+          Report_error "Missing 'pm2'. Try installing with 'npm2 install -g pm2"
+        fi
+        ;;
+      --kill|-kill|kill)
+        if pgrep -f "croc relay"; then
+          local pgrep_output
+            pgrep_output=$(pgrep -f "croc relay")
+          local -a pids
+          mapfile -t pids <<< "${pgrep_output}"
+          kill -9 "${pids[@]}"
+        else
+          Report_info "Nothing to kill"
+        fi
+        ;;
+      *)
+        Report_error "Unknown option '$1'. Use --help for more info"
+        ;;
+    esac
+    shift
+  done
+  if [[ ${ERROR_COUNT} != 0 ]]; then
+    Report_fatal "Fix ${ERROR_COUNT} errors and retry"
+  fi
+
+  if ! pgrep croc; then
+    nohup croc relay >>~/croc-relay.log 2>&1 &
+  else
+    Report_warning "Croc relay is lready running"
+  fi
+}
+
+Croc_relay "$@"

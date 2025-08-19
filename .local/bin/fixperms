@@ -1,0 +1,128 @@
+#!/usr/bin/perl
+eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
+     if 0; #$running_under_some_shell
+
+# $Info: Remove execute permissions from files that should not be. $
+
+use warnings;
+use strict;
+use File::Find ();
+
+# Set the variable $File::Find::dont_use_nlink if you're using AFS,
+# since AFS cheats.
+
+# for the convenience of &wanted calls, including -eval statements:
+use vars qw/*name *dir *prune/;
+*name   = *File::Find::name;
+*dir    = *File::Find::dir;
+*prune  = *File::Find::prune;
+
+our @EXECUTABLES;
+our @EXECUTABLE_PATTERNS = qw{
+.*\.bash
+.*\.bin
+.*\.csh
+.*\.dir
+.*\.exe
+.*\.lua
+.*\.pl
+.*\.py
+.*\.sh
+.*\.tcl
+.*\.zsh
+};
+our @PLAIN_FILES;
+our @PLAIN_FILE_PATTERNS = qw{
+.*\.(t)?gz
+.*\.[ch]pp
+.*\.[ch]xx
+.*\.[hcS]
+.*\.7z
+.*\.avi
+.*\.doc
+.*\.docx
+.*\.htm(l)?
+.*\.inc
+.*\.jpeg
+.*\.jpg
+.*\.kwd
+.*\.md
+.*\.mov
+.*\.mp3
+.*\.mp4
+.*\.pdf
+.*\.PDF
+.*\.png
+.*\.pps
+.*\.ppsx
+.*\.ppt
+.*\.pptm
+.*\.pptx
+.*\.ps
+.*\.rs
+.*\.sv(h)?
+.*\.tar
+.*\.tex
+.*\.text
+.*\.toml
+.*\.txt
+.*\.v
+.*\.vhd(l)?
+.*\.vlg
+.*\.xls
+.*\.xlsx
+.*\.zip
+};
+
+our $verbose=0;
+our $debug=0;
+
+sub executable {
+    my $file = $_;
+    return if $name =~ m{/[.][^/]+/};
+    return unless -f $_;
+    my ($dev, $ino, $mode, $nlink, $uid, $gid) = lstat($_);
+    return unless grep( $file =~ m{$_}, @EXECUTABLE_PATTERNS );
+    my $perm = $mode;
+    $perm |=  0x0555; # Add execute and read
+    return if $mode == $perm;
+    chmod $mode,$file;
+    push @EXECUTABLES,$name;
+}
+
+sub not_executable {
+    my $file = $_;
+    return if $name =~ m{/[.][^/]+/};
+    return unless -f $_;
+    my ($dev, $ino, $mode, $nlink, $uid, $gid) = lstat($_);
+    return unless grep( $file =~ m{$_}, @PLAIN_FILE_PATTERNS );
+    my $perm = $mode;
+    $perm &= ~0x0111; # Remove execute
+    $perm |=  0x0444; # Add read
+    return if $mode == $perm;
+    chmod $mode,$file;
+    push @PLAIN_FILES,$name;
+}
+
+our @ARGS = @ARGV;
+while( $ARGS[0] =~ m{^-} ) {
+  my $arg = shift @ARGS;
+  $verbose = 1 if $arg =~ m{^-{1,2}v(erbose)?$};
+  $debug = 1 if $arg =~ m{^-{1,2}d(ebug)?$};
+}
+
+push @ARGS, '.' if scalar(@ARGS) == 0;
+
+for my $dir (@ARGS) {
+  if( not -d $dir ) {
+    continue;
+  }
+  File::Find::find({wanted => \&plain_file}, $dir);
+  File::Find::find({wanted => \&executable}, $dir);
+}
+if( $verbose ) {
+  printf "Executables:\n  %s\n", join("\n  ", @EXECUTABLES);
+  printf "Plain files:\n  %s\n", join("\n  ", @PLAIN_FILES);
+}
+
+exit;

@@ -5,7 +5,7 @@ function lx() { # Display last N files (default 30) sorted by modification time
   local ls='gls' opt0="-Alht"
   local -a opts=()
   if ! builtin command -v 1>/dev/null 2>&1 "${ls}"; then ls='ls'; fi
-  local N=-30 opt=""
+  local N=-15 opt=""
   export DEBUG=0
   while [[ "$1" =~ ^- ]]; do
     opt="$1"
