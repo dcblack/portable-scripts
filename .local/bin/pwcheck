@@ -4,18 +4,39 @@
 
 function Pwcheck()
 {
-  local FILTEROUT='password' OPT=''
+  local FILTEROUT='password' OPT='' KIND=crack
   while [[ "$1" =~ ^- ]]; do
     OPT="$1"; shift
-    if [[ "${OPT}" =~ ^-{1,2}v(erbose) ]]; then
-      FILTEROUT="xxxxxxx"
-    fi
+    case "$1" in
+      --verbose|-verbose|-v)
+        FILTEROUT="xxxxxxx"
+        ;;
+      --crack)
+        KIND="crack"
+        ;;
+      --zxcvbn|-z)
+        KIND=zxcvbn
+        ;;
+      *)
+        ;;
+    esac
   done
 
-  #shellcheck disable=SC2312
-  zxcvbn |\
-    perl -pe "\$_=qq{} if m{\"${FILTEROUT}\":}" |\
-    perl -ne 'next unless m{(password|per_second|score|warning)":};s{"}{}g;s{^ +}{};s{,$}{};print'
+  case "${KIND}" in
+    quality)
+      #shellcheck disable=SC2312
+      zxcvbn |\
+        perl -pe "\$_=qq{} if m{\"${FILTEROUT}\":}" |\
+        perl -ne 'next unless m{(password|per_second|score|warning)":};s{"}{}g;s{^ +}{};s{,$}{};print'
+      ;;
+
+    crack)
+      cracklib-check --no-echo
+      ;;
+    *)
+      echo "Error: no such kind" 1>&2
+      ;;
+  esac
 }
 
 Pwcheck "$@"
