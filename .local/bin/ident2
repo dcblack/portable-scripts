@@ -89,6 +89,10 @@ is potentially dangerous.
 
 Compare the keyword signatures of I<FILE1> and I<FILE2>.
 
+=item B<--bare>
+
+Removes the leading and trailing delimeters (i.e., '$' & '%'
+
 =item B<-h>
 
 Help (this text).
@@ -271,8 +275,8 @@ $delim = '$%';
 #------------------------------------------------------------------------------
 # Process command line arguments
 #------------------------------------------------------------------------------
-use vars qw(@HOLD @ORIG $arg $OPT_q $OPT_id $OPT_header $OPT_diff $OPT_sum $OPT_only 
-            $OPT_patt $OPT_v);
+use vars qw(@HOLD @ORIG $arg $OPT_q $OPT_id $OPT_info $OPT_header $OPT_diff $OPT_sum
+            $OPT_only $OPT_bare $OPT_patt $OPT_v);
 
 ARGV: {
   my @HOLD;
@@ -289,6 +293,8 @@ ARGV: {
       $OPT_only = 1;
     } elsif ($arg =~ m/^--?(check)?sum$/) {
       $OPT_sum = 1;
+    } elsif ($arg =~ m/^--info$/) {
+      $OPT_info = 1;
     } elsif ($arg =~ m/^--?diff$/) {
       $OPT_diff = 1;
     } elsif ($arg =~ m/^--?patt(ern)?$/) {
@@ -327,10 +333,11 @@ foreach $file (@ARGV) {
     # Scan file for all RCS keywords
     LINE: while (<FILE>) {
       next LINE if $OPT_patt ne '' and not m/$OPT_patt/;
-      FRAG: while (s/[$delim]([A-Z]\w+: [^$delim]+ )[$delim]//) {
+      FRAG: while (s{[$delim]([A-Z]\w+: [^$delim]+ )[$delim]}{}) {
         ($ident,$core) = ($&,$1);
         next FRAG if $OPT_id and $ident !~ m/^.(Header|Id):/
                   or $OPT_header and $ident !~ m/^.(Header):/;
+        next FRAG if $OPT_info and $ident !~ m/^.Info:/;
         $found++;
         push @{$ident{$file}},$core;
         push @ident,sprintf("  %s\n",$ident);
@@ -339,8 +346,11 @@ foreach $file (@ARGV) {
     close FILE;
     printf STDERR "INFO: Found %d fragments\n",$found if $OPT_v;
     next if $OPT_diff or $OPT_only;
-    # Output results
 
+    ######################################################################
+    # Output results
+    ######################################################################
+    
     #---------------------------------------------------------------------
     # Default behavior
     #---------------------------------------------------------------------
@@ -348,8 +358,15 @@ foreach $file (@ARGV) {
        if ($OPT_id) {
           ($ident) = sort(@ident); # use $ before %
           $ident =~ s{Header: +/\S+/}{Id: }; # transform Header -> Id
-          $ident =~ s/^\s+//;
+          $ident =~ s{^\s+}{};
           printf "%s => %s",$file, $ident;
+        } elsif ($OPT_info) {
+          my ($info) = sort(@ident); # use $ before %
+          $info =~ s{^\s+}{};
+          $info =~ s{Info:}{};
+          $info =~ s{[$%]$}{};
+          $info =~ s{^[$%]}{};
+          printf "%s => %s",$file, $info;
        } else {
           printf "%s =>\n%s", $file,join('',@ident);
        }#endif
@@ -377,15 +394,15 @@ for my $i (0..$#ARGV) {
    $fw = length $ARGV[$i] if $fw < length $ARGV[$i]
 }#endfor
 for my $i (0..$#ARGV) {
-   $temp[$i] =~ s:.*/::; # strip path information
+   $temp[$i] =~ s{.*/}{}; # strip path information
    $temp[$i] = "$temp_dir/$temp[$i]";
    open(TEMP,">$temp[$i]") or REPORT_FATAL "Unable to write $temp[$i]!?";
    printf TEMP "%s\n",join("\n",sort @{$ident{$ARGV[$i]}});
    close TEMP;
    $sum = `sum $temp[$i]`;
-   $sum =~ s/^\s+//;
-   $sum =~ s/\s+$//;
-   $sum =~ s/\s+/_/;
+   $sum =~ s{^\s+}{};
+   $sum =~ s{\s+$}{};
+   $sum =~ s{\s+}{_};
    printf "sum %-${fw}.${fw}s %s\n",$ARGV[$i],$sum;
    unlink $temp[$i];
 }#endif
@@ -410,7 +427,7 @@ if (scalar keys %ident == 0) {
   mkdir $temp_dir,0755;
   my $fw = length $ARGV[0]; $fw = length $ARGV[1] if $fw < length $ARGV[1];
   for my $i (0..1) {
-     $temp[$i] =~ s:.*/::; # strip path information
+     $temp[$i] =~ s{.*/}{}; # strip path information
      $temp[$i] = "$temp_dir/$temp[$i]";
      open(TEMP,">$temp[$i]") or REPORT_FATAL "Unable to write $temp[$i]!?";
      if (defined $ident{$ARGV[$i]}) {
