@@ -15,7 +15,7 @@ STDERR->autoflush(1);
 use vars qw($exe);
 
 our $TOOLNAME="header";
-our $VERSION="1.2.0";
+our $VERSION="1.3.0";
 
 ############################################################################}}}
 ## BEGIN DOCUMENTATION #####################################################{{{
@@ -60,6 +60,7 @@ OPTIONS:
  -spacing=COLS -- add COLS columns of space between letters
  -trim ---------- remove trailing whitespace (default leaves spaces)
  -uc ------------ force to UPPERCASE
+ -utf8 ---------- use UTF8 default
  -v ------------- verbose mode
  -vbar[=CHAR] --- draw a vertical bar on the left
  -version ------- display version
@@ -281,6 +282,9 @@ while ($ARGV[0] =~ /^-/) {
   } elsif ($opt =~ m{^-{1,2}uc$}) {
     $OPT{-uc}  = 1;
   #---------------------------------------------------------------------------
+  } elsif ($opt =~ m{^-{1,2}utf(8)?$}) {
+    $OPT{-utf8}  = 1;
+  #---------------------------------------------------------------------------
   } elsif ($opt =~ m{^-{1,2}c$}) {
     $OPT{-fmt}  = 'c';
     $OPT{-cols} = 78;
@@ -289,7 +293,7 @@ while ($ARGV[0] =~ /^-/) {
     $OPT{-vbar} = '*';
     $OPT{-box}  = '*';
   #---------------------------------------------------------------------------
-  } elsif ($opt =~ m{^-{1,2}C(olor)?$}) {
+  } elsif ($opt =~ m{^-{1,2}[Cc](olor)?$}) {
     if($ARGV[0] =~ m{^(off|no|disable|none|blk|red|grn|blu|ylw|mag|cyn|wht)$}) {
       $OPT{-color} = shift @ARGV;
       $OPT{-color} = '' if $OPT{-color} =~  m{(off|no|disable|none)};
@@ -423,6 +427,8 @@ while ($ARGV[0] =~ /^-/) {
   }#endif
   #---------------------------------------------------------------------------
 }#endwhile Processing command-line
+
+$OPT{-char} = '■' if exists $OPT{-utf8};
 
 #-----------------------------------------------------------------------------
 # Read font
