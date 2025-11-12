@@ -18,6 +18,34 @@ alias ez='exec zsh'
 alias 1p=op
 alias db=defaultbrowser
 
+alias and='&&'
+alias or='||'
+
+#- Searching -------------------------------------------------------------------
+alias Find='find 2>/dev/null'
+alias W='builtin command -V';
+alias WS=FindScript
+function WL()
+{
+  # Returns the path of a file reported by command -V
+  # -d returns the containing directory
+  # shellcheck disable=SC2312
+  local PERLSCRIPT='print qq{$1} if m{ (/\S+)$}'
+  if [[ "$1" == "-d" ]]; then
+    shift
+    PERLSCRIPT='next unless m{ (/\S+)$}; $d=qq{$1}; $d=~s{/[^/]+$}{};print $d'
+  fi
+  builtin command -V "$@" 2>/dev/null | perl -lne "${PERLSCRIPT}"
+}
+function f()
+{
+  # Returns the path of a j(ump) command
+  ( j "$@" ; realpath "." );
+}
+alias F='file'
+alias I='lipo -info'
+alias info='info --vi-keys'
+
 alias Arm='open "${HOME}/Drives/Arm-Training.sparsebundle"; sleep 2; open /Volumes/Arm-Training'
 
 alias 0p='eval $(op signin family_tx512)'
@@ -96,22 +124,51 @@ alias aliases='alias | perl -pe "s/alias //;s/=.*//" | fmt'
 function funcs()
 {
   # shellcheck disable=SC2312
-  declare -f | perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]' | fmt
+  declare -f | perl -lane 'print $F[0] if m{^[a-zA-Z]{2,} *[(][)]-' | fmt
 }
+
+
+alias ag=rg
 function aga()
 {
-  ag 2>/dev/null -a -u --hidden "$@" || true
+  # Search all files
+  if builtin command -v rg 2>/dev/null 1>/dev/null; then
+    rg 2>/dev/null -a -u --hidden "$@" || true
+  else
+    ag 2>/dev/null -a -u --hidden "$@" || true
+  fi
 }
 function agl()
 {
-  ag 2>/dev/null -l --nocolor "$@" | sort || true
+  # List filenames containing pattern
+  if builtin command -v rg 2>/dev/null 1>/dev/null; then
+    rg 2>/dev/null --files-with-matches --color=never "$@" | sort || true
+  else
+    ag 2>/dev/null -l --nocolor "$@" | sort || true
+  fi
 }
 function agL()
 {
-  ag 2>/dev/null -L --nocolor "$@" | sort || true
+  # List filenames not containing pattern
+  if builtin command -v rg 2>/dev/null 1>/dev/null; then
+    rg 2>/dev/null --files-without-match --color==never "$@" | sort || true
+  else
+    ag 2>/dev/null -L --nocolor "$@" | sort || true
+  fi
 }
+function agx()
+{
+  if builtin command -v rg 2>/dev/null 1>/dev/null; then
+    _do rg --color=never -No "$@"
+  else
+    _do ag --nocolor --nonumbers -o "$@"
+  fi
+}
+alias rgx=agx
+alias rgl=agl
+alias rgL=agL
 alias ag0='ag --depth=0'
-alias ag1='ag --depth=0'
+alias ag1='ag --depth=1'
 alias ag.='ag --depth=0 --hidden'
 function agh()
 {
@@ -220,7 +277,7 @@ function new()
 function Columns()
 {
   # shellcheck disable=SC2312
-  stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}'
+  ( stty -a | /usr/bin/perl -lne 'if((m{columns ([[:digit:]]+)})or(m{([[:digit:]]+) columns})){print $1;last}' )
 }
 alias Cols=Columns
 
@@ -264,29 +321,13 @@ function m()
     less "$@"
   fi
 }
-#-------------------------------------------------------------------------------
-alias Find='find 2>/dev/null'
-alias W='builtin command -V';
-alias WS=FindScript
-function WL()
-{
-  # Returns the path of a file reported by command -V
-  # shellcheck disable=SC2312
-  builtin command -V "$@" 2>/dev/null | perl -lne 'print qq{$1} if m{ (/\S+)$}'
-}
 
-function f()
-{
-  # Returns the path of a j(ump) command
-  ( j "$@" ; realpath "${!#}" );
-}
-alias F='file'
-alias I='lipo -info'
-alias info='info --vi-keys'
 export CLEAR_EXE
 CLEAR_EXE="$(FindExe clear '/opt/local/bin/clear' /usr/bin/clear /bin/clear)"
 alias clear='${CLEAR_EXE} -x'
 alias cls='clear; '
+
+#-------------------------------------------------------------------------------
 alias .bashrc='. ~/.bashrc';
 function UserInit()
 {
@@ -363,4 +404,4 @@ function serialize()
 #   unset -f declare typeset
 # }
 
-#EOF ~/.bash_aliases vim:nospell
+#EOF ~/.zsh_aliases vim:nospell
