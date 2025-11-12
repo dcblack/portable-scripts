@@ -122,6 +122,7 @@ EOT
     git
     grep
     "${SED}"
+    rg
     tree
     rsync
     shellcheck
