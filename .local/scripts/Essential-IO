@@ -402,7 +402,7 @@ function _do()
 
   # Process command-line
   while [[ "$1" =~ ^[^./_0-9a-zA-Z] ]]; do
-    if [[ "$1" == "-h" ]]; then
+    if [[ "$1" =~ ^-{,2}h(elp)?$ ]]; then
       printf "
 NAME
 ----
@@ -623,7 +623,34 @@ function Debug-off()
 #-------------------------------------------------------------------------------
 function Ruler()
 {
-  local ARGS SEP MAX LIN WID
+  local ARGS SEP MAX LIN WID RULER_HELP
+  RULER_HELP='
+Name
+----
+
+Ruler - display a line across the full width of the terminal
+
+Synopsis
+--------
+
+Options
+-------
+
+Option    | Description
+------    | -----------
+ -h       | Display this help
+ -pre STR | Add STR prefix
+ -cyn     | Color cyan
+ -red     | Color red
+ -grn     | Color green
+ -mag     | Color magenta
+ -ylw     | Color yellow
+ -wht     | Color white
+ -blu     | Color blue
+ -bld     | Bold characters
+ -off     | Turn off color attributes
+
+'
   SEP="_" # Default
   MAX="$(Columns)"
   local PRE
@@ -631,6 +658,10 @@ function Ruler()
   # Test for color prefix
   while [[ "$1" =~ ^-[[:alpha:]]{3,3}$ ]]; do
     case "$1" in
+      -h | --help)
+        echo "${RULER_HELP}"
+        return
+        ;;
       -pre) PRE="${PRE}${2}"    ; shift  ; shift ;;
       -cyn) PRE="${PRE}$(_C cyn)" ; shift ;;
       -red) PRE="${PRE}$(_C red)" ; shift ;;
@@ -640,6 +671,7 @@ function Ruler()
       -wht) PRE="${PRE}$(_C wht)" ; shift ;;
       -blu) PRE="${PRE}$(_C blu)" ; shift ;;
       -bld) PRE="${PRE}$(_C bold)" ; shift ;;
+      -off) PRE="${PRE}$(_C none)" ; shift ;;
       -[0-9]*) MAX=$(( - $1 )); shift ;;
          *) PRE="" ;;
     esac
