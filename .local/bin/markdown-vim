@@ -27,18 +27,20 @@ my $title   = '{:TITLE:}';
 $title = $ENV{TITLE} if exists $ENV{TITLE};
 my $subject = '{:SUBJECT:}';
 $subject = $ENV{SUBJECT} if exists $ENV{SUBJECT};
-my $author  = '{:AUTHOR:}';
-$author = $ENV{USER} if exists $ENV{USER};
-$author = $ENV{NAME} if exists $ENV{NAME};
-$author = $ENV{AUTHOR} if exists $ENV{AUTHOR};
-$author = $ENV{AUTHOR_NAME} if exists $ENV{AUTHOR_NAME};
-my $email   = '{:EMAIL:}';
-$email = $ENV{HOME_EMAIL} if exists $ENV{HOME_EMAIL};
-$email = $ENV{WORK_EMAIL} if exists $ENV{WORK_EMAIL};
-$email = $ENV{EMAIL} if exists $ENV{EMAIL};
+my $author = '';
+$author = $ENV{AUTHOR_NAME} if $author eq '' and exists $ENV{AUTHOR_NAME};
+$author = $ENV{AUTHOR}      if $author eq '' and exists $ENV{AUTHOR};
+$author = $ENV{NAME}        if $author eq '' and exists $ENV{NAME};
+$author = $ENV{USER}        if $author eq '' and exists $ENV{USER};
+$author = '{:AUTHOR:}' if $author eq '';
+my $email = '';
+$email = $ENV{HOME_EMAIL} if $email eq '' and exists $ENV{HOME_EMAIL};
+$email = $ENV{WORK_EMAIL} if $email eq '' and exists $ENV{WORK_EMAIL};
+$email = $ENV{EMAIL}      if $email eq '' and exists $ENV{EMAIL};
+$email   = '{:EMAIL:}'    if $email eq '';
 my $yaml =
 "---
-title: ${title};
+title: ${title}
 subject: ${subject}
 author: ${author}
 contacts: ${email}
