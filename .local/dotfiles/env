@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# Must source ~/.local/dotfiles/functions first
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [[ ${SOURCED} == 0 ]]; then
+  echo "Don't run $0, source it" >&2
+  exit 1
+fi
 
+# Must source ~/.local/dotfiles/functions first
 export DID_FUNCTIONS
 if [[ ${DID_FUNCTIONS} != 1 ]]; then
   TRY=~/.local/dotfiles/functions
@@ -45,6 +50,7 @@ function portable-env() {
   SCREENDIR=~/.screen
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   SYSTEMC_SRC="${PSCR}/src/systemc"
+  # Note: (Pre/App)end_path functions only append if the directory exists
   Prepend_path PATH "${HOME}/.platformio/penv/bin"
   Prepend_path PATH ~/".rvm/bin"
   Prepend_path PATH "/sbin"
@@ -56,7 +62,12 @@ function portable-env() {
   Prepend_path PATH "/opt/local/sbin"
   Prepend_path PATH "/opt/local/bin"
   Prepend_path PATH "/cocalc/bin"
+  Prepend_path PATH "${HOME}/go/bin"
+  Prepend_path PATH "${HOME}/.cargo/bin"
+  Prepend_path PATH "${HOME}/.lmstudio/bin"
+  Prepend_path PATH "/opt/local/libexec/gnubin"
   Prepend_path PATH "/opt/homebrew/opt/ccache/libexec"
+  Prepend_path PATH "/opt/homebrew/opt/zip/bin"
   Prepend_path PATH "/opt/homebrew/sbin"
   Prepend_path PATH "/opt/homebrew/bin"
   Prepend_path PATH "${HOME}/.local/usr/local/bin"
@@ -84,6 +95,8 @@ function portable-env() {
     EDITOR\
     FAVS\
     LESS\
+    LESSOPEN\
+    PYGMENTIZE_STYLE\
     VISUAL\
     WHOME\
 
@@ -99,6 +112,10 @@ function portable-env() {
 
   # Affect applications
   LESS="-afrMRXj4x4"
+  if builtin command -v "pygmentize" 1>/dev/null; then
+    LESSOPEN="| pygmentize -g %s"
+    PYGMENTIZE_STYLE="paraiso-dark"   
+  fi
   CMAKE_VERSION="3.19"
   CMAKE_BUILD="7"
   # Change following if have and prefer clang
