@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+#
+#$Info: mk - Make that looks to parents for the makefile. $
+
+#-------------------------------------------------------------------------------
+function Realpath()
+{
+  if [[ $# == 0 ]]; then set - .; fi
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+#-------------------------------------------------------------------------------
+function FindFirst()
+{
+  local f p
+  for f in "$@"; do
+    if [[ -r "${f}" ]]; then
+      p="$(Realpath "${f}")"
+      printf "%s\n" "${p}"
+      return 0
+    fi
+  done
+  printf "\n"
+  return 1
+}
+
+function Report_fatal()
+{
+  local CFATAL="\033[1;91m" CMESG="\033[1;95m" NONE="\033[0m"
+  local FMT="${CFATAL}FATAL: ${CMESG}%s${NONE}\n"
+  # shellcheck disable=SC2059
+  printf "${FMT}" "${*}" 1>&2
+}
+
+#-------------------------------------------------------------------------------
+function Make()
+{
+  local MAKE CMAKE BUILD CFATAL="\033[1;91m" CINFO="\033[1;96m" NONE="\033[0m"
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+  local FMT="
+${CINFO}
+NAME
+----
+
+mk - Make that looks to parents for the makefile. 
+
+SYNOPSIS
+--------
+mk TARGETS
+mk --help|-h
+
+${NONE}
+"
+    # shellcheck disable=SC2059
+    printf "${FMT}"
+    return 0
+  fi
+  MAKE="$(builtin command -v gmake)"
+  if [[ -z "${MAKE}" ]]; then
+    MAKE="$(builtin command -v make)"
+  fi
+  if [[ -z "${MAKE}" ]]; then
+    Report_fatal "Unable to locate executable for make"
+    return 1
+  fi
+  CMAKE="$(builtin command -v cmake)"
+  BUILD="$(builtin command -v build)"
+
+  local ORIGIN HERE FOUND=""
+  HERE="$(pwd)"
+  ORIGIN="${HERE}"
+  while [[ -z "${FOUND}" ]]; do
+    FOUND="$(FindFirst GNUmakefile Makefile makefile)"
+    if [[ -n "${FOUND}" ]]; then
+      break
+    fi
+    cd .. 1>/dev/null || return 1
+    HERE="$(pwd)"
+    if [[ "${HERE}" == "/" ]]; then
+      Report_fatal "FATAL: Unable to locate makefile"
+      return 1
+    fi
+  done
+  cd "${ORIGIN}" 1>/dev/null || return 1
+
+  local ARG NAH=0
+  local -a ARGS=()
+  for ARG in "$@"; do
+    if [[ "${ARG}" == "-n" ]]; then
+      NAH=1
+    else
+      ARGS=( "${ARGS[@]}" "${ARG}" )
+    fi
+  done
+  if [[ ${NAH} == 1 ]]; then
+    local FMT="${CINFO}%% %s -f '%s' %s${NONE}\n"
+    # shellcheck disable=SC2059
+    printf "${FMT}" "${MAKE}" "${FOUND}" "${ARGS[*]}" 
+    return 0
+  fi
+
+  if [[ -r CMakeLists.txt ]]; then
+    if [[ -n "${BUILD}" ]]; then
+      "${BUILD}" -test "$@" -DORIGIN="${ORIGIN}"
+    elif [[ -n "${CMAKE}" ]]; then
+      "${CMAKE}" "$@" -DORIGIN="${ORIGIN}"
+    else
+      Report_fatal "FATAL: Missing build script"
+      return 1
+    fi
+  else
+    "${MAKE}" -f "${FOUND}" "$@" ORIGIN="${ORIGIN}"
+  fi
+}
+
+#-------------------------------------------------------------------------------
+Make "$@"

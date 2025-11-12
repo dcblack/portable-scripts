@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+#
+#$Info: ubuntu-screensaver - control the screensaver on Ubuntu. $
+
+HELP_TEXT='
+
+# Name
+
+ubuntu-screensaver - control the screensaver on Ubuntu. $
+
+# Synopsis
+
+```bash
+ubuntu-screensaver disable|enable|except-saving
+```
+'
+
+case "$1" in
+  disable)
+    gsettings reset org.gnome.desktop.lockdown disable-lock-screen
+    ;;
+  enable)
+    gsettings set org.gnome.desktop.lockdown disable-lock-screen true
+    ;;
+  except-saving)
+    gsettings set org.gnome.desktop.screensaver lock-enabled false
+    ;;    
+  *)
+    if builtin command -v glow; then
+      glow -p <<< "${HELP_TEXT}"
+    else
+      echo "${HELP_TEXT}"
+    fi
+    ;;
+esac
+
+exit 0
+
+MARKDOWN='
+Disable Screen Saver Ubuntu 24.04
+
+To disable the screen saver and prevent the screen from blanking or dimming in
+Ubuntu 24.04, you can use several methods depending on your desktop environment
+and specific needs.
+
+For the GNOME desktop environment, which is standard on Ubuntu 24.04, you can
+disable the screen saver and related power-saving features using the `gsettings`
+command. Run the following commands in a terminal:
+
+```bash
+
+# to disable automatic screen locking.
+gsettings set org.gnome.desktop.screensaver lock-enabled false
+
+# to prevent the screensaver from activating when idle.
+gsettings set org.gnome.desktop.screensaver idle-activation-enabled false
+
+# to ensure the screen brightness does not dim when idle 
+gsettings set org.gnome.settings-daemon.plugins.power idle-brightness 100
+```
+
+Additionally, you can disable the DPMS (Display Power Management Signaling) and
+screen saver features directly using the `xset` command:
+
+```bash
+
+# disables energy-saving features like screen dimming and turning off.
+xset -dpms
+
+# disables the screen saver.
+xset s off
+
+# combined
+xset -dpms s off
+```
+
+If the above commands do not resolve the issue, it might be due to a power
+profile setting. Check your current power profile with `powerprofilesctl get`.
+If it is set to "Power Saver," change it to "Performance" using
+`powerprofilesctl set performance`  This can prevent aggressive dimming
+behavior.
+
+For a more permanent solution, you can add the `xset` commands to your startup
+applications to ensure they run every time you log in. Open the Startup
+Applications preferences, add a new entry, and set the command to `xset -dpms s
+off` 
+
+If you are using a different desktop environment like Ubuntu MATE or Xubuntu,
+the process may vary. For example, in Xubuntu, you can disable the screensaver
+by setting the Display Mode to "Disable Screensaver" in the Display Settings  In
+Ubuntu MATE, you can use `gsettings set org.mate.screensaver
+idle-activation-enabled false` or modify the `cycle-delay` setting to a high
+value like 240 minutes to prevent the screen from blanking 
+
+If you are experiencing persistent issues, it may be necessary to check for
+specific driver settings or BIOS configurations affecting screen brightness and
+dimming behavior 
+'

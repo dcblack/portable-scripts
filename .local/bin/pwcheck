@@ -4,34 +4,110 @@
 
 function Pwcheck()
 {
-  local FILTEROUT='password' OPT='' KIND=crack
+  local TOOL_NAME="pwcheck"
+  local TOOL_VERSION=1.0
+  local HELP_TEXT="
+Name
+----
+
+${TOOL_NAME}
+
+Synopsis
+--------
+
+${TOOL_NAME} [OPTIONS]
+
+Options
+-------
+
+| Long       | Short | Description                    |
+| ---------- | ----- | ------------------------------ |
+| --crack    | -k    | use crack-lib algorithm        |
+| --generate | -g    | generate passwords             |
+| --help     | -h    | show this text                 |
+| --number=# | -n #  | specify a count                |
+| --quality  | -q    | use zxcvbn algorithm (default) |
+| --verbose  | -v    | reveals password               |
+| --version  | -V    | show version                   |
+
+License
+-------
+
+Apache 2.0
+"
+  local KIND=quality FILTEROUT='password' VERBOSE=0 N=4
+  local -a CMND
   while [[ "$1" =~ ^- ]]; do
-    OPT="$1"; shift
     case "$1" in
+      --help|-help|-h)
+        printf "%s\n" "${HELP_TEXT}"
+        return 0
+        ;;
+      --version|-V)
+        printf "%s version %s\n" "${TOOL_NAME}" "${TOOL_VERSION}"
+        return 0
+        ;;
       --verbose|-verbose|-v)
+        VERBOSE=1
         FILTEROUT="xxxxxxx"
         ;;
-      --crack)
+      --generate|-gen|-g)
+        KIND="generate"
+        ;;
+      --number=[1-9]|--number=[1-9][0-9])
+        N="${1/*=}"
+        ;;
+      -[1-9]|-[1-9][0-9])
+        N=$(( -$1 ))
+        ;;
+      -n|-[1-9])
+        N="$2"
+        shift
+        ;;
+      --crack|-k)
         KIND="crack"
         ;;
-      --zxcvbn|-z)
-        KIND=zxcvbn
+      --quality|--zxcvbn|-z)
+        KIND=quality
         ;;
       *)
+        printf "Error: Unknown option %s\n" "$1"
+        return 1
         ;;
     esac
+    shift
   done
+  case "${KIND}" in
+    quality)  CMND=( "zxcvbn" ) ;;
+    crack)    CMND=( "cracklib-check" ) ;;
+    generate)
+      ;;
+    *) i      println "No algorithm chosen\n" return 1 ;;
+  esac
+
+  if [[ ${VERBOSE} == 1 ]]; then
+    printf "Info: %s %s\n" "${KIND}" "${CMND[*]}"
+  fi
 
   case "${KIND}" in
     quality)
+      builtin command -v "${CMND[0]}" 1>/dev/null 2>&1 || ( printf "Error: Missing %s\n" "${CMND[0]}" && return 1 )
       #shellcheck disable=SC2312
-      zxcvbn |\
+      "${CMND[0]}" |\
         perl -pe "\$_=qq{} if m{\"${FILTEROUT}\":}" |\
         perl -ne 'next unless m{(password|per_second|score|warning)":};s{"}{}g;s{^ +}{};s{,$}{};print'
       ;;
 
     crack)
-      cracklib-check --no-echo
+      builtin command -v "${CMND[0]}" 1>/dev/null 2>&1 || ( printf "Error: Missing %s\n" "${CMND[0]}" && return 1 )
+      "${CMND[0]}" --no-echo
+      ;;
+    generate)
+      "${CMND[@]}"
+      #shellcheck disable=SC2312
+      LC_ALL=C grep -Ex '[a-z]{3,9}' /usr/share/dict/words |\
+        shuf --random-source=/dev/urandom -n "${N}" |\
+        fmt | sed -e 's/ /-/g'
       ;;
     *)
       echo "Error: no such kind" 1>&2
