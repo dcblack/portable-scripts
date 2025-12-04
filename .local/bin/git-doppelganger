@@ -1,0 +1,549 @@
+#!/usr/bin/env python3
+"""
+git-doppelganger: create a clean, one-commit clone of a Git repository.
+
+Syntax:
+    git-doppelganger [--help|--version]
+    git-doppelganger [--verbose] [git_options] URL [NAME]
+
+Examples:
+    git-doppelganger git@github.com:dcblack/example.git joes-example
+        # runs: git clone git@github.com:dcblack/example.git joes-example
+
+    git-doppelganger --depth 1 git@github.com:dcblack/example.git .
+        # runs: git clone --depth 1 git@github.com:dcblack/example.git .
+
+Behavior:
+    - NAME, if given, is used literally as the clone destination (like git clone).
+    - If NAME is omitted, the destination is derived from the URL (like git clone).
+    - After cloning, the script:
+        * Gathers metadata
+        * Writes VERSION.yml
+        * Removes .git
+        * Re-initializes a fresh repo with one commit and (optionally) a tag
+"""
+
+from __future__ import annotations
+
+import shutil
+import socket
+import subprocess
+import sys
+from datetime import datetime
+from getpass import getuser
+from pathlib import Path
+from typing import Any, Iterable, List, Optional, Tuple
+
+# ---------------------------------------------------------------------------
+# Minimum Python version check
+# ---------------------------------------------------------------------------
+
+MIN_MAJOR = 3
+MIN_MINOR = 8  # required for pathlib.Path.unlink(missing_ok=True), etc.
+
+if sys.version_info < (MIN_MAJOR, MIN_MINOR):
+    print(
+        f"ERROR: git-doppelganger requires Python {MIN_MAJOR}.{MIN_MINOR} or newer. "
+        f"You are running {sys.version.split()[0]}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+VERSION = "0.4.0"
+
+USAGE = """\
+Usage:
+  git-doppelganger [--help|--version]
+  git-doppelganger [--verbose] [git_options] URL [NAME]
+
+Semantics:
+  - [git_options], URL, NAME follow git-clone style.
+  - NAME is interpreted as:
+      * omitted: clone into <repo-basename> (like git clone default)
+      * given:   clone into NAME exactly (including "." for current dir)
+
+Actions:
+  a. Obtain a fresh clone:
+       git clone [git_options] URL DEST
+  b. Gather information:
+       - current date & time (YEAR-MM-DD HH:MM)
+       - hostname & username
+       - current git BRANCH
+       - most recent git TAG on the current branch
+       - git HASH of the repository
+       - list of all git TRACKED files
+       - list of all SUBMODULES and their points of origin (if any)
+  c. Record all information in VERSION.yml (YAML)
+  d. Remove the original .git directory
+  e. git init -b BRANCH
+  f. Add VERSION.yml to the repo
+  g. Add all previously tracked files to the repo
+  h. Ensure submodule working trees are present (initialized)
+  i. Commit as:
+       "initial from {TAG} of {BRANCH} from {URL}"
+  j. Tag using TAG (if it exists)
+
+Notes:
+  - Requires Git to be installed and on your PATH.
+  - Result is a single-commit snapshot without original history.
+"""
+
+
+class SubmoduleInfo:
+    def __init__(
+        self,
+        name: str,
+        path: str,
+        url: Optional[str],
+        commit: Optional[str],
+    ) -> None:
+        self.name = name
+        self.path = path
+        self.url = url
+        self.commit = commit
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+
+    if not argv or argv[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0
+
+    if argv[0] == "--version":
+        print(f"git-doppelganger {VERSION}")
+        return 0
+
+    verbose = False
+    if argv and argv[0] in ("--verbose", "-v"):
+        verbose = True
+        argv = argv[1:]
+
+    if not argv:
+        print("git-doppelganger: missing URL", file=sys.stderr)
+        print(USAGE, file=sys.stderr)
+        return 1
+
+    try:
+        git_options, url, name = split_git_args(argv)
+    except ValueError as exc:
+        print(f"git-doppelganger: {exc}", file=sys.stderr)
+        print(USAGE, file=sys.stderr)
+        return 1
+
+    if verbose:
+        print(f"[git-doppelganger] URL: {url}")
+        if name is not None:
+            print(f"[git-doppelganger] NAME: {name}")
+        if git_options:
+            print(f"[git-doppelganger] git clone options: {git_options}")
+
+    # Determine destination directory and absolute path where we'll work
+    dest_name, repo_dir = determine_clone_target(url, name)
+
+    if verbose:
+        print(f"[git-doppelganger] clone destination: {dest_name}")
+        print(f"[git-doppelganger] repo directory: {repo_dir}")
+
+    # Step a: Obtain a fresh clone
+    clone_cmd = ["git", "clone", *git_options, url, dest_name]
+    run(clone_cmd, verbose=verbose, cwd=None)
+
+    if not repo_dir.is_dir():
+        print(
+            f"git-doppelganger: repository directory not found: {repo_dir}",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Step b: Gather information inside the clone
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    host = socket.gethostname()
+    user = getuser()
+
+    branch = run_git(
+        ["rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=repo_dir,
+        verbose=verbose,
+    ).strip()
+
+    commit = run_git(
+        ["rev-parse", "HEAD"],
+        cwd=repo_dir,
+        verbose=verbose,
+    ).strip()
+
+    # Most recent tag reachable from current HEAD (may fail if no tags)
+    tag: Optional[str] = None
+    try:
+        tag = run_git(
+            ["describe", "--tags", "--abbrev=0"],
+            cwd=repo_dir,
+            verbose=verbose,
+        ).strip()
+    except subprocess.CalledProcessError:
+        if verbose:
+            print("[git-doppelganger] No tags found on current branch.")
+
+    # Ensure submodules are populated so their working trees are present
+    ensure_submodules_populated(repo_dir, verbose=verbose)
+
+    # Gather tracked files
+    tracked_output = run_git(
+        ["ls-files"],
+        cwd=repo_dir,
+        verbose=verbose,
+    )
+    tracked_files = [line for line in tracked_output.splitlines() if line.strip()]
+
+    # Gather submodule metadata for VERSION.yml
+    submodules = collect_submodules(repo_dir, verbose=verbose)
+
+    # Step c: Write VERSION.yml
+    version_data: dict[str, Any] = {
+        "created_at": created_at,
+        "host": host,
+        "user": user,
+        "source": {
+            "url": url,
+            "branch": branch,
+            "tag": tag,
+            "commit": commit,
+        },
+        "tracked_files": tracked_files,
+        "submodules": [
+            {
+                "name": sm.name,
+                "path": sm.path,
+                "url": sm.url,
+                "commit": sm.commit,
+            }
+            for sm in submodules
+        ],
+    }
+
+    version_path = repo_dir / "VERSION.yml"
+    write_yaml(version_path, version_data)
+    if verbose:
+        print("[git-doppelganger] Wrote VERSION.yml with metadata.")
+
+    # Step d: Remove the original .git directory
+    git_dir = repo_dir / ".git"
+    if git_dir.exists():
+        if git_dir.is_dir():
+            if verbose:
+                print(f"[git-doppelganger] Removing {git_dir}")
+            shutil.rmtree(git_dir)
+        else:
+            if verbose:
+                print(f"[git-doppelganger] Removing git file {git_dir}")
+            git_dir.unlink(missing_ok=True)
+
+    # Step e: git init -b BRANCH
+    run_git(["init", "-b", branch], cwd=repo_dir, verbose=verbose)
+
+    # Step f & g: Add VERSION.yml and all previously tracked files
+    paths_to_add = set(tracked_files)
+    paths_to_add.add("VERSION.yml")
+
+    add_paths_in_batches(sorted(paths_to_add), repo_dir, verbose=verbose)
+
+    # Step h: submodule working trees are already there and included by adds
+    if verbose and submodules:
+        print("[git-doppelganger] Submodule working trees included in snapshot.")
+
+    # Step i: Commit message
+    if tag:
+        message = f"initial from {tag} of {branch} from {url}"
+    else:
+        message = f"initial of {branch} from {url}"
+
+    run_git(["commit", "-m", message], cwd=repo_dir, verbose=verbose)
+
+    # Step j: Tag using TAG (if it exists)
+    if tag:
+        run_git(["tag", tag], cwd=repo_dir, verbose=verbose)
+        if verbose:
+            print(f"[git-doppelganger] Created tag {tag}")
+    else:
+        if verbose:
+            print("[git-doppelganger] No tag created (no source tag found).")
+
+    if verbose:
+        print("[git-doppelganger] Done.")
+    return 0
+
+
+def split_git_args(args: List[str]) -> Tuple[List[str], str, Optional[str]]:
+    """
+    Split `[git_options] URL [NAME]` from remaining args in a way
+    that is close to git clone semantics.
+
+    Heuristic:
+      - If only 1 arg -> URL
+      - If 2 args -> URL NAME
+      - If >=3:
+          last two are URL/NAME; everything before that is git_options.
+    """
+    if not args:
+        raise ValueError("missing arguments")
+
+    if len(args) == 1:
+        return [], args[0], None
+
+    if len(args) == 2:
+        return [], args[0], args[1]
+
+    git_options = args[:-2]
+    url = args[-2]
+    name = args[-1]
+    return git_options, url, name
+
+
+def repo_basename_from_url(url: str) -> str:
+    """
+    Derive the default directory name from a git URL, like git clone does.
+    """
+    url_no_trailing = url.rstrip("/")
+
+    # Strip query / fragment (for https)
+    for sep in ("?", "#"):
+        if sep in url_no_trailing:
+            url_no_trailing = url_no_trailing.split(sep, 1)[0]
+
+    # scp-like URL: user@host:path/to/repo.git
+    if ":" in url_no_trailing and "://" not in url_no_trailing:
+        tail = url_no_trailing.split(":", 1)[1]
+        base = tail.split("/")[-1]
+    else:
+        base = url_no_trailing.split("/")[-1]
+
+    if base.endswith(".git"):
+        base = base[:-4]
+    return base or "repo"
+
+
+def determine_clone_target(url: str, name: Optional[str]) -> Tuple[str, Path]:
+    """
+    Decide the destination directory name for git clone and
+    compute the absolute repo_dir path.
+
+    Rules:
+      - name is None  -> <repo-basename>
+      - name given    -> name literally (including ".")
+    """
+    base = repo_basename_from_url(url)
+
+    if name is None:
+        dest = base
+    else:
+        dest = name
+
+    if dest == ".":
+        repo_dir = Path.cwd().resolve()
+    else:
+        repo_dir = (Path.cwd() / dest).resolve()
+
+    return dest, repo_dir
+
+
+def run(
+    cmd: List[str],
+    cwd: Optional[Path],
+    verbose: bool = False,
+    check: bool = True,
+):
+    if verbose:
+        print("+", " ".join(cmd), file=sys.stderr)
+    proc = subprocess.run(
+        cmd,
+        cwd=str(cwd) if cwd is not None else None,
+        text=True,
+        capture_output=True,
+    )
+    if verbose and proc.stdout:
+        sys.stdout.write(proc.stdout)
+    if proc.stderr and (verbose or proc.returncode != 0):
+        sys.stderr.write(proc.stderr)
+    if check and proc.returncode != 0:
+        raise SystemExit(proc.returncode)
+    return proc
+
+
+def run_git(
+    args: List[str],
+    cwd: Path,
+    verbose: bool = False,
+    check: bool = True,
+) -> str:
+    proc = run(["git", *args], cwd=cwd, verbose=verbose, check=check)
+    return proc.stdout.strip()
+
+
+def ensure_submodules_populated(repo_dir: Path, verbose: bool = False) -> None:
+    # Initialize submodules (no-op if none)
+    try:
+        run_git(
+            ["submodule", "update", "--init", "--recursive"],
+            cwd=repo_dir,
+            verbose=verbose,
+            check=False,
+        )
+    except SystemExit:
+        if verbose:
+            print(
+                "[git-doppelganger] Warning: failed to fully initialize submodules.",
+                file=sys.stderr,
+            )
+
+
+def collect_submodules(repo_dir: Path, verbose: bool = False) -> List[SubmoduleInfo]:
+    gitmodules = repo_dir / ".gitmodules"
+    if not gitmodules.exists():
+        return []
+
+    submodules: dict[str, SubmoduleInfo] = {}
+
+    # --- Parse submodule paths -------------------------------------------------
+    try:
+        output = run_git(
+            ["config", "-f", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$"],
+            cwd=repo_dir,
+            verbose=verbose,
+            check=False,
+        )
+    except Exception:
+        output = ""
+
+    for line in output.splitlines():
+        fields = line.strip().split(None, 1)
+        if len(fields) != 2:
+            continue
+        key, path = fields
+        parts = key.split(".")
+        if len(parts) < 3:
+            continue
+
+        name = ".".join(parts[1:-1])
+        submodules[name] = SubmoduleInfo(
+            name=name,
+            path=path.strip(),
+            url=None,
+            commit=None,
+        )
+
+    # --- Parse submodule URLs --------------------------------------------------
+    try:
+        url_output = run_git(
+            ["config", "-f", ".gitmodules", "--get-regexp", r"^submodule\..*\.url$"],
+            cwd=repo_dir,
+            verbose=verbose,
+            check=False,
+        )
+    except Exception:
+        url_output = ""
+
+    for line in url_output.splitlines():
+        fields = line.strip().split(None, 1)
+        if len(fields) != 2:
+            continue
+        key, url_value = fields
+        parts = key.split(".")
+        if len(parts) < 3:
+            continue
+
+        name = ".".join(parts[1:-1])
+        info = submodules.get(name)
+        if info is None:
+            # Create an entry if the path line was missing
+            submodules[name] = SubmoduleInfo(
+                name=name,
+                path=name,  # best-effort fallback
+                url=url_value.strip(),
+                commit=None,
+            )
+        else:
+            info.url = url_value.strip()
+
+    # --- Record submodule commit SHAs -----------------------------------------
+    for info in submodules.values():
+        try:
+            ls_tree = run_git(
+                ["ls-tree", "HEAD", info.path],
+                cwd=repo_dir,
+                verbose=verbose,
+                check=False,
+            )
+        except Exception:
+            ls_tree = ""
+
+        if ls_tree:
+            parts = ls_tree.split()
+            if len(parts) >= 3:
+                info.commit = parts[2]
+
+    return list(submodules.values())
+
+
+def add_paths_in_batches(
+    paths: Iterable[str],
+    repo_dir: Path,
+    verbose: bool = False,
+    batch_size: int = 500,
+) -> None:
+    batch: List[str] = []
+    for p in paths:
+        batch.append(p)
+        if len(batch) >= batch_size:
+            run_git(["add", *batch], cwd=repo_dir, verbose=verbose)
+            batch.clear()
+    if batch:
+        run_git(["add", *batch], cwd=repo_dir, verbose=verbose)
+
+
+def yaml_escape(value: Any) -> str:
+    if value is None:
+        return "null"
+    s = str(value)
+    s = s.replace("'", "''")
+    return f"'{s}'"
+
+
+def write_yaml(path: Path, data: dict[str, Any]) -> None:
+    with path.open("w", encoding="utf-8") as f:
+        dump_yaml(data, f)
+
+
+def dump_yaml(value: Any, out) -> None:
+    """
+    Minimal YAML emitter for:
+      - dict[str, Any]
+      - list[Any]
+      - scalars (str, int, None)
+    """
+    def _dump(val: Any, indent: int) -> None:
+        prefix = " " * indent
+        if isinstance(val, dict):
+            for k, v in val.items():
+                key = str(k)
+                if isinstance(v, (dict, list)):
+                    out.write(f"{prefix}{key}:\n")
+                    _dump(v, indent + 2)
+                else:
+                    out.write(f"{prefix}{key}: {yaml_escape(v)}\n")
+        elif isinstance(val, list):
+            for item in val:
+                if isinstance(item, (dict, list)):
+                    out.write(f"{prefix}-\n")
+                    _dump(item, indent + 2)
+                else:
+                    out.write(f"{prefix}- {yaml_escape(item)}\n")
+        else:
+            out.write(f"{prefix}{yaml_escape(val)}\n")
+
+    _dump(value, 0)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
