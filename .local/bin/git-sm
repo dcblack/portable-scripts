@@ -14,7 +14,7 @@ Synopsis
 --------
 
 ```sh
-TOOLNAME --help
+TOOLNAME -help
 TOOLNAME [OPTIONS] COMMAND...
 ```
 
