@@ -2,16 +2,36 @@
 """
 git-doppelganger: create a clean, one-commit clone of a Git repository.
 
-Syntax:
+Copyright 2025 Doulos Inc. info@doulos.com
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+Syntax: (almost identical to git clone)
     git-doppelganger [--help|--version]
     git-doppelganger [--verbose] [git_options] URL [NAME]
+
+Purpose:
+    To create a working repository that is completely clean of any history or
+    secrets in the original repository. It also removes branches and old tags.
+    This is useful for distribution of code used in training where the students
+    only need the starting point, and the ability to use git to track their
+    progress.
 
 Examples:
     git-doppelganger git@github.com:dcblack/example.git joes-example
         # runs: git clone git@github.com:dcblack/example.git joes-example
 
-    git-doppelganger --depth 1 git@github.com:dcblack/example.git .
-        # runs: git clone --depth 1 git@github.com:dcblack/example.git .
+    git-doppelganger -b exercises git@github.com:dcblack/example.git .
+        # runs: git clone -b exercises git@github.com:dcblack/example.git .
 
 Behavior:
     - NAME, if given, is used literally as the clone destination (like git clone).
@@ -147,7 +167,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"[git-doppelganger] repo directory: {repo_dir}")
 
     # Step a: Obtain a fresh clone
-    clone_cmd = ["git", "clone", *git_options, url, dest_name]
+    extra_clone_opts: list[str] = []
+    if not any(
+        opt == "--depth" or opt.startswith("--depth=")
+        for opt in git_options
+    ):
+        extra_clone_opts.extend(["--depth", "2"])
+
+    clone_cmd = ["git", "clone", *extra_clone_opts, *git_options, url, dest_name]
+    
     run(clone_cmd, verbose=verbose, cwd=None)
 
     if not repo_dir.is_dir():
@@ -259,7 +287,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     else:
         message = f"initial of {branch} from {url}"
 
-    run_git(["commit", "-m", message], cwd=repo_dir, verbose=verbose)
+    run_git(["commit", "-m", message, "-a"], cwd=repo_dir, verbose=verbose)
 
     # Step j: Tag using TAG (if it exists)
     if tag:
@@ -496,10 +524,10 @@ def add_paths_in_batches(
     for p in paths:
         batch.append(p)
         if len(batch) >= batch_size:
-            run_git(["add", *batch], cwd=repo_dir, verbose=verbose)
+            run_git(["add", "-f", *batch], cwd=repo_dir, verbose=verbose)
             batch.clear()
     if batch:
-        run_git(["add", *batch], cwd=repo_dir, verbose=verbose)
+        run_git(["add", "-f", *batch], cwd=repo_dir, verbose=verbose)
 
 
 def yaml_escape(value: Any) -> str:
