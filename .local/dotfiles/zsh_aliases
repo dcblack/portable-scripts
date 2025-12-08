@@ -56,8 +56,9 @@ alias myip='ipconfig getifaddr en0'
 alias font-sample="echo '#=0123456789_=-^+@auvwxy/\B&8b6ijl1|L_?9gqQO0op2Z75S'"
 alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
 
-alias week='date +%W'
+alias week='date +%V'
 alias tab='it tab'
+alias tc='tab-color'
 alias flow=git-flow
 alias changed='git changed'
 alias %=_do
