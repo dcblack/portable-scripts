@@ -2,6 +2,7 @@
 #
 # Install GoogleTest under current project.
 # IMPORTANT; Must be run inside project git repository.
+VERSION=1.2
 if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
   cat <<'HELPTEXT'
 Name
@@ -23,6 +24,9 @@ Must be run inside project git repository.
 
 HELPTEXT
   exit 0;
+elif [[ "$1" =~ ^-{1,2}version$ ]]; then
+  echo "build-gtest version ${VERSION}"
+  exit 0;
 fi
 
 
@@ -41,7 +45,7 @@ function Realpath() {
 
 BUILD_PATH="$(Realpath "$0")"
 echo "Attempting to build ${TOOL_DESC} using ${BUILD_PATH}"
-INSTALL_DIR="$(find_extern -q)"
+INSTALL_DIR="$(find_extern -s)"
 if [[ -z "${INSTALL_DIR}" ]]; then
   Report_fatal "Unable to locate required extern/include directory";
   return 1

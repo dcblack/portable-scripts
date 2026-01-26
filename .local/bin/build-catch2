@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+VERSION=1.2
+if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
   cat <<'HELPTEXT'
 Name
 ----
@@ -20,6 +21,9 @@ IMPORTANT
 Must be run inside project git repository.
 
 HELPTEXT
+  exit 0;
+elif [[ "$1" =~ ^-{1,2}version$ ]]; then
+  echo "build-catch2 version ${VERSION}"
   exit 0;
 fi
 
@@ -49,7 +53,7 @@ source "$SCRIPTDIR/Essential-IO"
 
 TOOL_PATH="$(Realpath "$0")"
 Report_info "Attempting to build ${TOOL_DESC} using ${TOOL_PATH}"
-INSTALL_DIR="$(find_extern -q)"
+INSTALL_DIR="$(find_extern -s)"
 if [[ -z "${INSTALL_DIR}" ]]; then
   Report_fatal "Unable to locate required extern/include directory";
   return 1

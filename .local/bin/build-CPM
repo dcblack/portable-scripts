@@ -3,7 +3,9 @@
 #$Info: build-CPM - Install CPM, the CMake Package Manager, under the current project. $
 #
 # IMPORTANT; Must be run inside project git repository.
-if [[ "$!" =~ ^-{1,2}h(elp)?$ ]]; then
+TOOL_NAME="build-CPM"
+TOOL_VERS=1.2
+if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
   cat <<'HELPTEXT'
 Name
 ----
@@ -23,6 +25,9 @@ IMPORTANT
 Must be run inside project git repository.
 
 HELPTEXT
+  exit 0;
+elif [[ "$1" =~ ^-{1,2}version$ ]]; then
+  echo "${TOOL_NAME} version ${TOOL_VERS}"
   exit 0;
 fi
 
@@ -62,7 +67,7 @@ function Build_CPM()
 {
   TOOL_PATH="$(Realpath "$0")"
   Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
-  INSTALL_DIR="$(find_extern -q)"
+  INSTALL_DIR="$(find_extern -s)"
   if [[ -z "${INSTALL_DIR}" ]]; then
     Report_fatal "Unable to locate required extern/include directory" ;
     return 1

@@ -2,6 +2,7 @@
 #
 
 export VERBOSITY
+VERSION=1.2
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
     -h|-help|--help)
@@ -31,6 +32,10 @@ HELPTEXT
       ;;
     -v|--verbose)
       VERBOSITY=1
+      ;;
+    --version|-version)
+      echo "build-crc version ${VERSION}"
+      exit 0
       ;;
     *)
       ;;
@@ -66,7 +71,7 @@ source "$SCRIPTDIR/Essential-IO"
 #
 TOOL_PATH="$(Realpath "$0")"
 Report_info "Attempting to build ${LIBNAME} using ${TOOL_PATH}"
-INSTALL_DIR="$(find_extern -q)"
+INSTALL_DIR="$(find_extern -s)"
 if [[ -z "${INSTALL_DIR}" ]]; then
   Report_fatal "Unable to locate required extern/include directory" ;
   return 1

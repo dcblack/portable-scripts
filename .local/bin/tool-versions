@@ -8,6 +8,8 @@
 # - perl5
 
 export CC CXX
+TOOL_NAME="$0"
+TOOL_VERS=1.2
 
 function Tool_versions()
 {
@@ -18,9 +20,10 @@ function Tool_versions()
   QUIET=0
   TOOLS=()
   # Color support
-  local CRED CGRN="" CCYN="" BOLD="" NONE=""
+  local CRED="" CGRN="" CYLW="" CBLU="" CMAG="" CCYN="" BOLD="" NONE=""
   if [[ "${NOCOLOR}" != 1 ]]; then
-    CRED="[91m" CGRN="[92m" CCYN="[93m" BOLD="[1m" NONE="[0m"
+    # shellcheck disable=SC2034
+    CRED="[91m" CGRN="[92m" CYLW="[93m" CBLU="[94m" CMAG="[95m" CCYN="[96m" BOLD="[1m" NONE="[0m"
   fi
   while [[ $# != 0 ]]; do
     case "$1" in
@@ -64,7 +67,7 @@ EOT
       -l|--loud)    QUIET=0 ;;
       -N|--nocolor) NOCOLOR=1 CRED=""       CGRN=""       BOLD=""      NONE="" ;;
       -q|--quiet)   QUIET=1 ;;
-      -v|--version) echo "version 1.2" ; exit ;;
+      -v|--version) echo "${TOOL_NAME} version ${TOOL_VERS}" ; exit ;;
       -*)           echo "Error: Uknown option: $1"; exit 1 ;;
        *)           TOOLS+=("$1") ;;
     esac
@@ -117,8 +120,11 @@ EOT
   fi
   EXTRAS=(
     ag 
+    build
     clang-format
     clang-tidy
+    find_extern
+    gh
     git
     grep
     "${SED}"
@@ -135,7 +141,7 @@ EOT
   )
 
   if [[ ${EXTRA} == 1 ]]; then
-    TOOLS=("${TOOLS[@]}" "${EXTRAS[@]}")
+    TOOLS+=( "${EXTRAS[@]}" )
   fi
 
   #-------------------------------------------------------------------------------
@@ -246,6 +252,9 @@ EOT
   fi
 
   echo "----------------------------------------"
+  if [[ ${EXTRA} == 0 ]]; then
+    echo "${CCYN}HINT: For more tools use --extras${NONE}"
+  fi
 }
 
 Tool_versions "$@"
