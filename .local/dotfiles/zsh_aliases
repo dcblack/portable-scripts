@@ -56,7 +56,7 @@ alias myip='ipconfig getifaddr en0'
 alias font-sample="echo '#=0123456789_=-^+@auvwxy/\B&8b6ijl1|L_?9gqQO0op2Z75S'"
 alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
 
-alias week='date +%V'
+alias week='if builtin command gdate 2>/dev/null; then gdate +%V; else gate +%V; fi'
 alias tab='it tab'
 alias tc='tab-color'
 alias flow=git-flow
@@ -108,6 +108,7 @@ function viscr()
   ViSrc "$(Firstreal ~/"scripts/$1" "${LOCAL}/scripts/$1")";
 }
 alias vial='ViSrc ~/.zsh_aliases'
+alias viws='ViSrc $cws'
 alias vizsh='ViSrc ~/.zshrc'
 alias vigit='ViSrc ~/.gitconfig'
 alias vissh='ViSrc ~/.ssh/config'
@@ -317,9 +318,13 @@ function Ps()
 function m()
 {
   if [[ "$1" == '-nc' ]]; then
+    Ruler
     env NOCOLOR=1 less "$@"
+    Ruler
   else
+    Ruler -grn
     less "$@"
+    Ruler -red
   fi
 }
 
