@@ -36,6 +36,10 @@ function Report_fatal()
 function Make()
 {
   local MAKE CMAKE BUILD CFATAL="\033[1;91m" CINFO="\033[1;96m" NONE="\033[0m"
+
+  # shellcheck disable=SC2034
+  local BLD="[1m" RED="[91;1m" GRN="[92;1m" YLW="[93;1m" BLU="[94;1m" MAG="[95;1m" CYN="[96;1m" OFF="[0m"
+
   if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
   local FMT="
 ${CINFO}
@@ -46,7 +50,7 @@ mk - Make that looks to parents for the makefile.
 
 SYNOPSIS
 --------
-mk TARGETS
+mk [-n][-v][-D] [--] [TOOL_OPTS] TARGETS
 mk --help|-h
 
 ${NONE}
@@ -83,13 +87,22 @@ ${NONE}
   done
   cd "${ORIGIN}" 1>/dev/null || return 1
 
-  local ARG NAH=0
+  local ARG MK_DEBUG=0 NAH=0 MK_VERBOSE=0
   local -a ARGS=()
-  for ARG in "$@"; do
-    if [[ "${ARG}" == "-n" ]]; then
+  while [[ $# -gt 0 ]]; do
+    ARG="$1"
+    shift
+    if [[ "${ARG}" == "--" ]]; then
+      ARGS+=( "$@" )
+      break
+    elif [[ "${ARG}" == "-D" ]]; then
+      MK_DEBUG=1
+    elif [[ "${ARG}" == "-n" ]]; then
       NAH=1
+    elif [[ "${ARG}" == "-v" ]]; then
+      MK_VERBOSE=1
     else
-      ARGS=( "${ARGS[@]}" "${ARG}" )
+      ARGS+=( "${ARG}" )
     fi
   done
   if [[ ${NAH} == 1 ]]; then
@@ -101,15 +114,20 @@ ${NONE}
 
   if [[ -r CMakeLists.txt ]]; then
     if [[ -n "${BUILD}" ]]; then
-      "${BUILD}" -test "$@" -DORIGIN="${ORIGIN}"
+      "${BUILD}" -test "${ARGS[@]}" -DORIGIN="${ORIGIN}"
     elif [[ -n "${CMAKE}" ]]; then
-      "${CMAKE}" "$@" -DORIGIN="${ORIGIN}"
+      "${CMAKE}" "${ARGS[@]}" -DORIGIN="${ORIGIN}"
     else
       Report_fatal "FATAL: Missing build script"
       return 1
     fi
+  elif [[ $((MK_VERBOSE + MK_DEBUG)) -gt 0 ]]; then
+    if [[ ${MK_VERBOSE} == 1 ]]; then
+      echo "${BLU}% ${CYN}${MAKE} -f ${FOUND} $* ORIGIN=${ORIGIN} MK_VERBOSE=${MK_VERBOSE} MK_DEBUG=${MK_DEBUG}${OFF}"
+    fi
+    "${MAKE}" -f "${FOUND}" "${ARGS[@]}" ORIGIN="${ORIGIN}" MK_VERBOSE="${MK_VERBOSE}" MK_DEBUG="${MK_DEBUG}"
   else
-    "${MAKE}" -f "${FOUND}" "$@" ORIGIN="${ORIGIN}"
+    "${MAKE}" -f "${FOUND}" "${ARGS[@]}" ORIGIN="${ORIGIN}"
   fi
 }
 
