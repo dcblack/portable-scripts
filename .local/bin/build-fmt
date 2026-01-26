@@ -109,7 +109,7 @@ HELPTEXT
 
   # Display information about how this script will run
   printf "\033[1;96m\n"
-  printf "Running ${SCRIPTNAME} v${VERSION} to build "
+  printf "Running %s v%s to build " "${SCRIPTNAME}" "${VERSION}"
   if [[ ${SHARED} == 1 ]]; then printf "shared "; else printf "static "; fi
   if [[ ${PIE} == 1 ]]; then printf "position independent "; fi
   printf "library using "
@@ -134,17 +134,17 @@ HELPTEXT
   # shellcheck disable=SC2250,SC1091
   source "$SCRIPTDIR/Essential-IO"
 
-  local BUILD_PATH HERE WORKTREE_DIR REPO_DIR BUILD_DIR INSTALL_DIR
-  BUILD_PATH="$(Realpath "$0")"
-  Report_info "Attempting to build ${TOOL_DESC} using ${BUILD_PATH}"
-  HERE="$(pwd)"
-  if [[ "${HERE}" =~ .*/extern ]]; then
-    _do cd "${HERE/extern*/}" || Report_fatal "Trying to escape extern sub-directory failed"
+  local TOOL_PATH REPO_DIR BUILD_DIR INSTALL_DIR
+
+  TOOL_PATH="$(Realpath "$0")"
+  Report_info "Attempting to build ${TOOL_DESC} using ${TOOL_PATH}"
+  INSTALL_DIR="$(find_extern -q)"
+  if [[ -z "${INSTALL_DIR}" ]]; then
+    Report_fatal "Unable to locate required extern/include directory" ;
+    return 1
   fi
-  WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
   REPO_DIR="$(basename "${GIT_URL}" .git)"
   BUILD_DIR="BUILD-${TOOL_NAME}"
-  INSTALL_DIR="${WORKTREE_DIR}/extern"
   _do mkdir -p "${INSTALL_DIR}"
   _do cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
   Report_info "Building under ${INSTALL_DIR}"
@@ -188,7 +188,7 @@ HELPTEXT
   _do cd "${REPO_DIR}" || Report_fatal "Unable to enter ${REPO_DIR}"
   _do cmake -B "${BUILD_DIR}" -S . "${DEFS[@]}" || Report_fatal "Unable to configure cmake"
   _do cmake --build "${BUILD_DIR}" || Report_fatal "Failed to compile and link"
-  _do cmake --install build || Report_fatal "Failed to install"
+  _do cmake --install "${BUILD_DIR}" || Report_fatal "Failed to install"
   Report_info "Successfully built ${TOOL_DESC}"
 }
 

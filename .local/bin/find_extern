@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+"""
+Find_extern — locate the nearest directory matching a two-level directory pattern.
+
+Default pattern: "extern/include"
+
+Rules:
+1) If the starting path contains a component equal to the *pattern root* (the first directory name),
+   begin searching at that root directory's parent.
+2) Search upward from the start directory:
+   - If "<dir>/<root>/<child>" matches, where:
+       * <root> is a directory named exactly the first pattern element
+       * <child> is a directory matching the second pattern element (glob: * and ? allowed)
+     then print the full path to "<dir>/<root>" and exit 0.
+   - Otherwise move to the parent directory and repeat until filesystem root.
+3) If not found, print a red error message and exit nonzero (unless -s, which prints a blank line).
+
+Pattern requirements:
+- Must be exactly two directory levels: "<root><sep><child>"
+- <root> must be a simple directory name (letters/digits/._- only; no wildcards)
+- <sep> can be "/" or "\\" on any platform (we accept either in the CLI)
+- <child> may include Linux glob wildcards "*" and "?" but must be a single path component
+- Both matched elements must be directories.
+
+This script is designed to work on Linux/macOS/Windows.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+VERSION = "1.2.0"
+
+
+HELP_MD = """\
+# NAME
+
+**Find_extern** — locate the nearest directory matching a two-level directory pattern (default: `extern/include`)
+
+# SYNOPSIS
+
+```bash
+Find_extern [OPTIONS] [OPTIONAL_STARTING_DIRECTORY_PATH]
+```
+
+# DESCRIPTION
+
+Starting from the provided directory (or the current working directory if omitted), this tool walks **up**
+the directory tree looking for a two-level directory pattern.
+
+Default pattern:
+- `extern/include`
+
+Pattern rules:
+- `--pattern=ROOT/CHILD` (or `ROOT\\CHILD`) must have exactly **two** directory levels.
+- `ROOT` must be a simple directory name (letters/digits/._- only; no wildcards).
+- `CHILD` may contain glob wildcards `*` and `?` and must be a single directory name (no separators).
+- Both matched elements must be directories.
+
+Special handling:
+- If the starting path contains a path component equal to `ROOT`, the search begins at that `ROOT` directory’s **parent**.
+
+On success:
+- Prints the full path to the matched `ROOT` directory (with a trailing newline) and exits with status **0**.
+
+On failure:
+- Prints a red error: `Error: <pattern> not found!` and exits nonzero.
+- With `-s`, prints a blank line and exits nonzero.
+
+# OPTIONS
+
+- `--help`, `-h`  Show this help (markdown).
+- `--no-color`  Disable ANSI color output.
+- `--pattern=PATTERN`  Two-level directory pattern to match (default: `extern/include`).
+- `--version`  Show version.
+- `-s`  Silently suppress error messages; prints a blank line if nothing is found.
+"""
+
+
+@dataclass(frozen=True)
+class Pattern:
+    root: str
+    child_glob: str
+
+    def display(self) -> str:
+        return f"{self.root}/{self.child_glob}"
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(add_help=False)
+    p.add_argument("-s", action="store_true", help="silently suppress errors; print blank line on failure")
+    p.add_argument("--pattern", default="extern/include", help="two-level dir pattern (default: extern/include)")
+    p.add_argument("--no-color", action="store_true", help="disable ANSI color output")
+    p.add_argument("-h", "--help", action="store_true", help="show help in markdown")
+    p.add_argument("--version", action="store_true", help="show version")
+    p.add_argument("start", nargs="?", default=None, help="optional starting directory path")
+    return p.parse_args(argv)
+
+
+def _enable_windows_ansi() -> bool:
+    """Best-effort enable ANSI escape processing on Windows consoles."""
+    if os.name != "nt":
+        return True
+
+    try:
+        if not sys.stderr.isatty():
+            return False
+    except Exception:
+        return False
+
+    try:
+        import ctypes  # noqa: WPS433
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-12)  # STD_ERROR_HANDLE
+        if handle in (0, -1):
+            return False
+
+        mode = ctypes.c_uint32()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)) == 0:
+            return False
+
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        new_mode = mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        if kernel32.SetConsoleMode(handle, new_mode) == 0:
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def should_use_color(no_color: bool) -> bool:
+    if no_color:
+        return False
+    if os.environ.get("NO_COLOR") is not None:
+        return False
+    try:
+        if not sys.stderr.isatty():
+            return False
+    except Exception:
+        return False
+    return _enable_windows_ansi()
+
+
+def color_red(text: str, enable: bool) -> str:
+    if not enable:
+        return text
+    return f"\033[31m{text}\033[0m"
+
+
+_ROOT_RE = __import__("re").compile(r"^[A-Za-z0-9._-]+$")
+
+
+def parse_pattern(raw: str) -> Pattern:
+    """
+    Accept "root/child" or "root\\child" (either separator), exactly two levels.
+    root: simple directory name (no wildcards)
+    child: single component, may include '*' and '?', but no separators.
+    """
+    if raw is None:
+        raise ValueError("pattern is required")
+
+    s = raw.strip()
+    # Split on either / or \, but only once (two levels)
+    # Also reject patterns containing more than one separator.
+    sep_count = s.count("/") + s.count("\\")
+    if sep_count != 1:
+        raise ValueError("pattern must have exactly two levels: ROOT/CHILD")
+
+    if "/" in s:
+        root, child = s.split("/", 1)
+    else:
+        root, child = s.split("\\", 1)
+
+    if not root or not child:
+        raise ValueError("pattern must have exactly two levels: ROOT/CHILD")
+
+    if not _ROOT_RE.fullmatch(root):
+        raise ValueError("pattern root must be a simple directory name (letters/digits/._- only)")
+
+    if "/" in child or "\\" in child:
+        raise ValueError("pattern child must be a single directory name (no separators)")
+
+    # child may include glob wildcards '*' and '?'. We also allow normal characters.
+    # Ensure it's not "." or ".." as a safety/clarity rule.
+    if child in (".", ".."):
+        raise ValueError("pattern child must not be '.' or '..'")
+
+    return Pattern(root=root, child_glob=child)
+
+
+def normalize_start_path(start: Path, root_name: str) -> Path:
+    """
+    If start path contains a component named root_name, return the parent of the *deepest* such component.
+    Otherwise return start.
+    """
+    start_resolved = start.expanduser().resolve(strict=False)
+    parts = start_resolved.parts
+
+    last_idx: int | None = None
+    for i, part in enumerate(parts):
+        if part == root_name:
+            last_idx = i
+
+    if last_idx is None:
+        return start_resolved
+
+    parent_parts = parts[:last_idx]
+    if not parent_parts:
+        return start_resolved.parent
+    return Path(*parent_parts)
+
+
+def find_pattern(start_dir: Path, pat: Pattern) -> Path | None:
+    """
+    Walk upward from start_dir. At each directory D:
+      - check D/<root> is a directory
+      - check inside D/<root> for at least one directory matching <child_glob>
+    Returns path to D/<root> if found, else None.
+    """
+    cur = start_dir
+    while True:
+        root_dir = cur / pat.root
+        try:
+            if root_dir.is_dir():
+                # Use Path.glob for glob patterns; ensure matches are directories.
+                for match in root_dir.glob(pat.child_glob):
+                    try:
+                        if match.is_dir():
+                            return root_dir
+                    except OSError:
+                        continue
+        except OSError:
+            pass
+
+        parent = cur.parent
+        if parent == cur:
+            return None
+        cur = parent
+
+
+def _coerce_to_start_dir(start: Path) -> Path:
+    start_resolved = start.expanduser().resolve(strict=False)
+    try:
+        if start_resolved.exists() and start_resolved.is_file():
+            return start_resolved.parent
+    except OSError:
+        pass
+    return start_resolved
+
+
+def main(argv: list[str]) -> int:
+    ns = parse_args(argv)
+
+    if ns.help:
+        sys.stdout.write(HELP_MD)
+        return 0
+
+    if ns.version:
+        sys.stdout.write(VERSION + "\n")
+        return 0
+
+    try:
+        pat = parse_pattern(ns.pattern)
+    except ValueError as e:
+        # Argument error should be clear; treat as failure.
+        msg = f"Error: {e}\n"
+        if ns.s:
+            sys.stdout.write(os.linesep)
+        else:
+            sys.stderr.write(color_red(msg, should_use_color(ns.no_color) and True))
+        return 2
+
+    color_ok = should_use_color(ns.no_color)
+
+    start = Path.cwd() if ns.start is None else Path(ns.start)
+    start_dir = normalize_start_path(_coerce_to_start_dir(start), pat.root)
+
+    found = find_pattern(start_dir, pat)
+    if found is not None:
+        sys.stdout.write(str(found) + os.linesep)
+        return 0
+
+    if ns.s:
+        sys.stdout.write(os.linesep)
+    else:
+        sys.stderr.write(color_red(f"Error: {pat.display()} not found!\n", color_ok))
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

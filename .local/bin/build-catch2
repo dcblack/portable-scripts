@@ -49,14 +49,13 @@ source "$SCRIPTDIR/Essential-IO"
 
 TOOL_PATH="$(Realpath "$0")"
 Report_info "Attempting to build ${TOOL_DESC} using ${TOOL_PATH}"
-HERE="$(pwd)"
-if [[ "${HERE}" =~ .*/extern ]]; then
-  cd "${HERE/extern*/}" || Report_fatal "Trying to escape extern sub-directory failed"
+INSTALL_DIR="$(find_extern -q)"
+if [[ -z "${INSTALL_DIR}" ]]; then
+  Report_fatal "Unable to locate required extern/include directory";
+  return 1
 fi
-WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Report_fatal "Not in git repo"
 REPO_DIR="$(basename "${GIT_URL}" .git)"
 BUILD_DIR="BUILD-${TOOL_NAME}"
-INSTALL_DIR="${WORKTREE_DIR}/extern"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
 if [[ -d "${REPO_DIR}/.git" ]]; then
