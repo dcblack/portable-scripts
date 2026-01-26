@@ -25,6 +25,7 @@ source "$SCRIPTDIR/Essential-IO"
 function Docx_to_md()
 {
   local HELP_TEXT
+  #shellcheck disable=SC2016
   HELP_TEXT='
 Name
 ----
@@ -134,6 +135,7 @@ docx2md file1.docx file2.docx mydir/docs
           ;;
       esac
     elif [[ -d "${ARG}/." ]]; then
+      #shellcheck disable=SC2312
       mapfile -t -O "${#FILES[@]}" FILES < <(find . -depth "${DEPTH}" -name '*.docx' -print0 | xargs -0 printf '%s\n')
     elif [[ -r "${ARG}" ]]; then
       if [[ "${ARG}" =~ .*[.]docx ]]; then
@@ -153,9 +155,10 @@ docx2md file1.docx file2.docx mydir/docs
 
   for FILE in "${FILES[@]}"; do
     if [[ "${FILE}" =~ .*[.]docx ]]; then
-      MD="${FILE/docx/md}"
+      MD="${FILE/.docx/.md}"
       if [[ ${KEEP} == 0 ]]; then
-        MD="${MD//[_$.&@# ]+/_}"
+        MD=$(sed -E 's/[_$%@# ]+/_/g' <<<"${MD}") #>>>
+        Report_debug "converted to '${MD}'"
       fi
     else
       Report_warning "Skipping '${FILE}' - not Microsoft Word docx"
