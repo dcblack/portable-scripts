@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.13
+BUILD_TOOL_VERSION=1.14
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
@@ -9,7 +9,7 @@ export LICENSE="
 
 **${BUILD_TOOL_NAME} version ${BUILD_TOOL_VERSION}**
 
-Copyright 2025 by Doulos Inc. All rights reserved.
+Copyright 2025-2026 by Doulos Inc. All rights reserved.
  
 Licensed under the Apache License, Version 2.0 (the \"License\");
 you may not use this file except in compliance with the License.
@@ -203,11 +203,18 @@ function Build()
         ;;
     esac
   fi
+
   if [[ "$*" =~ ^-{1,2}list-extensions$ || "$*" == "-lx" ]]; then
     local bindir
     bindir="$(dirname "$0")"
     perl -le '$_="@ARGV";s{[^[:space:]]+/build-}{}g;print "Extensions:";print "  $_"' "${bindir}/build-"*
     exit 0
+  fi
+
+  # Did you really mean 'cargo build'?
+  if [[ -r Cargo.toml && ! -r CMakeLists.txt ]]; then
+    printf "[1;96mWarning:[0m Assuming you meant: cargo %s\n" "$*"
+    cargo build "$@" && return 0 || return 1
   fi
 
   export BUILD_TOOL_NAME SCRIPTS_DIR LOGFILE
