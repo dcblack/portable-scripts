@@ -6,16 +6,31 @@ if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
   cat <<'HELPTEXT'
 Name
 ----
+
 build-omz - Download and install Oh-My-Zsh
 
 Synopsis
 --------
+
+```bash
 build-omz --help|-h # produces this text
 build-omz [--curl|--wget]
+```
 
 Description
 -----------
-{:DESCRIPTION:}
+
+Installs the Oh-My-Zsh framework.
+
+**Oh My Zsh** is an **open-source, community-driven framework** designed to manage **Zsh configuration**, rather than being a shell itself. It sits on top of the Zsh shell to provide **curated configuration files**, a **plugin ecosystem** with over **300 optional plugins**, and a **theming system** with **140+ themes** to enhance the terminal experience.
+
+Key features include:
+*   **Productivity Tools**: Predefined aliases (e.g., `ga` for `git add`), advanced tab completion, and spelling correction.
+*   **Plugin Support**: Easily enable plugins for languages and tools like **Git**, **Docker**, **Node**, **Python**, and **Homebrew**.
+*   **Customization**: Users can switch themes or enable plugins by editing the `~/.zshrc` file, with support for advanced themes like **Powerlevel10k**.
+*   **Auto-Updates**: Includes a built-in tool to check for and apply updates from the community repository.
+
+While **Zsh** provides the core shell functionality, **Oh My Zsh** adds convenience and automation, modifying the `~/.zshrc` file to source its framework without altering the Zsh binary itself. It is compatible with **macOS** (default since Catalina), **Linux**, and **Windows** via WSL.
 
 HELPTEXT
   exit 0;
