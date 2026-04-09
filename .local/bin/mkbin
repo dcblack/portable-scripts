@@ -169,13 +169,14 @@ function Mkbin()
   CBLU="$(_C bright blue)"
   NONE="$(_C none)"
   local HASHBANG DIRECTORY EDIT SCRIPT SCRIPT_NAME SCRIPT_PATH TARGET_DIR MKDIR
-  local OPTION CMNT KIND IS_NEW ADD_TAIL ADD_UTILS FIRST_LINE V N DEBUG
+  local OPTION CMNT KIND IS_NEW IS_SCRIPT ADD_TAIL ADD_UTILS FIRST_LINE V N DEBUG
   local -a T
   ADD_TAIL=1
   ADD_UTILS=0
   KIND="bash"
   HASHBANG="/usr/bin/env bash"
   DIRECTORY=""
+  IS_SCRIPT=0
   EDIT=""
   CMNT="#"
   DEBUG=0
@@ -314,6 +315,7 @@ function Mkbin()
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}s(cript)?$ ]]; then
       # --script
+      IS_SCRIPT=1
       TARGET_DIR="${HOME}/scripts"
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d ${HOME}/scripts ]]; then
