@@ -5,8 +5,106 @@ function Realpath() {
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
 
+function _Report_debug() {
+  export J_DEBUG
+  if [[ ${J_DEBUG} == 0 ]]; then return; fi
+  local fmt="[1;91mDebug: [0m$1"
+  shift
+  # shellcheck disable=SC2059
+  printf "${fmt}\n" "$@"
+}
+
 # l=last c=current n=next wd=working_directory ws=working_script
 export ACTION lwd nwd lws cws nws ITERM2_TAB
+
+function js() {
+  export lws cws nws J_DEBUG
+  local working_script='setup.profile'
+  # Deal with new working script if it exists
+  TMP1="$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)"
+  nws="$(Firstreal "${TMP1}")"
+  _Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG:-0}"
+  if [[ -n "${nws}" ]]; then
+    nws="$(Realpath "${nws}")"
+    local LASTOK NEXTOK REPEAT
+    LASTOK=1 NEXTOK=1 REPEAT=0
+    # Qualifications to use a working script:
+    # 1. Must not be the same as the last working script
+    # 2. Must be executable and not a directory
+    # 3. Last script must support ACTION variable
+    if [[ -n "${lws}" && "${lws}" == "${nws}" ]]; then
+      _Report_debug "lws set and equal to nws ${nws}" -if "${J_DEBUG:-0}"
+      LASTOK=0
+      NEXTOK=0
+      REPEAT=1
+    fi
+    if [[ ! -x "${lws}" || -d "${lws}" ]]; then
+      LASTOK=0
+    fi
+    if [[ ${LASTOK} == 1 ]]; then
+      if grep -q ACTION "${lws}"; then
+        LASTOK=1
+      else
+        LASTOK=0
+      fi
+    fi
+    if [[ ! -x "${nws}" || -d "${nws}" ]]; then
+      NEXTOK=0
+      REPEAT=0
+      Report_warning "Skipping non-executable ${nws}"
+      _Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG:-0}"
+    fi
+    # Source old working script with ACTION='rm'
+    if [[ ${LASTOK} == 1 ]]; then
+      test "${J_VERBOSE}" = 1 && Report_info "Removing ${lws}"
+      export ACTION='rm'
+      if [[ ${J_NOSCRIPT} == 0 ]]; then
+        # shellcheck disable=SC2164
+        cd - 2>/dev/null 1>/dev/null
+        # shellcheck disable=SC1090
+        source "${lws}" --rm
+        # shellcheck disable=SC1090
+        test -r "${lws/setup./.setup.}" && source "${lws/setup./.setup.}" --rm
+        # shellcheck disable=SC2164
+        cd - 2>/dev/null 1>/dev/null
+      fi
+    fi
+    # Source new working script
+    if [[ ${NEXTOK} == 1 ]]; then
+      test "${J_VERBOSE}" = 1 && Report_info "Adding ${nws}"
+      export ACTION='add'
+      if [[ ${J_NOSCRIPT} == 0 ]]; then
+        if [[ ${J_SHOW} == 0 ]]; then
+          # shellcheck disable=SC1090
+          source "${nws}" --add
+          # shellcheck disable=SC1090
+          test -r "${nws/setup./.setup.}" && source "${nws/setup./.setup.}" --add
+        else
+          # shellcheck disable=SC1090
+          source "${nws}" --add --show
+          # shellcheck disable=SC1090
+          test -r "${nws/setup./.setup.}" && source "${nws/setup./.setup.}" --add --show
+        fi
+      fi
+      cws="${nws}"
+    elif [[ ${REPEAT} == 1 ]]; then
+      if grep -q ACTION "${nws}"; then
+        test "${J_VERBOSE}" = 1 && Report_info "Repeating ${nws}"
+        export ACTION='repeat'
+        if [[ ${J_NOSCRIPT} == 0 ]]; then
+          # shellcheck disable=SC1090
+          source "${nws}" --repeat
+          # shellcheck disable=SC1090
+          test -r "${nws/setup./.setup.}" && source "${nws/setup./.setup.}" --repeat
+        fi
+        cws="${nws}"
+      else
+        Report_warning "${nws} does not contain ACTION"
+      fi
+    fi
+  fi
+}
+
 function j() {
   export j_VERSION=1.6 FAVS
   # Synopsis
@@ -48,7 +146,9 @@ If the result is a path to a non-directory element, then it jumps to the directo
 | –list     | Briefly lists all favorites
 | –lns      | Lists all favorites exanding their targets
 | –mk FAV   | Adds a symbolic links to the favorites directory
+| –f        | Force replacement of symbolic link
 | –lwd      | Go to last working directory (uses ~/.lwd or ~/.lwd-${ITERM2_TAB})
+| –nah      | Not really
 # –nu       | No user-specific setup scripts
 # –nl       | No local setup scripts
 | –ns       | No setup scripts (aka --noscript)
@@ -62,13 +162,14 @@ Examples
 --------
 
   j tlm-? answers EX01
-  j ~/syscfund/ex01/ex01.cpp
+  j ~/syscfund ex01/ex01.cpp
+  j - ...
 
 HELP_TEXT
 )
 
-  export ACTION lwd nwd lws cws nws
-  local J_VERBOSE J_NOSCRIPT J_DEBUG J_SHOW TMP1 TMP2 J_MK J_LWD
+  export ACTION lwd nwd lws cws nws J_DEBUG
+  local J_VERBOSE J_NOSCRIPT J_SHOW TMP1 TMP2 J_MK J_LWD J_FORCE J_NAH J_ORIG
 # local J_NOUSER J_NOPROJ
 # local FAV FAV1
 # local J_RE
@@ -79,6 +180,9 @@ HELP_TEXT
   J_NOSCRIPT=0
   J_SHOW=0
   J_DEBUG=0
+  J_FORCE=0
+  J_NAH=0
+  J_ORIG="$(Realpath .)"
 # J_RE=0
   # Setup favorites list if not defined via exported FAVS variable
   if [[ -z "${FAVS}" ]]; then
@@ -90,10 +194,14 @@ HELP_TEXT
       fi
     done
   fi
+  if [[ ! -d "${FAVS}" ]]; then
+    Report_error "Missing favorites directory ${FAVS}"
+    return 1
+  fi
   if [[ $# != 0 ]]; then
     # Parse command-line options
     while [[ "$1" =~ ^-. ]]; do
-      Report_debug "$1" -if "${J_DEBUG:-0}"
+      _Report_debug "%s" "$1" -if "${J_DEBUG:-0}"
       case "$1" in
       -h | -help | --help)
         if builtin command -v glow; then
@@ -151,16 +259,32 @@ HELP_TEXT
         fi
         return 0
         ;;
+      -nah | --nah )
+        J_NAH=1
+        ;;
+      -f | --force )
+        J_FORCE=1
+        ;;
       -mk | --mk )
         shift
-        if [[ $# -lt 2 ]]; then Report_error "Requires at least two arguments: j -mk FAV DIRPATH"; return 1; fi
+        if [[ $# -lt 1 ]]; then Report_error "Requires at least one arguments: j -mk FAV [PATHS]"; return 1; fi
         J_MK="$1"
         shift
         if [[ "${J_MK}" =~ .*/.* ]]; then Report_error "-mk argument must be a simple name"; return 1; fi
         if [[ "${J_MK}" =~ ^[^a-zA-Z0-9].* ]]; then Report_error "-mk argument must begin with an alphanumeric"; return 1; fi
         if [[ "${J_MK}" =~ [^-_+a-zA-Z0-9].* ]]; then Report_error "-mk argument may only use simple names with allowance for hyphen and underscore"; return 1; fi
-        if [[ -e "${FAVS}/${J_MK}" ]]; then Report_error "$1 already exists"; return 1; fi
-        j "$@"
+        if [[ -e "${FAVS}/${J_MK}" ]]; then
+          if [[ ${J_FORCE} == 1 ]]; then
+            local J_WAS
+            J_WAS="$(readlink "${FAVS}/${J_MK}")"
+            rm "${FAVS}/${J_MK}" && Report_info "Previously ${J_WAS}"
+          else
+            Report_error "$1 already exists"; return 1;
+          fi
+        fi
+        if [[ $# -gt 0 ]]; then
+          j "$@"
+        fi
         TMP1="$(Realpath .)"
         if ln -s "${TMP1}" "${FAVS}/${J_MK}" ; then
           TMP1="$(Realpath "${FAVS}/${J_MK}")"
@@ -208,7 +332,7 @@ HELP_TEXT
       shift
     done
   fi
-  Report_debug "Debug on" -if "${J_DEBUG:-0}"
+  _Report_debug "Debug on" -if "${J_DEBUG:-0}"
   test "${J_VERBOSE}" = 1 && Report_info "Verbose on"
   # End parsing options
   #-----------------------------------------------------------------------------
@@ -220,7 +344,9 @@ HELP_TEXT
       pwd_file="${pwd_file}-${ITERM2_TAB}"
     fi
     if [[ -r "${pwd_file}" ]]; then
-      set - "$(tail -n -1 "${pwd_file}")" "$@"
+      local pwd_dir
+      pwd_dir="$(tail -n -1 "${pwd_file}")"
+      set - "${pwd_dir}" "$@"
     fi
   fi
 
@@ -234,10 +360,33 @@ HELP_TEXT
     cd
   else
     while [[ $# != 0 ]]; do
-      Report_debug "Arg '%s'" "$1" -if "${J_DEBUG:-0}"
+      _Report_debug "Arg '%s'" "$1" -if "${J_DEBUG:-0}"
       if [[ "$1" == '-' ]]; then
+        # Previous directory
         # shellcheck disable=SC2164
         cd -
+      elif [[ "$1" =~ ^[.]{2,}[1-9]?[0-9]*$ ]]; then
+        # Navigate upwards
+        _Report_debug "Navigating upwards"
+        local J_COUNT J_UP=".."
+        if [[ "$1" =~ ^[.]{2,}[1-9] ]]; then
+          J_COUNT="$(perl -le 'shift @ARGV;s/^[.]+//;print $_' "$1")"
+          _Report_debug "%s extracted from %s" "${J_COUNT}" "$1"
+        else
+          J_COUNT=$(wc -c <<<"$1"); #>>>
+          (( J_COUNT -- ))
+          _Report_debug "%s dots from '%s'" "${J_COUNT}" "$1"
+        fi
+        if [[ ${J_VERBOSE} == 1 ]]; then
+          Report_info "Moving J_UP ${J_COUNT}"
+        fi
+        shift
+        while [[ ${J_COUNT} -gt 2 ]]; do
+          J_UP="../${J_UP}"
+          (( --J_COUNT ))
+        done
+        # shellcheck disable=SC2164
+        cd "${J_UP}"
       else
         local PART GLOB
         PART="$1"
@@ -245,8 +394,8 @@ HELP_TEXT
           PART="$(perl -le '$_=shift;s{^([A-Z]):}{};$d=lc$1;s{\\}{\/}g;print qq{/mnt/$d$_}' "$1")"
         fi
         GLOB="$(/usr/bin/perl -le '@d=glob(shift @ARGV);print shift @d' "$1")"
-        Report_debug "DEBUG: PART='%s'" "${PART}" -if "${J_DEBUG:-0}"
-        Report_debug "DEBUG: GLOB='%s'" "${GLOB}" -if "${J_DEBUG:-0}"
+        _Report_debug "DEBUG: PART='%s'" "${PART}" -if "${J_DEBUG:-0}"
+        _Report_debug "DEBUG: GLOB='%s'" "${GLOB}" -if "${J_DEBUG:-0}"
         if [[ -e "${PART}" && -f "${PART}" ]]; then
           PART=$(dirname "${PART}")
         fi
@@ -266,13 +415,19 @@ HELP_TEXT
       shift
     done
   fi
-  Report_debug "Saving working directory" -if "${J_DEBUG:-0}"
+  _Report_debug "Saving working directory" -if "${J_DEBUG:-0}"
   # Save current location as the working directory
   local next_wd
   next_wd="$(Realpath .)"
   # Go back to original directory then forward to simulate a single jump
   # shellcheck disable=SC2164
   cd "${lwd}" 2>/dev/null 1>/dev/null
+
+  if [[ ${J_NAH} == 1 ]]; then
+    cd "${J_ORIG}" 2>/dev/null 1>/dev/null || return 1
+    return 0
+  fi
+
   # shellcheck disable=SC2164
   cd "${next_wd}"
 
@@ -290,7 +445,7 @@ HELP_TEXT
     cwd="${next_wd}"
   fi
   TMP1="$(pwd)"
-  Report_debug "Landed %s" "${TMP1}" -if "${J_DEBUG:-0}"
+  _Report_debug "Landed %s" "${TMP1}" -if "${J_DEBUG:-0}"
 
   # Save last working script if it was previously set
   if [[ -n "${nws}" ]]; then lws="${nws}"; fi
@@ -298,7 +453,7 @@ HELP_TEXT
   # Deal with new working script if it exists
   TMP1="$(Add_suffix "/${working_script}" . .. ../.. ../../.. ../../../.. ../../../../..)"
   nws="$(Firstreal "${TMP1}")"
-  Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG:-0}"
+  _Report_debug "Checking for working script nws=%s" "'${nws}'" -if "${J_DEBUG:-0}"
   if [[ -n "${nws}" ]]; then
     nws="$(Realpath "${nws}")"
     local LASTOK NEXTOK REPEAT
@@ -308,7 +463,7 @@ HELP_TEXT
     # 2. Must be executable and not a directory
     # 3. Last script must support ACTION variable
     if [[ -n "${lws}" && "${lws}" == "${nws}" ]]; then
-      Report_debug "lws set and equal to nws ${nws}" -if "${J_DEBUG:-0}"
+      _Report_debug "lws set and equal to nws ${nws}" -if "${J_DEBUG:-0}"
       LASTOK=0
       NEXTOK=0
       REPEAT=1
@@ -327,7 +482,7 @@ HELP_TEXT
       NEXTOK=0
       REPEAT=0
       Report_warning "Skipping non-executable ${nws}"
-      Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG:-0}"
+      _Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG:-0}"
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
