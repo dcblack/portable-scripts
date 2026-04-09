@@ -651,6 +651,10 @@ Option    | Description
  -off     | Turn off color attributes
 
 '
+  export NORULER
+  if [[ ${NORULER} == 1 ]]; then
+    return
+  fi
   SEP="_" # Default
   MAX="$(Columns)"
   local PRE
