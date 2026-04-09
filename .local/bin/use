@@ -15,6 +15,7 @@ use - execute use-* scripts.
 Synopsis
 --------
 use --help|-h # produces this text
+use [list] # lists available tools to use
 use TOOL [OPTIONS]
 
 Description
@@ -58,8 +59,34 @@ function Use-tool()
     Use-help
   fi
 
+  #-----------------------------------------------------------------------------
+  if [[ $# == 0 || "$1" == 'list' ]]; then
+    # Loop through each directory in the PATH environment variable
+    # Using preferred [[ ]] syntax with all variables properly quoted
+    tools=()
+    IFS=':' read -ra dirs <<< "${PATH}" # >>>
+    for dir in "${dirs[@]}"; do
+      # Skip empty directories
+      if [[ -n "${dir}" && -d "${dir}" ]]; then
+        # Find executable files matching the pattern use-*
+        find_cmd=$(gfind "${dir}" -maxdepth 1 -name "use-*" -type f -executable 2>/dev/null)
+        while IFS= read -r file; do
+          if [[ -n "${file}" ]]; then
+            tool=$(basename "${file}")
+            tools+=("${tool}")
+          fi
+        done <<< "${find_cmd}" # >>>
+      fi
+    done
+    if [[ ${#tools[@]} -gt 0 ]]; then
+      printf "Must specify tool from one of:\n"
+      printf '- %s\n' "${tools[@]}" | sort -u
+    fi
+    return 0
+  fi
+
   if [[ "$1" =~ ^[A-Za-z][A-Za-z0-9_]+$ ]]; then
-    if builtin command -v "use-$1" 1>/dev/null; then
+    if builtin command -v "Use-$1" 1>/dev/null; then
       UTILITY="Use-$1"
       shift
       # shellcheck disable=SC2093
