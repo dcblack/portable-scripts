@@ -28,10 +28,13 @@ list( PREPEND CMAKE_MODULE_PATH "${WORKTREE_DIR}/cmake" )
 include( "${defaults}" )
 
 # Packages for this project
-find_package( fmt )
+# find_package( fmt )
 
+#-------------------------------------------------------------------------------
+# Library
+#-------------------------------------------------------------------------------
 set( Target {:lc:NAME:} )
-add_executable( "${Target}" )
+add_library( "${Target}" )
 target_sources( "${Target}"
   PRIVATE
   {:if:SRCS:}
@@ -40,15 +43,5 @@ target_sources( "${Target}"
   {:qx:ls -1 *pp:}
   {:endif:SRCS:}
 )
-if( fmt_FOUND )
-  target_link_libraries( "${Target}" PRIVATE fmt::fmt )
-endif()
-#> target_compile_definitions( "${Target}" PRIVATE MYEXAMPLE )
-#> target_compile_features(    "${Target}" PUBLIC cxx_std_11 )
-add_test( NAME "${Target}-{:TESTNAME:}" COMMAND "${Target}" {:OPTIONS:} )
-
-#> add_subdirectory( tests )
-
-#> include(doxygen)
 
 # vim:syntax=cmake:nospell

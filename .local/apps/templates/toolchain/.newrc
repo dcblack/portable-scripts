@@ -1,50 +1,46 @@
-#!/usr/bin/bash -c new
-# vim:syntax=sh:tw=72
+#!new # vim:syntax=sh:tw=72
 
 # REQUIREMENTS & DEFAULTS
-#-require SRCS=[a-zA-Z].*[.]c.*
---default APPS=/apps
---default VERS=1.0
---default CMAKE_VERS=3.2.1
+#-require CXX=[a-zA-Z].*
+#-require CC=[a-zA-Z].*
+#-require TOOLDIR=/[a-zA-Z].*
 
 # BRIEF
-#! Creates CmakeLists.txt for named PROJECT that uses cmake
+#! Creates cmake toolchain file
 
 =pod
 
 =head1 NAME
 
-B<cpp-cmake template> - Creates a simple cmake project for C/C++
+B<toolchain template> - Creates a simple cmake toolchain file
 
 =head1 SYNOPSIS
 
-B<new> cpp-cmake I<OPTIONS> {:I<NAME>:} SRCS="I<LIST_OF_FILES> VERS=N.M"
+B<new> toolchain I<OPTIONS> NAME TOOLDIR=PATH CXX=PATH CC=PATH
 
 =head1 DESCRIPTION
 
-Creates a basic CMakeLists.txt file needed to build C/C++ projects.
+Creates a basic toolchain file for cmake.
 
 =head1 PARAMETERS
 
 =over
 
-=item SRCS
-
-List of plain file names for source files.
-
-=item CMAKE_VERS
-
-Version number #.#.# (defaults to 3.21)
-
-=item VERS
-
-Version number #.# (defaults to 0.0)
+=item CC        
+=item CXX       
+=item MAJOR     
+=item MINOR     
+=item PROCESSOR 
+=item SYSTEM    
+=item TOOLDIR   
+=item VENDOR    
+=item VERSION   
 
 =back
 
 =head1 REQUIREMENTS
 
-An appropriate version of cmake version 3.11 or better should be installed.
+An appropriate version of cmake.
 
 =head1 AUTHOR
 

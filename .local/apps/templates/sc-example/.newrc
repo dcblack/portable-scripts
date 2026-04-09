@@ -1,40 +1,34 @@
-#!/usr/bin/bash -c new
-# vim:syntax=sh:tw=72
+#!new # vim:syntax=sh:tw=72
 
 # REQUIREMENTS & DEFAULTS
-#-require SRCS=[a-zA-Z].*[.]c.*
---default APPS=/apps
---default VERS=1.0
---default CMAKE_VERS=3.2.1
+--default VERS=0.0
 
 # BRIEF
-#! Creates CmakeLists.txt for named PROJECT that uses cmake
+#! Creates C++ example project that uses cmake
 
 =pod
 
 =head1 NAME
 
-B<cpp-cmake template> - Creates a simple cmake project for C/C++
+B<cpp-cmake template> - Creates a simple project for C/C++
 
 =head1 SYNOPSIS
 
-B<new> cpp-cmake I<OPTIONS> {:I<NAME>:} SRCS="I<LIST_OF_FILES> VERS=N.M"
+B<new> sc-example I<OPTIONS> {:I<NAME>:} SRCS="I<LIST_OF_FILES>" VERS="N.M"
 
 =head1 DESCRIPTION
 
-Creates a basic CMakeLists.txt file needed to build C/C++ projects.
+Creates a basic directory to build a simple C++ project.
+
+    NAME/
+    ├── CMakeLists.txt
+    ├── main.cpp
+    ├── NAME.hpp
+    └── NAME.cpp
 
 =head1 PARAMETERS
 
 =over
-
-=item SRCS
-
-List of plain file names for source files.
-
-=item CMAKE_VERS
-
-Version number #.#.# (defaults to 3.21)
 
 =item VERS
 
@@ -52,7 +46,7 @@ David C Black <dcblack@dcblack.com>
 
 =head1 COPYRIGHT & LICENSE
 
-'cpp-cmake' template is copyright (C) 2018 David C Black
+'sc-example' template is copyright (C) 2024 David C Black
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

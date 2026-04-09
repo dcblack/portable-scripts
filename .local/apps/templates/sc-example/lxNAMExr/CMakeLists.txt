@@ -1,20 +1,19 @@
 #!cmake .
 #
-# See $ENV{APPS}/cmake/ABOUT_CMAKE.md for more information.
+# This works with SystemC versions 2.3.2 and later, which have support for
+# cmake and specify SystemC_CXX_STANDARD.
+#
+# REQUIREMENTS:
+# - Adjust ../../setup.profile if needed
 
-cmake_minimum_required( VERSION {:CMAKE_VERS:} )
+cmake_minimum_required( VERSION 3.20 )
 
-project(      {:NAME:}
-  VERSION     {:VERS:}
-  DESCRIPTION "{:DESC:}"
-  LANGUAGES   C CXX
-  )
-set( USE_CXX_VERSION 17 )
+project( {:NAME:} VERSION 0.1 DESCRIPTION "{:DESC:}" LANGUAGES CXX )
 
 #-------------------------------------------------------------------------------
 # Find project directory containing defaults
 #-------------------------------------------------------------------------------
-set( defaults "project_defaults" )
+set( defaults "sc-project_defaults" )
 set( _dir "${CMAKE_CURRENT_SOURCE_DIR}" )
 cmake_path( GET _dir ROOT_PATH _root )
 while( NOT EXISTS "${_dir}/cmake/${defaults}.cmake" )
@@ -30,25 +29,19 @@ include( "${defaults}" )
 # Packages for this project
 find_package( fmt )
 
-set( Target {:lc:NAME:} )
+#-------------------------------------------------------------------------------
+# Code
+#-------------------------------------------------------------------------------
+set_target( "${PROJECT_NAME}" )
 add_executable( "${Target}" )
-target_sources( "${Target}"
-  PRIVATE
-  {:if:SRCS:}
-  {:sp:SRCS:}
-  {:else:SRCS:}
-  {:qx:ls -1 *pp:}
-  {:endif:SRCS:}
+target_sources( "${Target}" PRIVATE
+  {:lc:NAME:}.hpp
+  {:lc:NAME:}.cpp
+  main.cpp
 )
 if( fmt_FOUND )
   target_link_libraries( "${Target}" PRIVATE fmt::fmt )
 endif()
-#> target_compile_definitions( "${Target}" PRIVATE MYEXAMPLE )
-#> target_compile_features(    "${Target}" PUBLIC cxx_std_11 )
-add_test( NAME "${Target}-{:TESTNAME:}" COMMAND "${Target}" {:OPTIONS:} )
+add_test( NAME "${Target}" COMMAND "${Target}" )
+set_tests_properties( "${Target}" PROPERTIES LABELS "exercise;${PROJECT_NAME}" )
 
-#> add_subdirectory( tests )
-
-#> include(doxygen)
-
-# vim:syntax=cmake:nospell
