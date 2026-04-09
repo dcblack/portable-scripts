@@ -8,8 +8,12 @@
 #   swd_func
 #   lwd_func
 #   rwd_func
+#   cwd_func
 #   wds_func
 #   aliases
+#
+# Dependencies:
+#   TO_BE_SUPPLIED
 #
 # shellcheck disable=SC2312
 
@@ -27,7 +31,7 @@ else
 fi
 
 function Firstreal() {
-  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }
 
@@ -48,13 +52,14 @@ SCRIPTDIR="${HOME}/.local/scripts"
 #  SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 #fi
 if [[ ! -d "${SCRIPTDIR}" ]]; then
-  printf "FATAL: eissing required directory '%s'\n" "${SCRIPTDIR}"
+  printf "FATAL: missing required directory '%s'\n" "${SCRIPTDIR}"
   crash
 fi
 # shellcheck source=$HOME/scripts/Essential-IO disable=SC2250,SC1091
 source "${SCRIPTDIR}/Essential-IO"
 
-export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers
+export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir 
+export wd_short wd_other wd_cram wd_verb wd_notreally wd_debug wd_vers
 real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
 wd_favs="$(Realpath "${real_favs}")"
 wd_init=false
@@ -81,6 +86,7 @@ swd - save working directory
 lwd - load working directory (aka wd)
 rwd - remove working directory(s)
 wds - list saved working directories
+cwd - list current directory's closest match
 
 Synopsis
 --------
@@ -90,19 +96,23 @@ wd -init
 swd [SET] [DIR]
 lwd [OPTIONS] [SET]
 wds
+cwd
 rwd SET
 
 Options
 -------
 
-| Option | Description
-| :----  | :----------
-| -help  | This text
-| -force | Use to skip verification during removal
-| -init  | Initialize/reload these scripts
-| -list  | List current set
-| -vers  | Display version
-| -print | Display path instead of going there
+| Option    | Description
+| :----     | :----------
+| -help     | This text
+| -force    | Use to skip verification during removal
+| -init     | Initialize/reload these scripts
+| -list     | List current set
+| -no-other | List current set
+| -short    | Shorten names where possible
+| -sqz      | Shorten names where possible
+| -vers     | Display version
+| -print    | Display path instead of going there
 
 HELP_TEXT
 )
@@ -130,16 +140,17 @@ function Wd_set()
 #-------------------------------------------------------------------------------
 function Wd_parse() # internal
 {
-  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   #-----------------------------------------------------------------------------
   # Defaults
   #-----------------------------------------------------------------------------
-  export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir wd_verb wd_notreally wd_debug wd_vers wd_print
+  export wd_favs wd_set wd_sets wd_setn wd_init wd_force wd_dir wd_short wd_verb wd_notreally wd_debug wd_vers wd_print
   wd_vers=1.1
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
   wd_favs="$(Realpath "${real_favs}")"
   wd_force=false
+  wd_short=false
   wd_verb=false
   wd_debug=false
   wd_print=false
@@ -191,6 +202,10 @@ function Wd_parse() # internal
         ;;
       -vers|-version|--version) Report_info "wd version ${wd_vers}" ;;
       -v|-verbose|--verbose) wd_verb=true ;;
+      -other|--other) wd_other=true ;;
+      -no-other|--no-other) wd_other=false ;;
+      -sq|-sqz|-squeeze|--squeeze) wd_cram=true ;;
+      -s|-short|-shorten|--shorten) wd_short=true ;;
       -debug|--debug|-D) wd_debug=true ;;
       -N|-notreally|--notreally) wd_notreally=true ;;
       -f|-force|--force) wd_force=true ;;
@@ -215,16 +230,19 @@ function Wd_parse() # internal
     esac
   done
   if [[ ${wd_debug} == true ]]; then
-    Report_debug -f "wd_favs='${wd_favs}'"
-    Report_debug -f "wd_set='${wd_set}'"
-    Report_debug -f "wd_dir='${wd_dir}'"
-    Report_debug -f "wd_pset='${wd_pset}'"
-    Report_debug -f "wd_pdir='${wd_pdir}'"
-    Report_debug -f "wd_setn='${wd_setn}'"
-    Report_debug -f "wd_sets='${wd_sets}'"
+    Report_debug -f "wd_favs='${wd_favs}'" ;
+    Report_debug -f "wd_set='${wd_set}'" ;
+    Report_debug -f "wd_dir='${wd_dir}'" ;
+    Report_debug -f "wd_pset='${wd_pset}'" ;
+    Report_debug -f "wd_pdir='${wd_pdir}'" ;
+    Report_debug -f "wd_setn='${wd_setn}'" ;
+    Report_debug -f "wd_sets='${wd_sets}'" ;
     Report_debug -f "wd_init='${wd_init}'"
-    Report_debug -f "wd_verb='${wd_verb}'"
-    Report_debug -f "ARGS='${ARGS}'"
+    Report_debug -f "wd_short='${wd_short}'" ;
+    Report_debug -f "wd_other='${wd_other}'" ;
+    Report_debug -f "wd_cram='${wd_cram}'" ;
+    Report_debug -f "wd_verb='${wd_verb}'" ;
+    Report_debug -f "ARGS='${ARGS}'" ;
   fi
   return 0
 }
@@ -277,6 +295,8 @@ function rwd() # rwd_func
 {
   Comment "Remove working directory(s)"
   export wd_favs wd_set wd_sets wd_setn wd_force
+  local today
+  today="$(date)"
   Wd_parse "$@" || return 1
 
   local REPLY wd_rdir all=0
@@ -322,11 +342,52 @@ function rwd() # rwd_func
 }
 
 #-------------------------------------------------------------------------------
+function cwd() # cwd_func
+{
+  if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
+  export wd_favs
+  local Find Sort
+  Find='/usr/bin/find' # Standard Linux find
+  Sort='/usr/bin/sort' # Standard Linux sort
+  local real_favs
+  real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
+  wd_favs="$(Realpath "${real_favs}")"
+  declare -a favs
+  local max=10 n r favorite t here
+  here="$(Realpath .)"
+  here="${here/+/[+]}"
+  read_into_array favs "${Find} '${wd_favs}' -name 'wd-*' | ${Sort} -t- -k 2n,2n -k 3n,3n"
+  for favorite in "${favs[@]}"
+  do
+    n="${favorite//*\//}"
+    r="$(Realpath "${favorite}")"
+    if [[ "${r}" =~ ^${here} ]]
+    then
+      t="${r/#${here}/}"
+      # shellcheck disable=SC2154
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${here}${NONE}${t}"
+      (( --max ))
+      if [[ ${max} -le 0 ]]; then break; fi
+    fi
+  done
+}
+
+#-------------------------------------------------------------------------------
 function wds() # wds_func
 {
-  export wd_favs
-  local s=0
-  if [[ "$1" == "-s" ]]; then s=1; shift; fi
+  export wd_short wd_cram wd_other
+  local other=1 short=0 cram=0
+  if [[ "${wd_other}" == false ]]; then other=0; fi
+  if [[ "${wd_short}" == true ]]; then short=1; fi
+  if [[ "${wd_cram}" == true ]]; then cram=1; fi
+  while [[ "$1" =~ ^- ]]; do
+    if   [[ "$1" == "-no-other" ]]; then other=0;
+    elif [[ "$1" == "-other" ]];    then other=1;
+    elif [[ "$1" == "-s" ]];        then short=1;
+    elif [[ "$1" == "-sq" ]];       then cram=1;
+    fi
+    shift
+  done
   local NONE
   NONE="$(_C none)"
   local FILTER
@@ -337,19 +398,21 @@ function wds() # wds_func
   local real_favs
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
   wd_favs="$(Realpath "${real_favs}")"
-  local p n r h t l
+  local found favorite n r here t l
   declare -a favs
-  h="$(Realpath .)"
-  h="${h/+/[+]}"
-  read_into_array favs "find '${wd_favs}' -name 'wd-*' | sort -t- -k 2n,2n -k 3n,3n"
+  here="$(Realpath .)"
+  here="${here/+/[+]}"
+  local Find Sort
+  Find='/usr/bin/find' # Standard Linux find
+  Sort='/usr/bin/sort' # Standard Linux sort
+  read_into_array favs "${Find} '${wd_favs}' -name 'wd-*' | ${Sort} -t- -k 2n,2n -k 3n,3n"
   
-  for p in "${favs[@]}"
+  for favorite in "${favs[@]}"
   do
     if [[ ${#FILTER[@]} != 0 ]]; then
-      local found
       found=0
-      for f in "${FILTER[@]}"; do
-        if [[ "${p}" =~ ${f} ]]; then
+      for filter in "${FILTER[@]}"; do
+        if [[ "${favorite}" =~ ${filter} ]]; then
           found=1
           break
         fi
@@ -358,10 +421,10 @@ function wds() # wds_func
         continue
       fi
     fi
-    n="${p//*\//}"
-    r="$(Realpath "${p}")"
+    n="${favorite//*\//}"
+    r="$(Realpath "${favorite}")"
     l="${r}"
-    if [[ ${s} == 1 ]]; then
+    if [[ ${short} == 1 ]]; then
       # Shorten
       case "${l}" in
         "${HOME}"*)
@@ -375,14 +438,23 @@ function wds() # wds_func
           ;;
       esac
     fi
-    if [[ "${r}" =~ ^${h} ]]
+    if [[ ${cram} == 1 ]]; then
+      # Squeeze
+      local pre=""
+      if [[ "${l}" =~ ^/ ]]; then
+        pre="/"
+        l="${l/\/}"
+      fi
+      l="${pre}${l/\/*\///.../}"
+    fi
+    if [[ "${r}" =~ ^${here} ]]
     then
-      t="${r/#${h}/}"
+      t="${r/#${here}/}"
       # shellcheck disable=SC2154
-      printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${h}${NONE}${t}"
+      printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${here}${NONE}${t}"
     elif [[ -z "${r}" ]]; then
       # shellcheck disable=SC2154
-      r="$(_C bold red)?? ${NONE}$(_C underscore red)$(readlink "${p}") ??${NONE}"
+      r="$(_C bold red)?? ${NONE}$(_C underscore red)$(readlink "${favorite}") ??${NONE}"
       printf "$(_C cyan)%s $(_C green)->${NONE} %s\n" "${n}" "${r}"
     else
       # shellcheck disable=SC2154
@@ -390,21 +462,23 @@ function wds() # wds_func
     fi
   done
   # Check for other matches
-  local max=10
-  read_into_array favs "find '${wd_favs}' -name 'wd-*' | sort -t- -k 2n,2n -k 3n,3n"
-  for p in "${favs[@]}"
-  do
-    n="${p//*\//}"
-    r="$(Realpath "${p}")"
-    if [[ "${r}" =~ ^${h} ]]
-    then
-      t="${r/#${h}/}"
-      # shellcheck disable=SC2154
-      printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${h}${NONE}${t}"
-      (( --max ))
-      if [[ ${max} -le 0 ]]; then break; fi
-    fi
-  done
+  if [[ ${other} == 1 ]]; then
+    local max=10
+    read_into_array favs "${Find} '${wd_favs}' -name 'wd-*' | ${Sort} -t- -k 2n,2n -k 3n,3n"
+    for favorite in "${favs[@]}"
+    do
+      n="${favorite//*\//}"
+      r="$(Realpath "${favorite}")"
+      if [[ "${r}" =~ ^${here} ]]
+      then
+        t="${r/#${here}/}"
+        # shellcheck disable=SC2154
+        printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${here}${NONE}${t}"
+        (( --max ))
+        if [[ ${max} -le 0 ]]; then break; fi
+      fi
+    done
+  fi
   export cwd lwd
   cwd="$(Realpath .)"
   printf "lwd '%s'\n" "${lwd}"
