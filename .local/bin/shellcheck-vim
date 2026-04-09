@@ -6,20 +6,31 @@ export SHELL
 SHELL=bash
 
 OPTS=""
+VERBOSE=0
 while [[ "$1" =~ ^- ]]; do
   OPT="$1"
   shift
-  if [[ "${OPT}" =~ ^-[efiPosSW]$ ]]; then
-    OPT="${OPT} $1"
-    shift
-  fi
+  case "${OPT}" in
+    --verbose)
+      VERBOSE=1
+      continue
+      ;;
+    *) if [[ "${OPT}" =~ ^-[efiPosSW]$ ]]; then
+         OPT="${OPT} $1"
+         shift
+       fi
+       ;;
+  esac
   if [[ -z "${OPTS+x}" ]]; then
     OPTS="${OPT}"
   else
     OPTS="${OPTS} ${OPT}"
   fi
 done
-if [[ -n "$(command -v shellcheck)" ]]; then
+if command -v shellcheck 1>/dev/null 2>&1 ; then
+  if [[ ${VERBOSE} == 1 ]]; then
+    printf "%s\n" "shellcheck --color=never ${OPTS} \"$*\""
+  fi
   # shellcheck disable=SC2086
   shellcheck --color=never ${OPTS} "$*"
 else
