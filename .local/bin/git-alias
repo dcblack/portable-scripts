@@ -127,13 +127,13 @@ function Git_alias()
       -list)
         if [[ ${#ARGS[@]} -lt 1 ]]; then
           git config --global --get-regexp "alias.*" |\
-           colrm 1 6 | sed -e 's/ .*//' | fmt | table || true
+           colrm 1 6 | sed -e 's/ .*//' | sort | fmt | table || true
         else
           ARG1="${ARGS[0]}"; Shift ARGS
           Report_debug "ARG1=${ARG1}"
           git config --global --get-regexp "alias.${ARG1}*" |\
            perl -pe 's/^alias\.//;s/ .*//' |\
-           colrm 1 6 | sed -e 's/ .*//' | fmt | table || true
+           colrm 1 6 | sed -e 's/ .*//' | sort | fmt | table || true
         fi
         ;;
       -dump)
