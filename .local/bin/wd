@@ -353,7 +353,7 @@ function cwd() # cwd_func
   real_favs="$(Firstreal "${HOME}/Favorites" "${HOME}/favs")"
   wd_favs="$(Realpath "${real_favs}")"
   declare -a favs
-  local max=10 n r favorite t here
+  local found=0 max=10 n r favorite t here
   here="$(Realpath .)"
   here="${here/+/[+]}"
   read_into_array favs "${Find} '${wd_favs}' -name 'wd-*' | ${Sort} -t- -k 2n,2n -k 3n,3n"
@@ -366,10 +366,14 @@ function cwd() # cwd_func
       t="${r/#${here}/}"
       # shellcheck disable=SC2154
       printf "$(_C cyan)%s $(_C green)->${NONE} %s${NONE}\n" "${n}" "$(_C bold magenta)${here}${NONE}${t}"
-      (( --max ))
+      (( --max )) ; (( ++found ))
       if [[ ${max} -le 0 ]]; then break; fi
     fi
   done
+  if [[ ${found} == 0 ]]; then
+    # shellcheck disable=SC2154
+    printf "%s \"%s%s\n" "👉$(_C white)" "$(_C bold magenta)${here}" "$(_C white)\"${NONE}"
+  fi
 }
 
 #-------------------------------------------------------------------------------
