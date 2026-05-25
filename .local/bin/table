@@ -15,7 +15,7 @@ use pscr qw(%OPT &Version);
 
 ###############################################################################
 $exe = "$RealBin/$RealScript";
-exec "perldoc $exe" if "@ARGV" =~ m/^--?help$/;
+exec "perldoc $exe" if "@ARGV" =~ m/^-{1,2}help$/;
 # Initialization <<<
 #------------------------------------------------------------------------------
 our $auth = 'David C Black <dcblack@mac.com>';
