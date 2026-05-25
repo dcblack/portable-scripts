@@ -9,7 +9,7 @@
 # Allow display of version
 export UTILS_VERSION
 UTILS_VERSION=1.10.1
-if [[ "$*" == "--version" ]]; then
+if [[ "$*" =~ "--version" ]]; then
   echo "utils.bash version ${UTILS_VERSION}"
 fi
 
