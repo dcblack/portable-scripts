@@ -103,10 +103,10 @@ function portable-env() {
   WHOME="/mnt/c/Users/${USER}"
 
   # Favorites
-  FAVS=~/Favorites
+  FAVS="${HOME}"/Favorites
   mkdir -p "${FAVS}"
   CDPATH="."
-  for dir in "${FAVS}" ~; do
+  for dir in "${FAVS}" "${HOME}"; do
     Append_path CDPATH "${dir}"
   done
 
@@ -128,3 +128,8 @@ function portable-env() {
 }
 
 portable-env
+
+if [[ -x "${HOME}/.user_env" ]]; then 
+  # shellcheck disable=SC1091
+  source "${HOME}/.user_env"
+fi
