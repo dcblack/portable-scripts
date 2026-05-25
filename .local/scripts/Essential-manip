@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2312
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 # Essential building blocks
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 # Add_prefix()
 # Add_suffix()
 # Append_path # only if 2nd arg does not exist in first
@@ -41,7 +41,7 @@ function Essential-manip() {
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Rm() {
   local TOOLNAME=Rm VERSION=1.0 HELP_TEXT='
 Name
@@ -111,13 +111,17 @@ Option      | Description
   mv "$@" "${TRASH_DIR}"
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Nargs() { echo $#; }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function SafeVar()
 {
   # Returns 0 for success if safe; otherwise, returns 1 for failure
+
+  # shellcheck disable=SC2034
+  local SafeVar_VERSION=1.1
+
   local -A unsafe
   unsafe=(
     ["path"]=1
@@ -131,7 +135,7 @@ function SafeVar()
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Add_prefix()
 {
   if [[ $# -lt 2 ]]; then Report_error "$0 needs at least two arguments"; return; fi
@@ -143,7 +147,7 @@ function Add_prefix()
   done
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Add_suffix()
 {
   #| Usage "$# -gt 1" Add_suffix PREFIX LIST
@@ -156,10 +160,11 @@ function Add_suffix()
   done
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Append_path() # only if 2nd arg does not exist in first
 {
-  export Append_path_VERSION=1.4
+  # shellcheck disable=SC2034
+  local Append_path_VERSION=1.5
   export ACTION
   #|Usage "$1" "Append_path VAR PATH" || return 1
   # Dependencies: Realpath Has_path Report_error Remove_path Unique_path
@@ -190,7 +195,7 @@ function Append_path() # only if 2nd arg does not exist in first
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Expand_path() # [-n] [-v] VAR # Expand paths within VAR
 {
   export Expand_path_VERSION=1.0
@@ -231,24 +236,24 @@ function Expand_path() # [-n] [-v] VAR # Expand paths within VAR
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Car()
 {
   echo "$1"
 }
 alias Firstword=Car
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Cdr()
 {
   shift
   echo "$@"
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 # Locate all instances of named script(s)
 # Dependencies: Realpath Append_path
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function FindScript() # SCRIPT(S)
 {
   if [[ $# == 0 ]]; then
@@ -289,17 +294,21 @@ function FindScript() # SCRIPT(S)
 }
 export FINDSCRIPT_COUNT SCRIPTDIRS
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Firstreal()
 {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit ; fi
   /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Has_path()
 {
   #| USAGE: Has_path VAR PATH
+
+  # shellcheck disable=SC2034
+  local Has_path_VERSION=1.1
+
   local arg plscript
   arg="$(Realpath "$2")"
   # shellcheck disable=SC2016
@@ -309,19 +318,19 @@ function Has_path()
 }
 
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 # Load a script (do NOT execute)
 
 export LOADED
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Run()
 {
   Load "$1"
   "$@"
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Load()
 {
   export Load_VERSION=1.5
@@ -384,13 +393,13 @@ Load [-v|-q][-n] SCRIPTNAME(S)
   return "${STATUS}"
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Unload()
 {
   true
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Reload()
 {
   #|Usage "$1" "Reload [-v]" || return
@@ -446,23 +455,32 @@ function Reload()
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Prepend_path() # only if 2nd arg does not exist in first
 {
-  export Prepend_path_VERSION=1.4
+  # shellcheck disable=SC2034
+  local Prepend_path_VERSION=1.5
+
   export ACTION
-  #|Usage "$1" "Prepend_path VAR PATH" || return 1
+  #|Usage "$1" "Prepend_path [-undo] [-sep SEPARATOR|-warn] VAR PATH" || return 1
   # Dependencies: Realpath Has_path Report_error Remove_path Unique_path
+  #
+  # shellcheck disable=SC2034
+  local WARN=0 VAR VAL SEP=':' ARG EVAL
   if [[ "$1" == "-undo" || "${ACTION}" == "rm" ]]; then
     shift
     Remove_path "$1" "$2"
   else
-    local VAR VAL SEP ARG EVAL
-    SEP=':'
-    if [[ "$1" == "-sep" ]]; then
-      SEP="$2"
-      shift; shift
-    fi
+    while [[ "$1" =~ ^- ]]; do
+      if [[ "$1" == "-sep" ]]; then
+        SEP="$2"
+        shift
+      elif [[ "$1" == "-warn" ]]; then
+        # shellcheck disable=SC2034
+        WARN=1
+      fi
+      shift
+    done
     if [[ $# != 2 ]]; then Report_error "Prepend_path requires two arguments"; return 1; fi
     if ! SafeVar "$1"; then Report_error "^-- Passed to Prepend_path"; return 1; fi
     VAR="$1"
@@ -479,8 +497,7 @@ function Prepend_path() # only if 2nd arg does not exist in first
   fi
 }
 
-
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 #@ Output the realpath name treating all arguments as a single filename specification
 #| Realpath FILENAME_SPECIFICATION
 if builtin command -v "realpath" 1>/dev/null; then
@@ -499,7 +516,7 @@ else
 fi
 
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Remove_missing()
 {
   export Remove_missing_VERSION=1.0
@@ -542,7 +559,7 @@ function Remove_missing()
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Remove_path()
 {
   export Remove_path_VERSION=1.4
@@ -584,7 +601,7 @@ function Remove_path()
   fi
 }
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------
 function Unique_path()
 {
   export Unique_path_VERSION=1.5
