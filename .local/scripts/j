@@ -18,7 +18,7 @@ fi
 function Auth()
 {
   if builtin command -v "auth" 1>/dev/null; then
-    auth "$@"
+    auth --default-root --color always --cache-time=60 "$@"
   else
     Report_error "Please install auth-files utility"
     return 1
@@ -58,7 +58,7 @@ function js() {
       NEXTOK=0
       REPEAT=1
     fi
-    if ! Auth --default-root --check "${lws}" || [[ -d "${lws}" ]]; then
+    if ! Auth --check "${lws}" || [[ -d "${lws}" ]]; then
       LASTOK=0
     fi
     if [[ ${LASTOK} == 1 ]]; then
@@ -68,7 +68,7 @@ function js() {
         LASTOK=0
       fi
     fi
-    if ! Auth --default-root --check "${nws}"; then
+    if ! Auth --check "${nws}"; then
       NEXTOK=0
       REPEAT=0
       Report_warning "Skipping unauthorized ${nws}"
@@ -82,7 +82,7 @@ function js() {
         # shellcheck disable=SC2164
         cd - 2>/dev/null 1>/dev/null
         # shellcheck disable=SC1090
-        Auth --default-root --check "${lws}" && source "${lws}" --rm
+        Auth --check "${lws}" && source "${lws}" --rm
         # shellcheck disable=SC2164
         cd - 2>/dev/null 1>/dev/null
       fi
@@ -94,10 +94,10 @@ function js() {
       if [[ ${J_NOSCRIPT} == 0 ]]; then
         if [[ ${J_SHOW} == 0 ]]; then
           # shellcheck disable=SC1090
-          Auth --default-root --check "${nws}" && source "${nws}" --add
+          Auth --check "${nws}" && source "${nws}" --add
         else
           # shellcheck disable=SC1090
-          Auth --default-root --check "${nws}" && source "${nws}" --add --show
+          Auth --check "${nws}" && source "${nws}" --add --show
         fi
       fi
       cws="${nws}"
@@ -107,7 +107,7 @@ function js() {
         export ACTION='repeat'
         if [[ ${J_NOSCRIPT} == 0 ]]; then
           # shellcheck disable=SC1090
-          Auth --default-root --check "${nws}" && source "${nws}" --repeat
+          Auth --check "${nws}" && source "${nws}" --repeat
         fi
         cws="${nws}"
       else
@@ -480,7 +480,7 @@ HELP_TEXT
       NEXTOK=0
       REPEAT=1
     fi
-    if ! Auth --default-root --check "${lws}" || [[ -d "${lws}" ]]; then
+    if ! Auth --check "${lws}" || [[ -d "${lws}" ]]; then
       LASTOK=0
     fi
     if [[ ${LASTOK} == 1 ]]; then
@@ -490,7 +490,7 @@ HELP_TEXT
         LASTOK=0
       fi
     fi
-    if ! Auth --default-root --check "${nws}" || [[ -d "${nws}" ]]; then
+    if ! Auth --check "${nws}" || [[ -d "${nws}" ]]; then
       NEXTOK=0
       REPEAT=0
       Report_warning "Skipping non-executable ${nws}"
@@ -504,7 +504,7 @@ HELP_TEXT
         # shellcheck disable=SC2164
         cd - 2>/dev/null 1>/dev/null
         # shellcheck disable=SC1090
-        Auth --default-root --check "${lws}" && source "${lws}" --rm
+        Auth --check "${lws}" && source "${lws}" --rm
         # shellcheck disable=SC2164
         cd - 2>/dev/null 1>/dev/null
       fi
