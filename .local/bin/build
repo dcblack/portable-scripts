@@ -212,10 +212,14 @@ function Build()
   fi
 
   # Did you really mean 'cargo build'?
-  if [[ -r Cargo.toml && ! -r CMakeLists.txt ]]; then
-    printf "[1;96mWarning:[0m Assuming you meant: cargo %s\n" "$*"
-    cargo build "$@" && return 0 || return 1
-  fi
+  for pdir in $(parents); do
+    if [[ -r "${pdir}/CMakeLists.txt" ]]; then break; fi
+    if [[ -r "${pdir}/Cargo.toml" ]]; then
+      printf "[1;96mWarning:[0m Assuming you meant: cargo %s\n" "$*"
+      cargo build "$@" && return 0 || return 1
+      return
+    fi
+  done
 
   export BUILD_TOOL_NAME SCRIPTS_DIR LOGFILE
   BUILD_TOOL_PATH="$(command -v "${BUILD_TOOL_NAME}")"
@@ -335,7 +339,7 @@ function Build()
       Build_help
       return 0
     #...........................................................................
-    elif [[ "${1}" =~ ^-(toolchain)|(tc)$ ]]; then
+    elif [[ "${1}" == "-toolchain" || "${1}" == "-tc" ]]; then
       if [[ $# -gt 1 && "${2}" =~ ^[a-zA-Z] ]]; then
         shift
         local TOOLCHAIN="${1}-toolchain" TOOLDIR TOOLPATH
@@ -360,13 +364,13 @@ function Build()
         Report_fatal "-toolchain requires an argument starting with a letter"
       fi
     #...........................................................................
-    elif [[ "$1" =~ ^-(gcc)|(GCC)|(gnu)|(GNU)$ ]]; then
+    elif [[ "$1" == "-gcc" || "$1" == "-GCC" || "$1" == "-gnu" || "$1" == "-GNU" ]]; then
       export CXX CC
       CXX="$(command -v g++)"
       CC="$(command -v gcc)"
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_CXX_COMPILER=${CXX}" "-DCC=${CC}")
     #...........................................................................
-    elif [[ "$1" =~ ^-(llvm)|(LLVM)|(clang)$ ]]; then
+    elif [[ "$1" == "-llvm" || "$1" == "-LLVM" || "$1" == "-clang" ]]; then
       export CXX CC
       CXX="$(command -v clang++)"
       CC="$(command -v clang)"
@@ -530,7 +534,7 @@ function Build()
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DUSE_CXX_VERSION=${1/-std=/}")
     #...........................................................................
     elif [[ "$1" =~ ^-type$ ]]; then
-      if [[ "$2" =~ ^(Debug|Release|RelWithDebInfo|MinSizeRel)$ ]]; then
+      if [[ "$2" == "Debug" || "$2" == "Release" || "$2" == "RelWithDebInfo" || "$2" == "MinSizeRel" ]]; then
         CMAKE_BUILD_TYPE="$2"
         shift
       elif [[ "$2" =~ ^- ]]; then
