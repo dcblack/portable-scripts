@@ -18,6 +18,7 @@ alias ez='exec zsh'
 alias 1p=op
 alias db=defaultbrowser
 
+alias tar=gtar
 alias and='&&'
 alias or='||'
 
@@ -29,18 +30,20 @@ function WL()
 {
   # Returns the path of a file reported by command -V
   # -d returns the containing directory
-  # shellcheck disable=SC2312
+  # shellcheck disable=SC2016
   local PERLSCRIPT='print qq{$1} if m{ (/\S+)$}'
   if [[ "$1" == "-d" ]]; then
     shift
+    # shellcheck disable=SC2016
     PERLSCRIPT='next unless m{ (/\S+)$}; $d=qq{$1}; $d=~s{/[^/]+$}{};print $d'
   fi
+  # shellcheck disable=SC2312
   builtin command -V "$@" 2>/dev/null | perl -lne "${PERLSCRIPT}"
 }
 function f()
 {
   # Returns the path of a j(ump) command
-  ( j "$@" ; realpath "." );
+  ( j "$@" ; Realpath "." );
 }
 alias F='file'
 alias I='lipo -info'
@@ -66,7 +69,6 @@ CPU=$(uname -p)
 if [[ "${CPU}" == "arm" ]]; then
   alias oldbrew=/usr/local/bin/brew
 fi
-alias nvim='gvim -ngp'
 export VI='gvim'
 export LOCAL EDITOR
 alias view-systemc='"${EDITOR}" "${LOCAL}/src/systemc/src"'
@@ -108,6 +110,7 @@ function viscr()
   ViSrc "$(Firstreal ~/"scripts/$1" "${LOCAL}/scripts/$1")";
 }
 alias vial='ViSrc ~/.zsh_aliases'
+# shellcheck disable=SC2154
 alias viws='ViSrc $cws'
 alias vizsh='ViSrc ~/.zshrc'
 alias vigit='ViSrc ~/.gitconfig'
@@ -130,7 +133,19 @@ function funcs()
 }
 
 
-alias ag=rg
+function ag()
+{
+  if [[ "$1" == '-nc' ]]; then
+    Ruler
+    env NOCOLOR=1 rg "$@"
+    Ruler
+  else
+    Ruler -grn
+    rg "$@"
+    Ruler -red
+  fi
+}
+
 function aga()
 {
   # Search all files
@@ -370,7 +385,6 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   alias ls='ls ${LS_OPTS}G';
   alias la='ls ${LS_OPTS}AG';
   export LSUSB='/usr/local/bin/lsusb'
-  export GREP='/usr/bin/grep'
 # alias make='gmake';
 # alias gdb='lldb'
 else
