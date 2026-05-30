@@ -339,7 +339,7 @@ function Mkbin()
     elif [[ "${OPTION}" =~ ^-{1,2}d(ir)? ]]; then
       # --dir
       if Regex "${OPTION}" "=" ; then
-        DIRECTORY="${1:s/.*=/}"
+        DIRECTORY="${1/.*=/}"
       elif [[ $# -gt 0 ]]; then
         DIRECTORY="$1"
         shift
