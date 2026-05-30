@@ -55,6 +55,13 @@ alias 0p='eval $(op signin family_tx512)'
 alias Bc='shellcheck -s bash -xa -o all'
 alias Clion='jb clion'
 alias Rover='jb rust'
+function qrust() {
+  if grep -Fq '#[test]' "$1"; then
+    rustc --test "$1" && "./${1/.rs}"
+  else
+    rustc "$1" && "./${1/.rs}";
+  fi
+}
 alias myip='ipconfig getifaddr en0'
 alias font-sample="echo '#=0123456789_=-^+@auvwxy/\B&8b6ijl1|L_?9gqQO0op2Z75S'"
 alias ipno='ifconfig|egrep "vmnet|(inet[ ])"'
@@ -101,6 +108,8 @@ function ViSrc()
   shift
   echo "${VI} -f $* ${FILE}"
   "${VI}" -f "$@" "${FILE}"
+  # Restore permissions if possible
+  chmod a+rx "${FILE}"
   Source "${FILE}" "$@"
 }
 
