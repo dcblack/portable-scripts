@@ -41,18 +41,21 @@ function portable-env() {
     SYSTEMC_SRC\
     TEMPLATEPATH\
 
+
+  mkdir -p ~/.local
   ORIGPATH="${PATH}"
   PSCR="$(Realpath ~/.local)"
   APPS="$(Realpath "${PSCR}/apps")"
   DOTBIN="$(Realpath "${PSCR}/bin")"
   DOULOSBIN="$(Realpath "${PSCR}/Doulos/bin")"
   APPSBIN="${PSCR}/apps/bin"
-  SCREENDIR=~/.screen
+  SCREENDIR=$(Realpath ~/.screen)
   SYSTEMC_HOME="${PSCR}/apps/systemc"
   SYSTEMC_SRC="${PSCR}/src/systemc"
+
   # Note: (Pre/App)end_path functions only append if the directory exists
   Prepend_path PATH "${HOME}/.platformio/penv/bin"
-  Prepend_path PATH ~/".rvm/bin"
+  Prepend_path PATH "${HOME}/.rvm/bin"
   Prepend_path PATH "/sbin"
   Prepend_path PATH "/bin"
   Prepend_path PATH "/usr/sbin"
@@ -74,13 +77,13 @@ function portable-env() {
   Prepend_path PATH "${APPSBIN}"
   Prepend_path PATH "${DOTBIN}"
   Prepend_path PATH "${DOULOSBIN}"
-  Prepend_path PATH ~/bin
+  Prepend_path PATH "${HOME}/bin"
   Append_path LD_LIBRARY_PATH "${HOME}/.local/usr/local/lib"
   Append_path LD_LIBRARY_PATH "${HOME}/.local/lib"
-  PERL5LIB="$(Realpath "${PSCR}/lib")"
-  TEMPLATEPATH="$(Realpath ~/templates)"
-  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath ~/.local/templates)"
-  TEMPLATEPATH="${TEMPLATEPATH}:$(Realpath ~/.local/apps/templates)"
+  Append_path PERL5LIB "${PSCR}/lib"
+  Append_path TEMPLATEPATH "${HOME}/templates"
+  Append_path TEMPLATEPATH "${HOME}/.local/templates"
+  Append_path TEMPLATEPATH "${HOME}/.local/apps/templates"
 
   Unique_path PATH
   Unique_path LD_LIBRARY_PATH
@@ -109,6 +112,7 @@ function portable-env() {
   for dir in "${FAVS}" "${HOME}"; do
     Append_path CDPATH "${dir}"
   done
+  Unique_path CDPATH
 
   # Affect applications
   LESS="-afrMRXj4x4"
