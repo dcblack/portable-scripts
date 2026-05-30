@@ -116,6 +116,7 @@ alias Lines=Rows
 #-------------------------------------------------------------------------------
 function _C()
 {
+  # ANSI terminal escape sequences
   export NOCOLOR COLOR_SET COLOR_FG
   if [[ ${NOCOLOR} == 1 ]]; then
     return
@@ -133,12 +134,14 @@ function _C()
     test -z "${arg}" && continue
     arg="$(echo "${arg}" | tr '[:upper:]' '[:lower:]')"
     if [[ ${COLOR_FG} == 1 ]]; then
+      # Foreground colors
       case ${COLOR_SET} in
         2)  PRF="3"  ;;
         10) PRF="9"  ;;
         *)  return 1 ;;
       esac
     else
+      # Background colors
       case ${COLOR_SET} in
         2)  PRF="4"  ;;
         10) PRF="10" ;;
@@ -154,7 +157,7 @@ function _C()
       bg|background)   COLOR_FG=0 ;;
       bright)          COLOR_SET=10 ;;
       norm|normal)     COLOR_SET=2 ;;
-      -|none)          echo -n "${ESC}[0m" ; COLOR_FG=1 ;;
+      -|none|off)      echo -n "${ESC}[0m" ; COLOR_FG=1 ;;
       bold)            echo -n "${ESC}[1m" ;;
       ubld|nobold)     echo -n "${ESC}[21m" ;;
       dark)            echo -n "${ESC}[2m" ;;
