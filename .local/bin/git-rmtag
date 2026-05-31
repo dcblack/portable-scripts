@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+#$Info: git-rmtag - remove one or more tags locally and remote. $
+
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    --help | -h)
+      echo '
+Name
+----
+
+Synopsis
+--------
+
+```bash
+git rmtag --help
+git rmtag TAG...
+```
+'
+      exit
+      ;;
+    *)
+      echo "[1;93mWARNING: Ignoring options except --help supported[0m" 1>&2
+      shift
+      ;;
+  esac
+done
+
+for tag in "$@"; do
+  git tag -d "${tag}" || true
+  git push origin --delete "${tag}" || true
+done
