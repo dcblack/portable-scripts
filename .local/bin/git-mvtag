@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+function Git_mvtag() {
+  local HELP_TEXT='
+Name
+----
+
+git-mvtag - rename a tag both locally and remotely.
+
+Synopsis
+--------
+
+```bash
+git mvtag --help
+git mvtag OLDTAG NEWTAG
+```
+'
+  local SIGN=''
+  while [[ "$1" =~ ^- ]]; do
+    case "$1" in
+    --help | -h)
+      echo "${HELP_TEXT}"
+      return
+      ;;
+    -s)
+      SIGN='-s'
+      ;;
+    *)
+      echo "[1;93mWARNING: Ignoring options except --help and -s supported[0m" 1>&2
+      shift
+      ;;
+    esac
+  done
+
+  local OLD_TAG="$1"
+  local NEW_TAG="$2"
+  local REMOTE="${3:-origin}"
+
+  if [[ -z "${OLD_TAG}" || -z "${NEW_TAG}" ]]; then
+    echo "Usage: $0 <old-tag> <new-tag> [remote-name]"
+    exit 1
+  fi
+
+  # Verify old tag exists
+  if ! git rev-parse "refs/tags/${OLD_TAG}" >/dev/null 2>&1; then
+    echo "Error: Tag '${OLD_TAG}' does not exist."
+    exit 1
+  fi
+
+  # Handle Annotated vs Lightweight tags
+  local TAG_TYPE MSG
+  TAG_TYPE=$(git cat-file -t "${OLD_TAG}")
+  if [[ "${TAG_TYPE}" == "tag" ]]; then
+    MSG=$(git tag -l --format='%(contents)' "${OLD_TAG}")
+    export GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL GIT_COMMITTER_DATE
+    GIT_COMMITTER_NAME=$(git tag -l --format='%(taggername)' "${OLD_TAG}")
+    GIT_COMMITTER_EMAIL=$(git tag -l --format='%(taggeremail)' "${OLD_TAG}")
+    GIT_COMMITTER_DATE=$(git tag -l --format='%(taggerdate:raw)' "${OLD_TAG}")
+    git tag -a "${SIGN}" "${NEW_TAG}" -m "${MSG}" "${OLD_TAG}"
+  else
+    echo "Note: '${OLD_TAG}' is a lightweight tag."
+    git tag "${NEW_TAG}" "${OLD_TAG}"
+  fi
+
+  # Delete old local tag
+  git tag -d "${OLD_TAG}"
+
+  # Update remote
+  echo "Updating remote '${REMOTE}'..."
+  git push "${REMOTE}" --delete "${OLD_TAG}"
+  git push "${REMOTE}" "${NEW_TAG}"
+
+  echo ""
+  echo "✅ Successfully renamed '${OLD_TAG}' to '${NEW_TAG}'."
+  echo ""
+  echo "📢 Send this command to collaborators to update their local repos:"
+  echo "   git tag -d ${OLD_TAG} && git fetch --tags"
+}
+
+Git_mvtag "$@"
+
+#TAF!

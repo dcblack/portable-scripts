@@ -6,12 +6,25 @@
 # Date must be formatted as a triplet
 # Time must be formatted [0-9]{1,2}:[0-9][0-9] with optional AM/PM
 
-require 5.4.0;
+require 5.36.0;
 use strict;
 use warnings;
 use English;
 
-# Get the current date components
+our $errors = 0;
+sub Error {
+  my ($RED, $red, $NONE) = ("[91;1m", "[22;91m", "[0m");
+  my ($tag,$fatal) = ('Error',0);
+  if ($_[0] eq 'fatal') {
+    shift @_;
+    ($tag,$fatal) = ('Fatal',1);
+  }
+  printf "${RED}${tag}: ${red}%s${NONE}\n", "@_";
+  exit 1 if $fatal;
+  ++$errors;
+}
+
+# Get the current date/time components
 my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime;
 $year += 1900;  # Convert from years since 1900 to full year
 my $mm = sprintf("%02d",$mon+1);
@@ -22,6 +35,7 @@ my $ampm = ( $hour >= 12 ) ? "PM" : "AM";
 my $hr12 = ($hour==0)?12:($hour>12)?$hour-12:$hour;
 my $time = sprintf("%02d:%02d %s",$hr12,$min,$ampm);
 
+# Set up variables related to front-matter
 my $date = "$year-".$months[$mon]."-$mday";
 my $title   = '{:TITLE:}';
 $title = $ENV{TITLE} if exists $ENV{TITLE};
@@ -38,6 +52,40 @@ $email = $ENV{HOME_EMAIL} if $email eq '' and exists $ENV{HOME_EMAIL};
 $email = $ENV{WORK_EMAIL} if $email eq '' and exists $ENV{WORK_EMAIL};
 $email = $ENV{EMAIL}      if $email eq '' and exists $ENV{EMAIL};
 $email   = '{:EMAIL:}'    if $email eq '';
+
+# Parse command-line options
+while ( $ARGV[0] =~ m{^-} ) {
+  my $opt = shift @ARGV;
+  if ( $opt =~ m{^-{1,2}t(itle)?\b}   ) { if ( $opt =~ m{=} ) { $title   = $'; } else { $title   = shift @ARGV; } continue }
+  if ( $opt =~ m{^-{1,2}s(ubject)?\b} ) { if ( $opt =~ m{=} ) { $subject = $'; } else { $subject = shift @ARGV; } continue }
+  if ( $opt =~ m{^-{1,2}a(uthor)?\b}  ) { if ( $opt =~ m{=} ) { $author  = $'; } else { $author  = shift @ARGV; } continue }
+  if ( $opt =~ m{^-{1,2}e(mail)?\b}   ) { if ( $opt =~ m{=} ) { $email   = $'; } else { $email   = shift @ARGV; } continue }
+  if ( $opt =~ m{^-{1,2}h(elp)?\b} ) {
+    printf "%s\n", '
+Name
+----
+
+$0
+
+Synopsis
+--------
+
+$0 --help
+$0 [OPTIONS] FILENAME...
+';
+    exit 0;
+  }
+}
+
+# Sanitize
+Error("Bad title '$title' - possibly option syntax") if $title =~ m{^-+};
+Error("Bad subject '$subject' - possibly option syntax") if $subject =~ m{^-+};
+Error("Bad author '$author' - possibly option syntax") if $author =~ m{^-+};
+Error("Bad email '$email' - possibly option syntax") if $email =~ m{^-+};
+Error("Bad email '$email' - pattern") unless $email =~ m{^[[:alpha:]][-.[:word:]]+@[[:alpha:]][-.[:word:]]*[.][[:alpha:]]{2,3}$};
+Error("Missing FILENAME") unless scalar @ARGV;
+Error('fatal', "Please fix above errors and retry") if $errors > 0;
+
 my $yaml =
 "---
 title: ${title}
@@ -46,29 +94,40 @@ author: ${author}
 contacts: ${email}
 ---
 [Updated ${date} ${time}]
-[Version 0.0]
+[Version 0.1.0]
+
 ";
 
-my $inp_name = "@ARGV";
-my $new_name = $inp_name;
-$new_name =~ s{([.][[:word:]]+)$}{-new$1};
-my $old_name = $inp_name;
-$old_name =~ s{([.][[:word:]]+)$}{-old$1};
-open my $inp_file, '<', $inp_name or die "Unable to open $inp_name";
-open my $new_file, '>', $new_name or die "Unable to open $new_name";
-while(<$inp_file>) {
-  # next if $INPUT_LINE_NUMBER > 50;
-  $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and s{^\[(frontmatter|yaml|yml)\]}{};
-  s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:][0-9A-Za-z]+}{[$1 ${date}}i;
-  s{\[((Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+) \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${time}}i;
-  if(m{\[(Version |v)(\d+)[.](\d+)}i) {
-    my ($tag,$maj,$min) = ($1,$2,$3);
-    ++$min;
-    s{\[(Version |v)\d+[.]\d+}{[${tag}${maj}.${min}}i;
+# Process files
+while ( @ARGV ) {
+  # Figure out file names
+  my $inp_name = shift @ARGV;
+  while ( (not -r $inp_name) and (scalar @ARGV) ) {
+    $inp_name .= " ".shift @ARGV;
   }
-} continue {
-  print $new_file $_;
+  Error('fatal', "Unable to determine filename") unless -r $inp_name;  
+
+  my $new_name = $inp_name;
+  $new_name =~ s{([.][[:word:]]+)$}{-new$1};
+  my $old_name = $inp_name;
+  $old_name =~ s{([.][[:word:]]+)$}{-old$1};
+  open my $inp_file, '<', $inp_name or Error('fatal', "Unable to open '$inp_name' for reading");
+  open my $new_file, '>', $new_name or Error('fatal', "Unable to open '$new_name' for writing");
+  while(<$inp_file>) {
+    # Insert YAML front matter if one of first two lines indicates a need
+    $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and s{^\[(frontmatter|yaml|yml)\]}{};
+    # Look for timestamp lines matching specific patterns
+    s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:][0-9A-Za-z]+}{[$1 ${date}}i;
+    s{\[((Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+) \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${time}}i;
+    if(m{\[(Version |v)(\d+)[.](\d+)}i) {
+      my ($tag,$maj,$min) = ($1,$2,$3);
+      ++$min;
+      s{\[(Version |v)\d+[.]\d+}{[${tag}${maj}.${min}}i;
+    }
+  } continue {
+    print $new_file $_;
+  }
+  rename $inp_name, $old_name;
+  rename $new_name, $inp_name;
+  unlink $old_name;
 }
-rename $inp_name, $old_name;
-rename $new_name, $inp_name;
-unlink $old_name;
