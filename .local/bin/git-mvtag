@@ -12,7 +12,7 @@ Synopsis
 
 ```bash
 git mvtag --help
-git mvtag OLDTAG NEWTAG
+git mvtag OLDTAG NEWTAG [REMOTE]
 ```
 '
   local SIGN=''
@@ -68,7 +68,7 @@ git mvtag OLDTAG NEWTAG
   # Update remote
   echo "Updating remote '${REMOTE}'..."
   git push "${REMOTE}" --delete "${OLD_TAG}"
-  git push "${REMOTE}" "${NEW_TAG}"
+  git push "${REMOTE}" --tags
 
   echo ""
   echo "✅ Successfully renamed '${OLD_TAG}' to '${NEW_TAG}'."
