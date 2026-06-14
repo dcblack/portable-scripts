@@ -18,7 +18,8 @@ fi
 function Auth()
 {
   if builtin command -v "auth" 1>/dev/null; then
-    auth --default-root --color always "$@"
+#   auth --config=${HOME}/.authrc "$@"
+    auth "$@"
   else
     Report_error "Please install auth-files utility"
     return 1
@@ -72,7 +73,7 @@ function js() {
       NEXTOK=0
       REPEAT=0
       Report_warning "Skipping unauthorized ${nws}"
-      _Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG:-0}"
+      _Report_debug "nws not authorized" -if "${J_DEBUG:-0}"
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
@@ -493,8 +494,8 @@ HELP_TEXT
     if ! Auth "${nws}" || [[ -d "${nws}" ]]; then
       NEXTOK=0
       REPEAT=0
-      Report_warning "Skipping non-executable ${nws}"
-      _Report_debug "nws not executable or is a directory ${nws}" -if "${J_DEBUG:-0}"
+      Report_warning "Skipping unauthorized ${nws}"
+      _Report_debug "nws not authorized" -if "${J_DEBUG:-0}"
     fi
     # Source old working script with ACTION='rm'
     if [[ ${LASTOK} == 1 ]]; then
