@@ -1,36 +1,51 @@
-# .gittattributes - setup for {:NAME:}
+# .gittattributes
+# - setup for {:NAME:}
 
 # For more information on this file see <https://docs.github.com/en/get-started/getting-started-with-git/configuring-git-to-handle-line-endings>
 # For information on file formats see <https://fileinfo.com>
+
+# Note: Not all of these will be used. This file tries to cover everything that might be used on a programming project.
 
 # Set the default behavior, in case people don't have core.autocrlf set.
 * text=auto
 
 # Explicitly declare text files you want to always be normalized and converted
 # to native line endings on checkout.
+*.asc   text
+*.bash  text eol=lf
 *.c     text
-*.h     text
 *.cpp   text
+*.cxx   text
+*.h     text
 *.hpp   text
+*.json  text eol=lf
+*.kwd   text
+*.ldf   text
+*.md    text eol=lf
+*.pl    text
+*.ps1   text eol=lf
+*.py    text eol=lf
 *.rs    text
 *.s     text
-*.ldf   text
 *.sh    text eol=lf
-*.bash  text eol=lf
-*.zsh   text eol=lf
-*.pl    text
-*.py    text
 *.sv    text
 *.svh   text
-*.md    text
-*.txt   text
-*.kwd   text
-*.asc   text
 *.tex   diff=c++draft
+*.toml  text eol=lf
+*.txt   text eol=lf
+*.xml   text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.zsh   text eol=lf
 README  text
 LICENSE text
+GNUmakefile text
+CMakeLists.txt text
 
 # Declare files that will always have CRLF line endings on checkout.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.hta text eol=crlf
 *.sln text eol=crlf
 *.vbs text eol=crlf
 
@@ -48,12 +63,25 @@ LICENSE text
 *.psd binary
 *.heic binary
 *.svg binary
-*.vsdx
-*.pbxproj -crlf -diff -merge
+*.vsdx binary
 *.pdf diff=pdfconv
+*.pbxproj text eol=lf
+.gitattributes text
+*.vba text eol=crlf
+*.bas text eol=crlf
+*.cls text eol=crlf
+*.frm text eol=crlf
+*.frx binary
+*.dotm binary
+*.ppam binary
+*.pptm binary
 
 # Office Documents
-*.ppt[mxs] binary
+*.pptx binary
+*.pptm binary
+*.ppsx binary
+*.ppsm binary
+*.ppam binary
 *.ppt binary
 *.docx diff=word
 *.doc binary
@@ -66,6 +94,7 @@ LICENSE text
 # Archives
 *.zip binary
 *.tgz binary
+*.txz binary
 *.pkg binary
 *.dmg binary
 *.iso binary
