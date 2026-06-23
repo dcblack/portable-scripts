@@ -1,0 +1,81 @@
+#!new # vim:syntax=sh:tw=72
+
+# REQUIREMENTS & DEFAULTS
+--default VERS=0.0
+--default AUTHOR=David C Black
+--default EMAIL=dcblack@mac.com
+
+# BRIEF
+#! Creates simple Rust project
+
+=pod
+
+=head1 NAME
+
+B<rust-project template> - Creates a simple Rust project
+
+=head1 SYNOPSIS
+
+B<new> rust-project I<OPTIONS> {:I<NAME>:}
+
+=head1 DESCRIPTION
+
+Creates a basic directory to build a simple SystemC project.
+
+    NAME/
+    ├── .gitattributes
+    ├── .gitignore
+    ├── ARCHIVE
+    │   └── README.md
+    ├── dev-tools
+    │   ├── make-help.py
+    │   └── README.md
+    ├── GNUmakefile
+    ├── NOTES
+    │   └── README.md
+    ├── README.md
+    └── setup.profile
+
+=head1 PARAMETERS
+
+=over
+
+=item AUTHOR
+
+=item COMPANY
+
+=item EMAIL
+
+=item VERS
+
+Version number #.# (defaults to 0.0)
+
+=back
+
+=head1 REQUIREMENTS
+
+Rust cargo new needs to be executed.
+
+=head1 AUTHOR
+
+David C Black <dcblack@mac.com>
+
+=head1 COPYRIGHT & LICENSE
+
+'rust-project' template is copyright (C) {:YEAR:} {:AUTHOR:}
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
+# END  {:Id:}

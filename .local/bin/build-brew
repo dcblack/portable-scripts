@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+#$Info: build-brew - install brew on macos or linux. $
+
+function Install_brew()
+{
+  local OS REV
+  OS="$(uname -s)"
+  REV="$(uname -r)"
+  HW="$(uname -m)"
+  case "${OS}-${REV}" in
+    Darwin*)
+      #shellcheck disable=2312
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      if ! builtin command -v brew >/dev/null 2>&1; then
+        if [[ "${HW}" =~ arm64 ]]; then
+          #shellcheck disable=2016
+          (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> ~/.zprofile
+        fi
+        #shellcheck disable=2312
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+      fi
+      ;;
+    Linux*WSL2) # Assume Linux
+      sudo apt update -y
+      sudo apt install -y build-essential procps curl file git
+      sudo apt autoremove -y
+      sudo rm /etc/resolv.conf
+      sudo bash -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf'
+      sudo bash -c 'echo "[network]" >> /etc/wsl.conf'
+      sudo bash -c 'echo "generateResolvConf = false" >> /etc/wsl.conf'
+      #shellcheck disable=2312
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      ;;
+    *)
+      printf "\033[1;91mError: Unknown OS for brew installation\033[0m\n"
+      return 1
+      ;;
+  esac
+}
+
+Install_brew "$@"

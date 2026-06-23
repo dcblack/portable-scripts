@@ -1,0 +1,26 @@
+/target/
+/.auth/
+/auth-test-db/
+*.swp
+.DS_Store
+.idea/
+.vscode/
+*.cdx.json
+
+/auth-test/
+*.db
+*.db-wal
+*.db-shm
+
+# Windows
+thumbs.db
+
+# Special
+ARCHIVE/
+DEV/
+NOTES/
+golden/
+artifacts/
+git.log
+
+# Taf!
