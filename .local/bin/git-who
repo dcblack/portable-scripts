@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+#$Info: git-who - Display the user name and email for commits. $
+
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+
+function Realpath ()
+{
+  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+}
+
+function Git_who()
+{
+  local HELP_TEXT
+  HELP_TEXT=$(cat <<'HELP_TEXT'
+Name
+----
+
+git-who - Display the user name and email for commits.
+
+Synopsis
+--------
+
+```bash
+git-who --help|-h # produces this text
+git-who
+```
+
+Description
+-----------
+
+Displays the git config user.name and user.email in an easy to understand format.
+
+HELP_TEXT
+)
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    if builtin command -v glow; then
+      glow -p <<<"${HELP_TEXT}" #>>>
+    elif builtin command -v less; then
+      less <<<"${HELP_TEXT}" #>>>
+    else
+      Report_info "${HELP_TEXT}"
+    fi
+    return 0;
+  fi
+
+  local USER_NAME USER_MAIL
+  USER_NAME="$(git config user.name)"
+  USER_MAIL="$(git config user.email)"
+  if [[ "${USER_MAIL}" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]]; then
+    :  # No-op: Do nothing if the email is valid
+  else
+    USER_MAIL="Bad-email:${USER_MAIL}"
+  fi
+  printf "%s <%s>\n" "${USER_NAME:-Undefined}" "${USER_MAIL}"
+
+}
+
+if [[ ${SOURCED} == 0 ]]; then
+  Git_who "$@"
+fi
