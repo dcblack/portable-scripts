@@ -80,7 +80,12 @@ export APPS ARGV BUILD_SOURCE_DOCUMENTATION CC   \
   VERBOSITY WARNINGS
 
 #NOW="$(date '+%m%d%H%M%Y.%S')"
-TMP="$(mktemp Save-XXX)"
+#TIMESTAMP="$(date +%s)"
+TMP="$(mktemp /tmp/Save-XXX)"
+Cleanup() {
+    rm -f "${TMP}"
+}
+trap Cleanup EXIT
 
 # Defaults if empty
 if [[ -z "${VERBOSITY}" ]]; then VERBOSITY=0;  fi

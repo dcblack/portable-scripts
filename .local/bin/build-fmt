@@ -3,7 +3,7 @@
 
 function Build_fmt()
 {
-  local SCRIPTNAME="build-fmt" VERSION=1.4
+  local SCRIPTNAME="build-fmt" VERSION=1.5
   local HELPTEXT
   HELPTEXT=$(cat <<'HELPTEXT'
 Name
@@ -144,7 +144,7 @@ HELPTEXT
     return 1
   fi
   REPO_DIR="$(basename "${GIT_URL}" .git)"
-  BUILD_DIR="BUILD-${TOOL_NAME}"
+  BUILD_DIR="target/${TOOL_NAME}"
   _do mkdir -p "${INSTALL_DIR}"
   _do cd "${INSTALL_DIR}" || Report_fatal "Unable to enter ${INSTALL_DIR}"
   Report_info "Building under ${INSTALL_DIR}"
