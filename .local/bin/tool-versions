@@ -9,15 +9,16 @@
 
 export CC CXX
 TOOL_NAME="$0"
-TOOL_VERS=1.2
+TOOL_VERS=1.3
 
 function Tool_versions()
 {
   # Defaults
-  local EXTRA QUIET TOOLS
+  local EXTRA QUIET TOOLS SORT
   export NOCOLOR CXX CC
   EXTRA=0
   QUIET=0
+  SORT=1
   TOOLS=()
   # Color support
   local CRED="" CGRN="" CYLW="" CBLU="" CMAG="" CCYN="" BOLD="" NONE=""
@@ -62,14 +63,16 @@ OPTIONS
 EOT
         exit
         ;;
-      -x|--extras)  EXTRA=1 ;;
-      -C|--color)   NOCOLOR=0 CRED="[91m" CGRN="[92m" BOLD="[1m" NONE="[0m" ;;
-      -l|--loud)    QUIET=0 ;;
-      -N|--nocolor) NOCOLOR=1 CRED=""       CGRN=""       BOLD=""      NONE="" ;;
-      -q|--quiet)   QUIET=1 ;;
-      -v|--version) echo "${TOOL_NAME} version ${TOOL_VERS}" ; exit ;;
-      -*)           echo "Error: Uknown option: $1"; exit 1 ;;
-       *)           TOOLS+=("$1") ;;
+      -x|--extras)   EXTRA=1 ;;
+      -C|--color)    NOCOLOR=0 CRED="[91m" CGRN="[92m" BOLD="[1m" NONE="[0m" ;;
+      -l|--loud)     QUIET=0 ;;
+      -N|--no-color) NOCOLOR=1 CRED=""       CGRN=""       BOLD=""      NONE="" ;;
+      -n|--no-sort)  SORT=0 ;;
+      -q|--quiet)    QUIET=1 ;;
+      -s|--sort)     SORT=1 ;;
+      -v|--version)  echo "${TOOL_NAME} version ${TOOL_VERS}" ; exit ;;
+      -*)            echo "Error: Uknown option: $1"; exit 1 ;;
+       *)            TOOLS+=("$1") ;;
     esac
     shift
   done
@@ -116,6 +119,9 @@ EOT
       "${PERL5}"
       python
       python3
+      rustc
+      rustup
+      cargo
     )
   fi
   EXTRAS=(
@@ -129,6 +135,7 @@ EOT
     grep
     "${SED}"
     rg
+    gtree
     tree
     rsync
     shellcheck
@@ -209,6 +216,19 @@ EOT
   echo "........................................"
 
   #-------------------------------------------------------------------------------
+  # Sort
+  #-------------------------------------------------------------------------------
+  if [[ ${SORT} == 1 ]]; then
+    local -a SORTED=()
+    local ELEMENT
+    # shellcheck disable=SC2312
+    while IFS= read -r -d '' ELEMENT; do
+        SORTED+=("${ELEMENT}")
+    done < <(printf '%s\0' "${TOOLS[@]}" | sort -z)
+    TOOLS=("${SORTED[@]}")   
+  fi
+
+  #-------------------------------------------------------------------------------
   # Display each of the tools
   #-------------------------------------------------------------------------------
   local TOOL EXISTS PATTERN SUBST VERSION_OPTION
@@ -219,20 +239,27 @@ EOT
     SUBST="s/This is perl/Perl/"
     if [[ -n "${EXISTS}" ]]; then
       case "${TOOL}" in
-        g[+][+]|clang|bash|zsh) PATTERN="${TOOL}" ;;
+        ag)    PATTERN="ag version" ;;
+        bash)  PATTERN="${TOOL}" ;;
+        build) PATTERN="build version" ;;
         clang-tidy) PATTERN="version" ;;
-        shellcheck) PATTERN="version" ;;
+        clang-format) PATTERN="version" ;;
+        clang) PATTERN="${TOOL}" ;;
+        g[+][+]) PATTERN="${TOOL}" ;;
         git)   PATTERN="version" ;;
         gmake) PATTERN="Make" ;;
         gsed)  PATTERN="[(]GNU sed[)]" ;;
         gzip)  PATTERN="gzip" ;;
         make)  PATTERN="Make" ;;
         perl)  PATTERN="version" ;;
+        rg)    PATTERN="ripgrep" ;;
         rsync) PATTERN="version" ;;
         sed)   PATTERN="[(]GNU sed[)]" ;;
+        shellcheck) PATTERN="version" ;;
         tar)   PATTERN="bsdtar" ;;
         unzip) PATTERN="modifications" VERSION_OPTION=-v ;;
         zip)   PATTERN="This is " SUBST="s/This is //" ;;
+        zsh)   PATTERN="${TOOL}" ;;
         *)     PATTERN+="" ;;
       esac
       echo -n "${CGRN}${TOOL}${NONE} - "
