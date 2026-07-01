@@ -81,7 +81,7 @@ export APPS ARGV BUILD_SOURCE_DOCUMENTATION CC   \
 
 #NOW="$(date '+%m%d%H%M%Y.%S')"
 #TIMESTAMP="$(date +%s)"
-TMP="$(mktemp /tmp/Save-XXX)"
+TMP="$(mktemp /tmp/Save-XXXX)"
 Cleanup() {
     rm -f "${TMP}"
 }
