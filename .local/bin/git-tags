@@ -23,7 +23,7 @@ git-tags [-#]
 ```
 '
   export ERRORS=0
-  local VERSION=1.0.0 N=15
+  local VERSION=1.0.0 N=10
 
   # Parse command-line
   while [[ "$1" =~ ^- ]]; do
@@ -31,7 +31,7 @@ git-tags [-#]
     shift
     if [[ "${OPT}" =~ ^-{1,2}h(elp)?$ ]]; then
       if command -v glow 2>/dev/null; then
-        glow -p <<<"${HELP_TEXT}"
+        glow -p <<<"${HELP_TEXT}" #>>>
       else
         echo "${HELP_TEXT}"
       fi
@@ -52,7 +52,7 @@ git-tags [-#]
                    --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' \
                    refs/tags/* \
     | perl -pe 's-refs/tags/--;s{... }{  };s{.[{][}]}{};' \
-    | tail -"${N}"
+    | head -n "${N}"
 }
 
 function Report_error()
