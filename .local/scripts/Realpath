@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 
-#@ Output the realpath name treating all arguments as a single filename specification
-#| Realpath FILENAME_SPECIFICATION
+#@ Output the realpath name treating multiple arguments as separate paths to resolve
+#| Realpath FILENAMES
 if builtin command -v "realpath" 1>/dev/null; then
   # Faster version in Linux
   function Realpath ()
   {
+    if [[ "$*" == '--version' ]]; then echo "Realpath v1.1"; return; fi
     if [[ $# == 0 ]]; then set - .; fi
     realpath -q "$@"
   }
 else
   function Realpath ()
   {
+    if [[ "$*" == '--version' ]]; then echo "Realpath v1.1"; return; fi
     if [[ $# == 0 ]]; then set - .; fi
-    /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+    /usr/bin/perl '-MCwd(abs_path)' -le 'for $a (@ARGV) {$p=abs_path($a);print $p if -e $p}' "$@"
   }
 fi
