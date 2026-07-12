@@ -8,6 +8,8 @@ fi
 
 function Git_tags()
 {
+  Setup_colors
+  export MAG OFF
   local HELP_TEXT='
 NAME
 ----
@@ -19,48 +21,185 @@ SYNOPSIS
 
 ```bash
 git-tags --help
-git-tags [-#]
+git-tags [-#]|--depth=#
+git-tags --hash TAG
+git-tags [--verbose|--quiet] --refs TAG
 ```
 '
-  export ERRORS=0
-  local VERSION=1.0.0 N=10
+  export ERRORS=0 VERBOSITY=0 DEBUG=0
+  local VERSION=1.0.0 N=10 ACTION='list'
 
   # Parse command-line
   while [[ "$1" =~ ^- ]]; do
     local OPT="$1"
+    case "$1" in
+      --help|-h)
+        if command -v glow 2>/dev/null; then
+          glow -p <<<"${HELP_TEXT}" #>>>
+        elif command -v less 2>/dev/null; then
+          less <<<"${HELP_TEXT}" #>>>
+        else
+          echo "${HELP_TEXT}"
+        fi
+        return 0
+        ;;
+      --debug|-debug)
+        DEBUG=1
+        ;;
+      --verbose|-v)
+        VERBOSITY=1
+        ;;
+      --quiet|-q)
+        VERBOSITY=-1
+        ;;
+      --version|-V)
+        echo "${0/*\//} version ${VERSION}"
+        return 0
+        ;;
+      -[0-9][0-9]*)
+        (( N=-OPT ))
+        ;;
+      --depth=[0-9][0-9]*)
+        (( N="${OPT/--depth=/}" ))
+        ;;
+      --hash)
+        ACTION='hash'
+        ;;
+      --refs)
+        ACTION='refs'
+        ;;
+      *)
+        Report_error "Unknown option: ${OPT}"
+        ;;
+    esac
     shift
-    if [[ "${OPT}" =~ ^-{1,2}h(elp)?$ ]]; then
-      if command -v glow 2>/dev/null; then
-        glow -p <<<"${HELP_TEXT}" #>>>
-      else
-        echo "${HELP_TEXT}"
-      fi
-      return 0
-    elif [[ "${OPT}" =~ ^-{1,2}[Vv](ersion)?$ ]]; then
-      echo "${0/*\//} version ${VERSION}"
-      return 0
-    elif [[ "${OPT}" =~ ^-[1-9][0-9]*$ ]]; then
-      (( N=-${OPT} ))
-    else
-      Report_error "Unknown option: ${OPT}"
-    fi
   done
+  [[ ${DEBUG} -gt 0 ]] && echo "${MAG}ACTION=${OFF}${ACTION} ${MAG}ARGS=${OFF}$*"
+  case "${ACTION}" in
+    list) Git_tag_list "${N}" ;;
+    hash) Git_tag_hash "${1}" ;;
+    refs) Git_tag_refs "${1}" ;;
+    *)
+      Report_error "Internal - unknown action: ${ACTION}"
+      ;;
+  esac
+}
 
+function Git_tag_hash()
+{
+  export DEBUG VERBOSITY RED YLW OFF
+  [[ ${DEBUG} -gt 0 ]] && echo "${MAG}Entered:${OFF} $0 $*"
+  local TAG="$1" HASH
+  if [[ "${VERBOSITY}" == "--quiet" ]]; then VERBOSITY=-1; fi
+  HASH="$(git rev-parse -q "${TAG}^0" 2>/dev/null)"
+  # Check verbosity
+  if [[ ${VERBOSITY} -gt 0 ]]; then # Verbose
+    if [[ -z "${HASH}" ]]; then
+      printf "${YLW}WARNING:${OFF} Tag %s is non-existant\n" "${TAG}"
+    else
+      printf "Tag %s references %s\n" "${TAG}" "${HASH}"
+    fi
+  elif [[ ${VERBOSITY} -lt 0 ]]; then # Quiet
+    echo "${HASH}"
+  else # Normal
+    if [[ -z "${HASH}" ]]; then
+      Report_error "Missing ${TAG}"
+      return 1
+    else
+      echo "${HASH}"
+    fi
+  fi
+}
+
+function Git_tag_refs()
+{
+  export DEBUG VERBOSITY
+  [[ ${DEBUG} -gt 0 ]] && echo "${MAG}Entered:${OFF} $0 $*"
+  local TAG="$1" HASH TAGS
+  local -a TAG_LIST=()
+  HASH="$(Git_tag_hash "${TAG}" --quiet)"
+  if [[ -z "${HASH}" ]]; then
+    if [[ ${VERBOSITY} -ge 0 ]]; then
+      Report_error "Missing ${TAG}"
+      return 1
+    fi
+  fi
+  TAGS="$(git tag --points-at "${HASH}")"
+  mapfile -t TAG_LIST <<<"${TAGS}" #>>>
+  if [[ ${VERBOSITY} -gt 0 ]]; then # Verbose
+    if [[ ${#TAG_LIST[@]} == 1 ]]; then
+      printf "Tag %s is unique\n" "${TAG}"
+    else
+      local -a OTHERS
+      for ITEM in "${TAG_LIST[@]}"; do
+        [[ "${ITEM}" != "${TAG}" ]] && OTHERS+=("${ITEM}")
+      done
+      printf "Tag %s also refers to %s\n" "${TAG}" "${TAG_LIST[@]}"
+    fi
+  elif [[ ${VERBOSITY} -lt 0 ]]; then # Quiet
+    echo "${TAG_LIST[@]}"
+  else # Normal
+    if [[ ${#TAG_LIST[@]} -gt 1 ]]; then
+      echo "${TAG_LIST[@]}"
+    else
+      Report_error "Unique ${TAG}"
+    fi
+  fi
+}
+
+function Git_tag_list()
+{
+  # shellcheck disable=SC2016
+  local perlscript='
+BEGIN { our @a = (); }
+chomp; chomp;
+$_ +~ s-refs/tags/--;
+$_ +~ s{... }{  };
+$_ +~ s{.[{][}]}{};
+push @a, $_;
+END {
+  my ($m1, $m2) = ( 0, 0 );
+  for $_ (@a) {
+    $_ =~ m/^([^ ]+) +([^ ]+)/;
+    $m1 = length($1) if length($1)>$m1;
+    $m2 = length($2) if length($2)>$m2;
+  }
+  for $_ (@a) {
+    $_ =~ s/^([^ ]+) +([^ ]+) +//;
+    printf "%-${m1}s %-${m2}s %s\n", $1, $2, $_;
+  }
+}
+'
   # shellcheck disable=SC2312
   git for-each-ref --count=30 \
-                   --sort='-*authordate' \
-                   --format='%(*objectname:short) %(*refname) %(*authorname) %(*subject) %(*authordate)' \
+                   --sort='-authordate' \
+                   --format='%(objectname:short) %(refname) %(authorname) %(subject) %(authordate)' \
                    refs/tags/* \
-    | perl -pe 's-refs/tags/--;s{... }{  };s{.[{][}]}{};' \
-    | head -n "${N}"
+                   | perl -ne "${perlscript}" \
+    | head -n "${1}"
+}
+
+function Setup_colors() {
+  export NOCOLOR RED OFF
+  if [[ -n "${NOCOLOR}" && ${NOCOLOR} != 0 ]]; then
+    RED=""
+    YLW=""
+    MAG=""
+    OFF="";
+  else
+    RED="[1;91m"
+    YLW="[1;93m"
+    MAG="[1;95m"
+    OFF="[0m"
+  fi
 }
 
 function Report_error()
 {
-  export ERRORS
+  export ERRORS RED OFF
   (( ++ERRORS ))
-  local RED="[1;91m" OFF="[0m"
   echo "${RED}Error:${OFF} $*"
 }
 
+[[ "$1" == "git-tags" ]] && shift
 Git_tags "$@"
