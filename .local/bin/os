@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# os - 
+# os - display the operating system name.
+readonly OS_VERSION="0.2.0"
+
 if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
   cat <<'HELPTEXT'
 Name
@@ -9,8 +11,9 @@ os - display the operating system name.
 
 Synopsis
 --------
-os --help|-h # produces this text
-os [-1|-v]
+os --help|-h
+os --version|-V
+os [-1|-v] [-p|--platform]
 
 Description
 -----------
@@ -21,19 +24,54 @@ Options
 
 Flag | Description
 ---- | -----------
--1   | Succint one-line
--p   | Indicate platform (macOS|CoCalc|WSL)
+-1   | Succinct one-line output
+-p   | Indicate platform (macOS|CoCalc|WSL|MinGW)
 -v   | Verbose
+-V, --version | Display the version and exit
+
+Dependencies
+------------
+
+- Bash: required to interpret the script.
+- Essential-IO: required at ../scripts/Essential-IO.
+- tr: used internally by Essential-IO when reporting errors.
+- uname: required for every invocation that reports the operating system.
+- Perl: required on Linux when /etc/os-release is available; it parses the
+  distribution name. It is not required on macOS or MinGW for normal output.
+- cat: required by verbose Linux output.
+- sw_vers: required by verbose macOS output.
+- WSL: wsl.exe is optional and is used only to identify a WSL environment.
+- CoCalc: /cocalc/bin/cocalc-open is optional and is used only to identify
+  a CoCalc environment.
+- MinGW: the script uses the MinGW/MSYS uname implementation; no separate
+  MinGW executable is invoked.
+
+Conflicts
+---------
+
+- Ubuntu/Linux normally provides uname, Perl, and cat, but minimal images may
+  omit Perl or cat. /etc/os-release is Linux-specific.
+- macOS provides uname and sw_vers, but does not normally provide
+  /etc/os-release. Perl availability varies by macOS installation.
+- WSL depends on the Windows-side wsl.exe being visible in PATH; native Linux
+  systems do not need it.
+- CoCalc detection depends on the optional /cocalc/bin/cocalc-open marker and
+  is not available on ordinary Ubuntu or macOS installations.
+- MinGW/MSYS supplies Unix-like commands with Windows path and uname values;
+  macOS-only sw_vers and Linux-only /etc/os-release are unavailable.
 
 HELPTEXT
   exit 0;
 fi
 
-function Realpath ()
-{
-  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
-}
-SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
+if [[ "$1" =~ ^-{1,2}version$ || "$1" == "-V" ]]; then
+  printf "os Version %s\n" "${OS_VERSION}"
+  exit 0
+fi
+
+# Resolve the helper directory without requiring an external realpath command.
+SCRIPTBASE="${BASH_SOURCE[0]%/*}"
+SCRIPTDIR="$(cd -- "${SCRIPTBASE}/../scripts" && pwd -P)"
 if [[ ! -d "${SCRIPTDIR}" ]]; then
   printf "FATAL: Missing required directory '%s'\n" "${SCRIPTDIR}"
   exit 1
@@ -43,6 +81,21 @@ source "$SCRIPTDIR/Essential-IO"
 
 function Os_main()
 {
+  local OS
+
+  # Check commands only when the selected execution path needs them. Optional
+  # WSL and CoCalc markers are platform detectors, not required dependencies.
+  Require_command()
+  {
+    if ! builtin command -v "$1" >/dev/null 2>&1; then
+      Report_error "Missing required dependency: $1"
+      return 1
+    fi
+    return 0
+  }
+
+  Require_command "uname" || return 1
+
   # Parse command options
   local VERBOSE=0 SUCCINCT=0 PLATFORM=0
   while [[ $# -gt 0 ]]; do
@@ -60,9 +113,9 @@ function Os_main()
     shift
   done
 
-  local OS 
   OS="$(uname -s)"
   if [[ "${OS}" != "Darwin" && -r /etc/os-release ]]; then
+    Require_command "perl" || return 1
     OS="$(perl -lne 'if(m{PRETTY_NAME="([^"]+)"}){$os=$1;$os=~s{Oracle}{CentOS};print $os;}' /etc/os-release)"
   fi
 
@@ -74,7 +127,7 @@ function Os_main()
           OS="macOS"
           ;;
         *)
-          if [[ -r /cocacl/bin/cocalc-open ]]; then
+          if [[ -r /cocalc/bin/cocalc-open ]]; then
             OS="cocalc"
           elif builtin command -V wsl.exe 1>/dev/null 2>&1; then
             OS="WSL"
@@ -93,10 +146,12 @@ function Os_main()
   _do uname -a
   case "${OS}" in
     Darwin)
+      Require_command "sw_vers" || return 1
       _do sw_vers
       ;;
     *)
       if [[ -r /etc/os-release ]]; then
+        Require_command "cat" || return 1
         _do cat /etc/os-release
       fi
       ;;
