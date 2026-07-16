@@ -2,19 +2,18 @@
 #
 #$Info: tool-versions - displays version information for selected development tools. $
 #
-# Requirements for this script:
-# - bash
-# - uname
-# - perl5
+# Runtime requirements are checked after option parsing.  macOS uses the GNU
+# utilities installed by Homebrew because BSD sort does not support -z.
 
 export CC CXX
-TOOL_NAME="$0"
-TOOL_VERS=1.3
+TOOL_NAME="${0##*/}"
+TOOL_VERS=1.3.0
 
 function Tool_versions()
 {
   # Defaults
-  local EXTRA QUIET TOOLS SORT
+  local EXTRA QUIET SORT
+  local -a TOOLS EXTRAS
   export NOCOLOR CXX CC
   EXTRA=0
   QUIET=0
@@ -29,18 +28,22 @@ function Tool_versions()
   while [[ $# != 0 ]]; do
     case "$1" in
       -h|--help)
+        if [[ $# != 1 ]]; then
+          echo "Error: --help must be the only option" >&2
+          exit 1
+        fi
         cat <<EOT
 NAME
 ----
 
-  $0 - Display the versions of tools
+  ${TOOL_NAME} - Display the versions of tools
 
 SYNOPSIS
 --------
 
-  $0 -h|--help
-  $0 --version
-  $0 [OPTIONS] [TOOL...]
+  ${TOOL_NAME} -h|--help
+  ${TOOL_NAME} -V|--version
+  ${TOOL_NAME} [OPTIONS] [TOOL...]
 
 DESCRIPTION
 -----------
@@ -56,31 +59,75 @@ OPTIONS
 | --extras  |  -x   | Show extra tools                   |
 | --help    |  -h   | Display this help                  |
 | --loud    |  -l   | Yell about missing tools (default) |
-| --nocolor |  -N   | No color                           |
+| --no-color, --nocolor |  -N   | No color                    |
 | --quiet   |  -q   | Don't complain about missing tools |
-| --version |  -v   | Show version of this script        |
+| --no-sort |  -n   | Do not sort the tool list          |
+| --sort    |  -s   | Sort the tool list (default)       |
+| --version |  -V   | Show version of this script        |
+
+DEPENDENCIES
+------------
+
+- Bash: required to interpret this script; Bash 3.2 or newer is supported.
+- date: required for the host-information timestamp.
+- Perl (perl or perl5): required to parse Linux distribution information and
+  filter tool version output.
+- uname (guname on macOS): required for host information.
+- sort (gsort on macOS): GNU sort is required because the script uses -z.
+- sw_vers: required on macOS for the operating-system version.
+- The commands listed in the default and --extras tool lists are optional
+  targets; missing targets are reported unless --quiet is selected.
+
+CONFLICTS AND PLATFORM NOTES
+----------------------------
+
+- macOS ships BSD sort and BSD utilities. If Homebrew is not installed, use
+  /bin/bash -c "\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)".
+  Then install GNU dependencies with: brew install coreutils gnu-sed gnu-tar
+  perl. Ensure Homebrew's bin directory is in PATH (brew shellenv can do this).
+- On macOS, coreutils supplies gsort and guname, while gnu-sed and gnu-tar
+  supply gsed and gtar. The script deliberately prefers these names.
+- Ubuntu and other GNU/Linux systems normally provide the required utilities;
+  minimal installations may need packages such as perl and coreutils.
+- WSL is supported when wsl.exe is visible in PATH; it is optional and only
+  adds a WSL host label.
+- MinGW/MSYS/Cygwin Bash environments may have different tool names and
+  version-output formats. The script does not require Windows tools, but the
+  requested development tools must be available in PATH.
+- Tool version output is filtered by tool-specific patterns, so vendor or
+  localized output can be omitted even when a command succeeds.
 
 EOT
-        exit
+        exit 0
         ;;
       -x|--extras)   EXTRA=1 ;;
       -C|--color)    NOCOLOR=0 CRED="[91m" CGRN="[92m" BOLD="[1m" NONE="[0m" ;;
       -l|--loud)     QUIET=0 ;;
-      -N|--no-color) NOCOLOR=1 CRED=""       CGRN=""       BOLD=""      NONE="" ;;
+      -N|--no-color|--nocolor) NOCOLOR=1 CRED="" CGRN="" BOLD="" NONE="" ;;
       -n|--no-sort)  SORT=0 ;;
       -q|--quiet)    QUIET=1 ;;
       -s|--sort)     SORT=1 ;;
-      -v|--version)  echo "${TOOL_NAME} version ${TOOL_VERS}" ; exit ;;
-      -*)            echo "Error: Uknown option: $1"; exit 1 ;;
+      -V|--version)
+        if [[ $# != 1 ]]; then
+          echo "Error: --version must be the only option" >&2
+          exit 1
+        fi
+        echo "${TOOL_NAME} version ${TOOL_VERS}"
+        exit 0
+        ;;
+      -*)            echo "Error: Unknown option: $1" >&2; exit 1 ;;
        *)            TOOLS+=("$1") ;;
     esac
     shift
   done
 
-  local PERL5 SED TAR UNAME
+  local PERL5 SED TAR UNAME SORT_COMMAND
   PERL5="perl"
   # shellcheck disable=SC2312
   if [[ -n "$(builtin command -v perl5 )" ]]; then
+    PERL5="perl5"
+  fi
+  if ! builtin command -v "${PERL5}" >/dev/null 2>&1; then
     PERL5="perl5"
   fi
   SED="sed"
@@ -98,10 +145,28 @@ EOT
   if [[ -n "$(builtin command -v guname )" ]]; then
     UNAME="guname"
   fi
+  SORT_COMMAND="sort"
+  if [[ "$(uname -s 2>/dev/null)" == "Darwin" ]]; then
+    # BSD sort lacks -z; Homebrew coreutils installs the compatible command
+    # under the non-conflicting name gsort.
+    SORT_COMMAND="gsort"
+  fi
+
+  # Check the commands that the script itself, rather than a listed target,
+  # must execute.  Do this before producing output to avoid partial reports.
+  local REQUIRED_COMMAND
+  for REQUIRED_COMMAND in date "${PERL5}" "${UNAME}" "${SORT_COMMAND}"; do
+    if ! builtin command -v "${REQUIRED_COMMAND}" >/dev/null 2>&1; then
+      echo "Error: Missing required dependency: ${REQUIRED_COMMAND}" >&2
+      if [[ "${REQUIRED_COMMAND}" == "gsort" ]]; then
+        echo "Install it on macOS with: brew install coreutils" >&2
+      fi
+      return 1
+    fi
+  done
 
       
   # Default tools
-  local -a TOOLS EXTRAS
   if [[ "${#TOOLS[@]}" == 0 ]]; then
     TOOLS=(
       systemc-version
@@ -192,6 +257,10 @@ EOT
   HOSTOS="$("${UNAME}" -s)"
   case "${HOSTOS}" in
     Darwin) 
+      if ! builtin command -v sw_vers >/dev/null 2>&1; then
+        echo "Error: Missing required dependency: sw_vers" >&2
+        return 1
+      fi
       "${UNAME}" -moprv
       OS="$(sw_vers --productName) "
       OS+="$(sw_vers --productVersion)"
@@ -224,7 +293,7 @@ EOT
     # shellcheck disable=SC2312
     while IFS= read -r -d '' ELEMENT; do
         SORTED+=("${ELEMENT}")
-    done < <(printf '%s\0' "${TOOLS[@]}" | sort -z)
+    done < <(printf '%s\0' "${TOOLS[@]}" | "${SORT_COMMAND}" -z)
     TOOLS=("${SORTED[@]}")   
   fi
 
@@ -263,10 +332,17 @@ EOT
         *)     PATTERN+="" ;;
       esac
       echo -n "${CGRN}${TOOL}${NONE} - "
-      # shellcheck disable=SC2312
-      "${TOOL}" "${VERSION_OPTION}" 2>/dev/null \
-      | "${PERL5}" -ne "next unless m/${PATTERN}/; next if m/(${FILTER_OUT})/ or m/^$/; ${SUBST}; print" \
-      ;
+      # Buffer each command so a failed version probe can be distinguished
+      # from a valid command whose output simply has no matching filter.
+      local VERSION_OUTPUT VERSION_STATUS
+      VERSION_OUTPUT="$("${TOOL}" "${VERSION_OPTION}" 2>/dev/null)"
+      VERSION_STATUS=$?
+      if [[ ${VERSION_STATUS} != 0 ]]; then
+        echo "${CRED}${TOOL} - ${BOLD}FAILED${NONE}"
+        continue
+      fi
+      printf '%s\n' "${VERSION_OUTPUT}" \
+        | "${PERL5}" -ne "next unless m/${PATTERN}/; next if m/(${FILTER_OUT})/ or m/^$/; ${SUBST}; print"
     elif [[ ${QUIET} != 1 ]]; then
       echo "${CRED}${TOOL} - ${BOLD}MISSING${NONE}"
     fi
