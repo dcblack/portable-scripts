@@ -329,10 +329,12 @@ EOT
         ag)    PATTERN="ag version" ;;
         bash)  PATTERN="${TOOL}" ;;
         build) PATTERN="build version" ;;
+        clang++) PATTERN="clang version" ;;
         clang-tidy) PATTERN="version" ;;
         clang-format) PATTERN="version" ;;
         clang) PATTERN="${TOOL}" ;;
         g[+][+]) PATTERN="${TOOL}" ;;
+        gh)    PATTERN="gh version" ;;
         git)   PATTERN="version" ;;
         gmake) PATTERN="Make" ;;
         gsed)  PATTERN="[(]GNU sed[)]" ;;
@@ -347,8 +349,8 @@ EOT
         tar)   PATTERN="bsdtar" ;;
         unzip) PATTERN="modifications" VERSION_OPTION=-v ;;
         zip)   PATTERN="This is " SUBST="s/This is //" ;;
+        rustup) PATTERN="^rustup[[:space:]]" ;;
         zsh)   PATTERN="${TOOL}" ;;
-        *)     PATTERN+="" ;;
       esac
       echo -n "${CGRN}${TOOL}${NONE} - "
       # Buffer each command so a failed version probe can be distinguished
