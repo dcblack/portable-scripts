@@ -7,7 +7,7 @@
 
 export CC CXX
 TOOL_NAME="${0##*/}"
-TOOL_VERS=1.3.0
+TOOL_VERS=1.3.1
 
 function Tool_versions()
 {
@@ -121,7 +121,7 @@ EOT
     shift
   done
 
-  local PERL5 SED TAR UNAME SORT_COMMAND
+  local PERL5 PYTHON3 SED TAR UNAME SORT_COMMAND
   PERL5="perl"
   # shellcheck disable=SC2312
   if [[ -n "$(builtin command -v perl5 )" ]]; then
@@ -129,6 +129,13 @@ EOT
   fi
   if ! builtin command -v "${PERL5}" >/dev/null 2>&1; then
     PERL5="perl5"
+  fi
+  # Python 3 may be installed as either `python3` or `python`; verify the
+  # selected command's version output when it is reported below.
+  PYTHON3="python"
+  # shellcheck disable=SC2312
+  if [[ -n "$(builtin command -v python3 )" ]]; then
+    PYTHON3="python3"
   fi
   SED="sed"
   # shellcheck disable=SC2312
@@ -145,8 +152,18 @@ EOT
   if [[ -n "$(builtin command -v guname )" ]]; then
     UNAME="guname"
   fi
+  if ! builtin command -v "${UNAME}" >/dev/null 2>&1; then
+    echo "Error: Missing required dependency: ${UNAME}" >&2
+    return 1
+  fi
+  local HOSTOS
+  HOSTOS="$("${UNAME}" -s 2>/dev/null)"
+  if [[ -z "${HOSTOS}" ]]; then
+    echo "Error: Unable to determine the host operating system" >&2
+    return 1
+  fi
   SORT_COMMAND="sort"
-  if [[ "$(uname -s 2>/dev/null)" == "Darwin" ]]; then
+  if [[ "${HOSTOS}" == "Darwin" ]]; then
     # BSD sort lacks -z; Homebrew coreutils installs the compatible command
     # under the non-conflicting name gsort.
     SORT_COMMAND="gsort"
@@ -155,7 +172,7 @@ EOT
   # Check the commands that the script itself, rather than a listed target,
   # must execute.  Do this before producing output to avoid partial reports.
   local REQUIRED_COMMAND
-  for REQUIRED_COMMAND in date "${PERL5}" "${UNAME}" "${SORT_COMMAND}"; do
+  for REQUIRED_COMMAND in date "${PERL5}" "${SORT_COMMAND}"; do
     if ! builtin command -v "${REQUIRED_COMMAND}" >/dev/null 2>&1; then
       echo "Error: Missing required dependency: ${REQUIRED_COMMAND}" >&2
       if [[ "${REQUIRED_COMMAND}" == "gsort" ]]; then
@@ -165,28 +182,34 @@ EOT
     fi
   done
 
+  # Check macOS-only dependencies before producing any report output.
+  if [[ "${HOSTOS}" == "Darwin" ]] && ! builtin command -v sw_vers >/dev/null 2>&1; then
+    echo "Error: Missing required dependency: sw_vers" >&2
+    return 1
+  fi
+
       
   # Default tools
   if [[ "${#TOOLS[@]}" == 0 ]]; then
     TOOLS=(
-      systemc-version
-      g++
+      autoconf
+      bash
+      cargo
       clang++
       cmake
-      autoconf
-      make
-      gmake
-      ninja
+      g++
       gdb
+      git
+      gmake
+      grep
       lldb
-      bash
-      zsh
+      make
+      ninja
       "${PERL5}"
-      python
-      python3
+      "${PYTHON3}"
       rustc
       rustup
-      cargo
+      systemc-version
     )
   fi
   EXTRAS=(
@@ -194,22 +217,22 @@ EOT
     build
     clang-format
     clang-tidy
+    croc
     find_extern
     gh
-    git
-    grep
-    "${SED}"
-    rg
     gtree
-    tree
+    gzip
+    marktext
+    rg
     rsync
     shellcheck
+    "${SED}"
     "${TAR}"
-    gzip
-    zip
-    unzip
+    tree
     "${UNAME}"
-    croc
+    unzip
+    zip
+    zsh
   )
 
   if [[ ${EXTRA} == 1 ]]; then
@@ -253,14 +276,9 @@ EOT
   #-------------------------------------------------------------------------------
   # Announce the Host information
   #-------------------------------------------------------------------------------
-  local HOSTOS OS PERLSCRIPT
-  HOSTOS="$("${UNAME}" -s)"
+  local OS PERLSCRIPT
   case "${HOSTOS}" in
-    Darwin) 
-      if ! builtin command -v sw_vers >/dev/null 2>&1; then
-        echo "Error: Missing required dependency: sw_vers" >&2
-        return 1
-      fi
+    Darwin)
       "${UNAME}" -moprv
       OS="$(sw_vers --productName) "
       OS+="$(sw_vers --productVersion)"
@@ -321,6 +339,7 @@ EOT
         gzip)  PATTERN="gzip" ;;
         make)  PATTERN="Make" ;;
         perl)  PATTERN="version" ;;
+        python|python3) PATTERN="Python 3" ;;
         rg)    PATTERN="ripgrep" ;;
         rsync) PATTERN="version" ;;
         sed)   PATTERN="[(]GNU sed[)]" ;;
@@ -335,10 +354,17 @@ EOT
       # Buffer each command so a failed version probe can be distinguished
       # from a valid command whose output simply has no matching filter.
       local VERSION_OUTPUT VERSION_STATUS
-      VERSION_OUTPUT="$("${TOOL}" "${VERSION_OPTION}" 2>/dev/null)"
+      VERSION_OUTPUT="$("${TOOL}" "${VERSION_OPTION}" 2>&1)"
       VERSION_STATUS=$?
       if [[ ${VERSION_STATUS} != 0 ]]; then
         echo "${CRED}${TOOL} - ${BOLD}FAILED${NONE}"
+        continue
+      fi
+      # A command named `python` is acceptable only when it identifies as
+      # Python 3; this catches legacy Python 2 installations explicitly.
+      if [[ "${TOOL}" == "python" || "${TOOL}" == "python3" ]] &&
+        [[ ! "${VERSION_OUTPUT}" =~ Python[[:space:]]3 ]]; then
+        echo "${CRED}${TOOL} - ${BOLD}FAILED (Python 3 required)${NONE}"
         continue
       fi
       printf '%s\n' "${VERSION_OUTPUT}" \
