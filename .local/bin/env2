@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 #$Info: env2 - Converts environment variables to various script languages. $
 
@@ -13,13 +13,15 @@ B<env2> - Converts environment variables to various script languages.
 
 =head1 SYNOPSIS
 
-B<env2> I<[OPTIONS]> B<-from> I<SHELL> B<-to> I<SHELL> I<SOURCE_FILE> [I<ARGS>]
+B<env2> I<[OPTIONS]> B<-from> I<DIALECT> B<-to> I<DIALECT> I<SOURCE_FILE> [I<ARGS>]
 
 B<env2> --save [FILE]
 
 B<env2> # displays help
 
 B<env2> --INSTALL # installs a security file
+
+B<env2> --check-sha1 # explicitly checks the script integrity
 
 =head1 DESCRIPTION
 
@@ -36,7 +38,7 @@ modifies, and the effective values of those variables are simply expressed in
 the syntax of the destination script's dialect. Typically, this is all you
 really need for scripts that modify the environment.
 
-NOTE: If you need to the conditionals and for-loops to be used for different
+NOTE: If you need to evaluate the conditionals and for-loops in different
 situations (e.g. different host architectures), then simply use this script
 repeatedly as needed.
 
@@ -63,6 +65,8 @@ currently include:
 
 =item * B<plist> - Property List
 
+=item * B<python3> - Python 3 script
+
 =item * B<ps1> - PowerShell
 
 =item * B<sh> - Shell
@@ -79,9 +83,9 @@ currently include:
 
 =back
 
-NOTE: The file version is identified by an internally computed SHA1 hash similar
-to the way B<git> does versioning. If you get a warning message about inconsistent
-hash, it means that somebody modified the file without updating the $SHA variable.
+The optional integrity check uses an internally computed SHA1 hash. It is not run
+for ordinary conversions; use B<--check-sha1> when you explicitly want to verify
+the script and its protection file.
 
 =head1 OPTIONS
 
@@ -89,12 +93,18 @@ hash, it means that somebody modified the file without updating the $SHA variabl
 
 =item B<-INSTALL>
 
-A security feature. Creates a small file in your login directory containing a
-SHA1 digest. When this file exists, it is compared against the SHA1 digest of
-the script so that new versions won't I<surprise> you. Requires that your
-Perl installation includes Digest::SHA.
+A security feature. Creates a small file in your login directory containing the
+script's SHA1 digest. Requires that your Perl installation includes
+Digest::SHA. Verification is opt-in; use B<--check-sha1> when you want to
+compare the installed protection file with the current script.
 
 Must be used by itself (i.e. no other options).
+
+=item B<--check-sha1>
+
+Explicitly verifies the script's SHA1 digest and the optional protection file.
+This check is not performed during ordinary conversions. The option must be
+used by itself and requires Digest::SHA.
 
 =item B<-all>
 
@@ -120,10 +130,14 @@ examined for a #! line. If that fails, the B<SHELL> environment variable
 is examined. If that fails, we default to B<bash> (Hey, I had to
 choose something, and B<bash> is the default Linux shell of choice).
 
-=item B<-help>
+=item B<-help>, B<-h>
 
 This built-in documentation. Written in POD so that you can also have it
 in HTML, PDF, RTF, plain text or as a man page.
+
+=item B<--version>, B<-V>
+
+Display the version of the script and exit successfully.
 
 =item B<-ignore> VARLIST
 
@@ -241,7 +255,7 @@ adverse affect on operation of UNIX.
 
 See also B<-clear>, B<-ignore> and B<-reset>.
 
-=item B<--version>
+=item B<--version>, B<-V>
 
 Display version of script.
 
@@ -253,7 +267,77 @@ ENV2 environment variable contains default command-line arguments if defined.
 
 =head1 DEPENDENCIES
 
-To support YAML::XS, this script uses the CPAN YAML::XS module.
+This script requires Perl 5.6 or newer and the standard Perl modules
+C<Data::Dumper>, C<FileHandle>, C<Cwd>, C<FindBin>, and C<English>. The
+B<-help> form also requires the C<perldoc> program, normally distributed with
+Perl.
+
+The optional C<Digest::SHA> module enables the B<-INSTALL> and
+B<--check-sha1> integrity operations; it is not needed for ordinary
+conversions.
+The optional C<YAML::XS> module is required when the input dialect is YAML.
+The source dialect's interpreter must also be installed and available through
+the user's C<PATH>; for example, Bash, C shell, Ksh, Lua, Tcl, or CMake as
+appropriate. Python output is plain Python 3 source and does not require
+Python while generating it, but the generated script requires Python 3 when
+it is executed. Similarly, generated PowerShell, Perl, Lua, Tcl, CMake, and
+shell scripts require their corresponding runtimes when executed.
+
+On macOS, the system Perl may be sufficient, while minimal Linux installations
+may need a Perl package. Homebrew Perl can be used when a newer Perl or an
+additional CPAN module is needed; ensure its bin and library paths are visible
+to the invoking shell. Perl::Critic is an optional development-time static
+analysis tool and is not required to run B<env2>.
+
+=head1 POSSIBLE ISSUES
+
+=over
+
+=item *
+
+The source script is executed to discover its resulting environment. Do not
+convert an untrusted source file: it can run commands and modify files with
+the permissions of the invoking user.
+
+=item *
+
+Only environment changes are translated. Shell syntax, conditionals, loops,
+aliases, functions, and other behavior are not converted. Evaluate the source
+in the intended host environment before relying on the generated file.
+
+=item *
+
+The result depends on the selected source interpreter, the current environment,
+the current working directory, and any arguments passed after the source file.
+Different hosts can therefore produce different output from the same input.
+
+=item *
+
+YAML conversion depends on C<YAML::XS> and its parser behavior. YAML input is
+rejected with an error when that module is unavailable; install it through the
+Perl package manager used by the selected Perl installation.
+
+=item *
+
+Environment values may contain shell- or dialect-specific characters. Review
+generated scripts before sourcing or executing them, especially when values
+come from external input or are intended for more than one target dialect.
+
+=item *
+
+The optional SHA1 protection file is user-specific and must be regenerated with
+B<-INSTALL> after an intentional script update. It protects against accidental
+or unexpected edits; it is not a substitute for signed distribution or source
+review.
+
+=item *
+
+Some target dialects are platform-specific. For example, PowerShell is not
+normally available on a minimal Unix installation, while C<plist> output is
+primarily useful on Apple platforms. The generated file is not proof that the
+target runtime is installed or compatible.
+
+=back
 
 =head1 EXAMPLES
 
@@ -274,7 +358,7 @@ To support YAML::XS, this script uses the CPAN YAML::XS module.
 =head1 COPYRIGHT/LICENSE
 
 env2 is copyright (C) 2003-2023 David C Black. All rights reserved.
-This code may is hereby made available under Apache 2.0 licensing.
+This code is hereby made available under Apache 2.0 licensing.
 
 =head1 AUTHOR
 
@@ -294,9 +378,9 @@ use FindBin qw($RealBin $RealScript);
 use Data::Dumper;
 use FileHandle;
 use Cwd qw(getcwd abs_path);
-BEGIN { eval 'use Digest::SHA qw(sha1)'; }
+BEGIN { eval { require Digest::SHA; Digest::SHA->import(qw(sha1)); 1 }; }
 our $use_sha1=defined &sha1;
-BEGIN { eval 'use YAML::XS'; }
+BEGIN { eval { require YAML::XS; YAML::XS->import; 1 }; }
 our $use_yaml=defined &Load;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
@@ -305,11 +389,12 @@ our $LINE = '?';
 use vars qw{$SHA1};
 our $verbose = 0;
 our (@DANGER_LIST,@USER_PREFS,@DEFAULT_IGNORE,@IGNORE,@ONLY);
-our $VERSION = '1.5.0'; ########################## <<< UPDATE THIS LINE WHEN FIXING BUGS OR ADDING FEATURES >>> ###
+our $VERSION = '1.5.1'; ########################## <<< UPDATE THIS LINE WHEN FIXING BUGS OR ADDING FEATURES >>> ###
 my  $homedir = (getpwuid($<))[7];
 our $SHA1FILE = "$homedir/.$RealScript.sha1";
 our $SHA1_HEX;
 our @ORIG = @ARGV;
+our $CHECK_SHA1 = @ORIG == 1 && $ORIG[0] =~ m{^-{1,2}check-sha1$};
 our %_C = (
   red     => "\e[1;91m",
   green   => "\e[1;92m",
@@ -325,26 +410,35 @@ $_C{error} = $_C{red};
 $_C{warn} = $_C{yellow};
 $_C{text} = $_C{none};
 
+# Keep informational commands independent of the optional integrity-check
+# modules and of the user's environment files.
+if (@ARGV == 1 and $ARGV[0] =~ m/^-{1,2}version$|^-V$/) {
+  printf "%s Version %s\n", $RealScript, $VERSION;
+  exit 0;
+}
+
 #-------------------------------------------------------------------------------
 # Compute SHA for the script
 #-------------------------------------------------------------------------------
-our $SHA1 = q{04e0c4c6c4e004f69e7721f7ecf50e062c27314a}; # this is the version string
-if ($use_sha1) {
+our $SHA1 = q{be5f5d51cd47d7161f3736e314a4239beedf4bae}; # this is the version string
+# SHA verification is deliberately opt-in.  Normal conversions should not
+# depend on a per-user digest file or emit integrity warnings.
+if ($use_sha1 && ("@ORIG" =~ m{^-{1,2}INSTALL$} || $CHECK_SHA1)) {
   my $sha = Digest::SHA->new(1);
-  open SCRIPT,"<","$RealBin/$RealScript";
-  while (<SCRIPT>) {
+  open my $script, "<", "$RealBin/$RealScript";
+  while (<$script>) {
     next if m{^our .SHA1 = q};
     $sha->add($_);
   }#endwhile
-  close SCRIPT;
+  close $script;
   $SHA1_HEX = $sha->hexdigest;
   if ($SHA1 eq $SHA1_HEX) {
     if (-r $SHA1FILE and -f $SHA1FILE and "@ORIG" !~ m{^-{1,2}INSTALL$}) {
-      open SHA1FILE,'<',$SHA1FILE;
-      my $oldsha1 = <SHA1FILE>;
+      open my $sha1file, '<', $SHA1FILE;
+      my $oldsha1 = <$sha1file>;
       chomp $oldsha1;
       chomp $oldsha1;
-      close SHA1FILE;
+      close $sha1file;
       warn "$_C{warn}WARNING(env2): $RealBin/$RealScript is new version $SHA1_HEX. You may want to examine and --INSTALL\n$_C{none}" if $oldsha1 ne $SHA1_HEX;
     } elsif ("@ORIG" !~ m{^-{1,2}INSTALL$}) {
       warn "$_C{warn}WARNING(env2): Missing or incorrect SHA1 digest protection file. You may want to examine and --INSTALL\n$_C{none}";
@@ -353,9 +447,14 @@ if ($use_sha1) {
     warn "$_C{warn}WARNING(env2): $RealBin/$RealScript has inconsistent SHA1 digest $SHA1_HEX\n$_C{none}";
   }#endif
 }#endif
+if ($CHECK_SHA1) {
+  die "$_C{error}ERROR: Requires Perl module 'Digest::SHA' to verify the script -- obtain from CPAN$_C{none}\n"
+    unless defined $SHA1_HEX;
+  exit 0;
+}
 our $NEWENV;
 
-if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
+if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?$/) {
   exec "perldoc $RealBin/$RealScript";
 } elsif (scalar(@ARGV) and $ARGV[0] eq '+TEST') {
   # +TEST is a hidden option for testing the script itself
@@ -462,9 +561,9 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   # Handle special case of installation
   if ("@ORIG" =~ m{^-{1,2}INSTALL$}) {
     if (defined $SHA1_HEX) {
-      open   SHA1FILE,">",$SHA1FILE;
-      printf SHA1FILE "%s\n",$SHA1_HEX;
-      close  SHA1FILE;
+      open my $sha1file, ">", $SHA1FILE;
+      printf $sha1file "%s\n", $SHA1_HEX;
+      close $sha1file;
       chmod  0600,$SHA1FILE;
     } else {
       die "$_C{error}ERROR: Requires Perl module 'Digest::SHA' to be installed -- obtain from CPAN$_C{none}\n";
@@ -506,6 +605,7 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
       $debug = 1; # suppress deletion of temporary files
     } elsif ($arg =~ m{^-{1,2}version$}) {
       printf STDERR "%s Version %s\n",$RealBin,$VERSION;
+      exit 0;
     } elsif ($arg =~ m{^-{1,2}sha(?:1?)$}) {
       printf STDERR "%s %s/%s\n",$SHA1,$RealBin,$RealScript;
     } elsif ($arg =~ m{^-{1,2}only$}) {
@@ -607,16 +707,16 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   if (scalar(@LIST) and $LIST[0] !~ m{^-?$}) { # File input
     $ifile = abs_path shift(@LIST);
     if ($ishell eq 'UNKNOWN') { # Determine type from file
-      open IFILE,'<',$ifile or die "FATAL(env2): Unable to read '$ifile'!?\n";
+      open my $ifile_handle, '<', $ifile or die "FATAL(env2): Unable to read '$ifile'!?\n";
       my $line;
-      while ($line = <IFILE>) {
+      while ($line = <$ifile_handle>) {
         chomp $line; chomp $line;
         if ($line =~ m{^#!\S+/env (\S+)}) { $ishell = $1; }
         elsif ($line =~ m{^#!(\S+)}) { $ishell = $1; }
         if ($ishell eq 'UNKNOWN' and $line =~ m{^eval\s+`exec (\S+)}) { $ishell = $1; }
         $ishell =~ s{.*/}{};
       }#endwhile
-      close IFILE;
+      close $ifile_handle;
       $ishell = 'csh' if $ishell eq 'UNKNOWN'; # Default for a file
     }#endif
     printf STDERR "$_C{debug}DEBUG:$_C{text} ishell={%s} ifile={%s}$_C{none}\n", $ishell, $ifile  if ($debug);
@@ -627,22 +727,23 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
     $ishell =~ s{.*/}{};
     $ifile = "/tmp/env2.$$.$ishell";
     $LINE = __LINE__ + 1;
-    open TFILE,">",$ifile or die "FATAL(env2:$LINE): Unable to write $ifile!?\n";
-    TFILE->autoflush(1);
-    print TFILE "#!$ishell\n";
+    open my $tfile_handle, ">", $ifile or die "FATAL(env2:$LINE): Unable to write $ifile!?\n";
+    $tfile_handle->autoflush(1);
+    print $tfile_handle "#!$ishell\n";
     $LINE = __LINE__ + 1;
-    open IFILE,"<-" or die "FATAL(env2:$LINE): Unable to read from STDIN!?\n";
+    open my $ifile_handle, '<&', \*STDIN
+      or die "FATAL(env2:$LINE): Unable to read from STDIN!?\n";
 
     my $nshell = undef;
-    while (<IFILE>) {
+    while (<$ifile_handle>) {
       chomp; chomp;
       $nshell = $1    if m{^#!(\S+)};
       $nshell = $1    if $ishell eq 'UNKNOWN' and m{^eval\s+`exec (\S+)};
       $nshell =~ s{.*/}{} if defined $nshell;
-      printf TFILE "%s\n",$_;
+      printf $tfile_handle "%s\n", $_;
     }#endwhile <IFILE>
-    close IFILE;
-    close TFILE;
+    close $ifile_handle;
+    close $tfile_handle;
     if (defined $nshell and $nshell ne $ishell) {
       my $nfile = "/tmp/env2.$$.$nshell";
       rename $ifile,$nfile;
@@ -680,25 +781,26 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   if ($ishell eq 'UNKNOWN' or not defined $ifile) {
     $status = &System('bash','--noprofile','--norc','-c',"$exe --save $efile");
   } elsif ($ishell =~ m/\b(?:yml|yaml|YAML)\b/) {
-    open YAML,"<",$ifile;
-    my @yaml = <YAML>;
-    close YAML;
-    $NEWENV = Load "@yaml";
+    die "FATAL(env2): YAML input requires the YAML::XS Perl module!\n" unless $use_yaml;
+    open my $yaml_handle, "<", $ifile;
+    my @yaml = <$yaml_handle>;
+    close $yaml_handle;
+    $NEWENV = YAML::XS::Load(join('', @yaml));
   } elsif ($ishell =~ m/\bcsh/) {
     $status = &System($ishell,'-f','-c',"source $ifile$args >&$logfile;$exe --save $efile");
   } elsif ($ishell =~ m/cmake/) {
-    open  TFILE,">",$tfile;
-    print TFILE qq{include( "$ifile" )\nexecute( COMMAND $exe --save "$efile" )\n};
-    close TFILE;
+    open my $tfile_handle, ">", $tfile;
+    print $tfile_handle qq{include( "$ifile" )\nexecute( COMMAND $exe --save "$efile" )\n};
+    close $tfile_handle;
   } elsif ($ishell =~ m/tcl/) {
-    open  TFILE,">",$tfile;
-    print TFILE qq{source "$ifile" ; exec $exe --save "$efile"\n};
-    close TFILE;
+    open my $tfile_handle, ">", $tfile;
+    print $tfile_handle qq{source "$ifile" ; exec $exe --save "$efile"\n};
+    close $tfile_handle;
     $status = &System(qq{$ishell $tfile$args >$logfile 2>&1});
   } elsif ($ishell =~ m/lua/) {
-    open  TFILE,">",$tfile;
-    print TFILE qq{dofile("$ifile")\nos.execute("$exe --save '$efile')\n};
-    close TFILE;
+    open my $tfile_handle, ">", $tfile;
+    print $tfile_handle qq{dofile("$ifile")\nos.execute("$exe --save '$efile')\n};
+    close $tfile_handle;
     $status = &System(qq{$ishell $tfile$args >$logfile 2>&1});
   } elsif ($ishell =~ m/ksh/) {
     $status = &System($ishell,'-c',". $ifile$args >$logfile 2>&1;$exe --save $efile");
@@ -739,39 +841,46 @@ if (@ARGV == 0 or scalar(@ARGV) and $ARGV[0] =~ m/^-{1,2}h(elp)?/) {
   # OUTPUT
   ############################################################################
   $LINE = __LINE__ + 1;
+  my $ofile_handle;
   if( $ofile eq '-' ) {
-    open OFILE,">-";
+    open $ofile_handle, '>&', \*STDOUT
+      or die "FATAL(env2:$LINE): Unable to open standard output!?\n";
   } else {
-    open OFILE,">",$ofile or die "FATAL(env2:$LINE): Unable to open '$ofile' for writing!?\n";
+    open $ofile_handle, ">", $ofile or die "FATAL(env2:$LINE): Unable to open '$ofile' for writing!?\n";
   }
-  OFILE->autoflush(1);
+  $ofile_handle->autoflush(1);
+  # Python output needs its module import even when the generated source is
+  # written to standard output rather than a named file.
+  print $ofile_handle "import os\n\n" if $ofile eq '-' and $oshell =~ m/python3/;
   ############################################################################
   # File header
   ############################################################################
   if ($ofile ne '-') {
     if ($oshell =~ m/\bmodule(cmd|file|s)?/) {
-      printf OFILE "%-78.78s\n",'#%Module1.0#'.('#' x 80);
+      printf $ofile_handle "%-78.78s\n", '#%Module1.0#'.('#' x 80);
     } elsif ($oshell =~ m/lmod|lua/) {
-      printf OFILE "-- -*- lua -*-\n"
+      printf $ofile_handle "-- -*- lua -*-\n"
     } elsif ($oshell =~ m/plist/) {
-      printf OFILE <<'EOT';
+      printf $ofile_handle <<'EOT';
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
 <plist version="0.9">
 <dict>
 EOT
+    } elsif ($oshell =~ m/python3/) {
+      print $ofile_handle "#!/usr/bin/env python3\nimport os\n\n";
     } elsif ($oshell =~ m/vim/) {
-      printf OFILE <<'EOT';
+      printf $ofile_handle <<'EOT';
 "vim script to set environment
 "Automatigically created with env2
 
 EOT
     } elsif ($oshell =~ m/\b(yml|yaml|YAML)\b/) {
-      print OFILE <<'EOT';
+      print $ofile_handle <<'EOT';
 # Yaml of environment
 EOT
     } else {
-      printf OFILE "#!%s;\n",$oshell;
+      printf $ofile_handle "#!%s;\n", $oshell;
     }#endif
   }#endif
   my $var;
@@ -783,19 +892,24 @@ EOT
     # Delete environment variable
     ##########################################################################
     if ($oshell =~ m/\bmodule(cmd|file|s)?\b/) {
-      printf OFILE "unsetenv %s;\n",$var;
+      printf $ofile_handle "unsetenv %s;\n", $var;
     } elsif ($oshell =~ m/lmod|lua/) {
-      printf OFILE "#unsetenv(\"%s\")\n",$var;
+      printf $ofile_handle "#unsetenv(\"%s\")\n", $var;
     } elsif ($oshell =~ m/plist/) {
       # Nothing
+    } elsif ($oshell =~ m/python3/) {
+      my $pyvar = $var;
+      $pyvar =~ s/\\/\\\\/g;
+      $pyvar =~ s/'/\\'/g;
+      printf $ofile_handle "del os.environ['%s']\n", $pyvar;
     } elsif ($oshell =~ m/csh/) {
-      printf OFILE "unsetenv %s;\n",$var;
+      printf $ofile_handle "unsetenv %s;\n", $var;
     } elsif ($oshell =~ m/perl/) {
-      printf OFILE "delete \$ENV{'%s'};\n",$var;
+      printf $ofile_handle "delete \$ENV{'%s'};\n", $var;
     } elsif ($oshell =~ m/\b(yml|yaml|YAML)\b/) {
       $DEL_YAML{$var} = 'DELETE';
     } else {
-      printf OFILE "unset %s;\n",$var;
+      printf $ofile_handle "unset %s;\n", $var;
     }#endif
   }#endfor
   for my $var (keys %$NEWENV) {
@@ -831,24 +945,26 @@ EOT
         my @oldlist = &List($oldval);
         my @newlist = &List($rawval);
         if ($pos < 0) {
-          printf OFILE "setenv %s {%s};\n",$var,$tclval;
+          printf $ofile_handle "setenv %s {%s};\n", $var, $tclval;
         } else {
           splice @newlist,$pos,scalar(@oldlist);
           if ($pos > 0) {
-            for $rawval (reverse @newlist[0..($pos-1)]) {
+            for my $pathval (reverse @newlist[0..($pos-1)]) {
+              $rawval = $pathval;
               ($tclval=$rawval) =~ s/[{}]/\\$1/g;
-              printf OFILE "prepend-path %s {%s};\n",$var,$tclval;
+              printf $ofile_handle "prepend-path %s {%s};\n", $var, $tclval;
             }#endfor
           }#endif
           if ($pos <= scalar(@newlist)) {
-            for $rawval (@newlist[$pos..$#newlist]) {
+            for my $pathval (@newlist[$pos..$#newlist]) {
+              $rawval = $pathval;
               ($tclval=$rawval) =~ s/[{}]/\\$1/g;
-              printf OFILE "append-path %s {%s};\n",$var,$tclval;
+              printf $ofile_handle "append-path %s {%s};\n", $var, $tclval;
             }#endfor
           }#endif
         }#endif
       } else {
-        printf OFILE "setenv %s {%s};\n",$var,$tclval;
+        printf $ofile_handle "setenv %s {%s};\n", $var, $tclval;
       }#endif
     } elsif ($oshell =~ m/lmod|lua/) {
       # Shorten/diff
@@ -858,38 +974,40 @@ EOT
         my @oldlist = &List($oldval);
         my @newlist = &List($rawval);
         if ($pos < 0) {
-          printf OFILE "#setenv(\"%s\",\"%s\")\n",$var,$tclval;
+          printf $ofile_handle "#setenv(\"%s\",\"%s\")\n",$var,$tclval;
         } else {
           splice @newlist,$pos,scalar(@oldlist);
           if ($pos > 0) {
-            for $rawval (reverse @newlist[0..($pos-1)]) {
+            for my $pathval (reverse @newlist[0..($pos-1)]) {
+              $rawval = $pathval;
               ($tclval=$rawval) =~ s/[{}]/\\$1/g;
-              printf OFILE "prepend_path(\"%s\",\"%s\")\n",$var,$tclval;
+              printf $ofile_handle "prepend_path(\"%s\",\"%s\")\n",$var,$tclval;
             }#endfor
           }#endif
           if ($pos <= scalar(@newlist)) {
-            for $rawval (@newlist[$pos..$#newlist]) {
+            for my $pathval (@newlist[$pos..$#newlist]) {
+              $rawval = $pathval;
               ($tclval=$rawval) =~ s/[{}]/\\$1/g;
-              printf OFILE "append_path(\"%s\",\"%s\")\n",$var,$tclval;
+              printf $ofile_handle "append_path(\"%s\",\"%s\")\n",$var,$tclval;
             }#endfor
           }#endif
         }#endif
       } else {
-        printf OFILE "setenv(\"%s\",\"%s\")\n",$var,$tclval;
+        printf $ofile_handle "setenv(\"%s\",\"%s\")\n",$var,$tclval;
       }#endif
     } elsif ($oshell =~ m/plist/) {
-      printf OFILE <<"EOT";
+      printf $ofile_handle <<"EOT";
   <key>$var</key>
   <string>$xmlval</string>
 EOT
     } elsif ($oshell =~ m/ps1/) {
-      printf OFILE qq{\$Env:%s = '%s' )\n},$var,$winval;
+      printf $ofile_handle qq{\$Env:%s = '%s'\n},$var,$winval;
     } elsif ($oshell =~ m/cmake/) {
-      printf OFILE qq{set( "ENV(%s)" "%s" )\n},$var,$rawval;
+      printf $ofile_handle qq{set( "ENV(%s)" "%s" )\n},$var,$rawval;
     } elsif ($oshell =~ m/tcl/) {
-      printf OFILE "set env(%s) {%s};\n",$var,$tclval;
+      printf $ofile_handle "set env(%s) {%s};\n",$var,$tclval;
     } elsif ($oshell =~ m/vim/) {
-      printf OFILE ":let \$%s='%s'\n",$var,$escval;
+      printf $ofile_handle ":let \$%s='%s'\n",$var,$escval;
     } elsif ($oshell =~ m/csh/) {
       if (exists $OLDENV{$var} and ($OLDENV{$var} =~ m/:/ or $rawval =~ m/:/)) {
         my $oldval = $OLDENV{$var};
@@ -913,46 +1031,57 @@ EOT
             # weird - may need to do something different here
             $suf = substr($escval,$end+1);
           }#endif
-          printf OFILE "setenv %s '%s\$\{%s\}%s';\n",$var,$pre,$var,$suf;
+          printf $ofile_handle "setenv %s '%s\$\{%s\}%s';\n",$var,$pre,$var,$suf;
         } else {
-          printf OFILE "setenv %s '%s';\n",$var,$escval;
+          printf $ofile_handle "setenv %s '%s';\n",$var,$escval;
         }#endif
       } else {
-        printf OFILE "setenv %s '%s';\n",$var,$escval;
+        printf $ofile_handle "setenv %s '%s';\n",$var,$escval;
       }#endif
     } elsif ($oshell =~ m/perl/) {
-      printf OFILE "\$ENV{'%s'}=q{%s};\n",$var,$escval;
+      printf $ofile_handle "\$ENV{'%s'}=q{%s};\n",$var,$escval;
+    } elsif ($oshell =~ m/python3/) {
+      my $pyvar = $var;
+      my $pyval = $rawval;
+      $pyvar =~ s/\\/\\\\/g;
+      $pyvar =~ s/'/\\'/g;
+      $pyval =~ s/\\/\\\\/g;
+      $pyval =~ s/'/\\'/g;
+      $pyval =~ s/\r/\\r/g;
+      $pyval =~ s/\n/\\n/g;
+      $pyval =~ s/\t/\\t/g;
+      printf $ofile_handle "os.environ['%s'] = '%s'\n",$pyvar,$pyval;
     } elsif ($oshell =~ m/\b(yml|yaml|YAML)\b/) {
       $NEW_YAML{$var} = $rawval;
     } else {
-      printf OFILE "%s='%s'; export %s;\n",$var,$escval,$var;
+      printf $ofile_handle "%s='%s'; export %s;\n",$var,$escval,$var;
     }#endif
   }#endfor
   if ($oshell =~ m/\b(yml|yaml|YAML)\b/) {
-    print OFILE YAML::Dump(\%NEW_YAML) if scalar keys %NEW_YAML;
-    print OFILE "---\n",YAML::Dump(\%DEL_YAML) if scalar keys %DEL_YAML;
-    print OFILE "...\n";
+    print $ofile_handle YAML::XS::Dump(\%NEW_YAML) if scalar keys %NEW_YAML;
+    print $ofile_handle "---\n",YAML::XS::Dump(\%DEL_YAML) if scalar keys %DEL_YAML;
+    print $ofile_handle "...\n";
   }#endif
   ############################################################################
   # File trailer
   ############################################################################
   if ($ofile ne '-') {
     if ($oshell =~ m/\bmodule(cmd|file|s)?\b/) {
-      printf OFILE "#eof %s\n",$ofile;
+      printf $ofile_handle "#eof %s\n",$ofile;
     } elsif ($oshell =~ m/plist/) {
-      printf OFILE <<'EOT';
+      printf $ofile_handle <<'EOT';
 </dict>
 </plist>
 EOT
     } elsif ($oshell =~ m/vim/) {
-      printf OFILE qq{\n"eof %s\n},$ofile;
+      printf $ofile_handle qq{\n"eof %s\n},$ofile;
     } elsif ($oshell =~ m/perl/) {
-      printf OFILE "1;\n#eof %s\n",$ofile;
+      printf $ofile_handle "1;\n#eof %s\n",$ofile;
     } else {
-      printf OFILE "#eof %s\n",$ofile;
+      printf $ofile_handle "#eof %s\n",$ofile;
     }#endif
   }#endif
-  close OFILE;
+  close $ofile_handle;
   if ($debug) {
     printf STDERR "$_C{debug}DEBUG:$_C{text} diff={%s}$_C{none}\n",    $diff;
     printf STDERR "$_C{debug}DEBUG:$_C{text} ishell={%s}$_C{none}\n",  $ishell;
@@ -978,12 +1107,14 @@ sub reduce {
     my (%old,@new,$old);
     @old = split(':',join(':',@old)) unless wantarray;
     # Create a list of unique entries
-    foreach $old (@old) {
+    foreach my $entry (@old) {
+        $old = $entry;
         $old =~ s://+:/:; # remove // from paths
         $old{$old} = 1; # note the entry
     }#endforeach
     @new = ();
-    foreach $old (@old) {
+    foreach my $entry (@old) {
+        $old = $entry;
         next unless defined $old{$old} and $old ne '';
         push(@new,$old);
         delete $old{$old}; # only use the first one
@@ -1000,8 +1131,8 @@ sub read_args {
     my $path = &abs_path($file);
     return () if exists $file_seen{$path}; # only include once per path
     $file_seen{$path} = 1;
-    open ARGS,"<",$path or die "FATAL(env2:$LINE): Unable to read $path!?\n";
-    while (<ARGS>) {
+    open my $args_handle, "<", $path or die "FATAL(env2:$LINE): Unable to read $path!?\n";
+    while (<$args_handle>) {
       chomp; chomp;
       s{^\s+}{}; # remove leading whitespace
       s{\s+$}{}; # remove trailing whitespace
@@ -1009,14 +1140,14 @@ sub read_args {
       s{\s+}{ }g; # compress whitespace
       push @results,split $_;
     }#endwhile
-    close ARGS;
+    close $args_handle;
   }#endfor
   return @results;
 }#endsub read_args
 
 ################################################################################
 # Return a list based on separator ":" as used in PATH, MANPATH, LD_LIBRARY_PATH, et al
-sub List($) {
+sub List {
   my ($str) = @_;
   my @list = split(':',"A:$str:Z");
   shift @list;
@@ -1026,7 +1157,7 @@ sub List($) {
 
 ################################################################################
 # Search for substring within string.
-sub IndexPath($$) {
+sub IndexPath {
   my ($str,$sub) = @_;
   my @str = &List($str);
   my @sub = &List($sub);
@@ -1064,7 +1195,7 @@ sub IndexPath($$) {
 
 ################################################################################
 # Used for debugging
-sub TestIndexPath($$$$$) {
+sub TestIndexPath {
   my ($tno,$arg1,$arg2,$exp1,$exp2) = @_;
   my ($got1,$got2);
   printf "Test#%d '%s','%s' expecting %d %d ", $tno, $arg1, $arg2, $exp1, $exp2;
