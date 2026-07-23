@@ -1,1 +1,6 @@
-src
+# Platform meta-data
+.DS_Store
+thumbs.db
+
+# Artifacts
+target/
