@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+from pathlib import Path
+import stat
+import sys
+
+
+VERSION = "0.1.0"
+
+
+def mode_matches(candidate: Path, requested: str) -> bool:
+    """Return whether candidate permissions satisfy a symbolic or octal mode."""
+    if requested.isdigit():
+        try:
+            expected = int(requested, 8)
+        except ValueError:
+            return False
+        return stat.S_IMODE(candidate.stat().st_mode) == expected
+
+    permissions = {
+        "r": stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH,
+        "w": stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH,
+        "x": stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
+    }
+    for permission in requested:
+        if permission.lower() not in permissions:
+            return False
+        mask = permissions[permission.lower()]
+        actual = stat.S_IMODE(candidate.stat().st_mode) & mask
+        if permission.islower() and actual == 0:
+            return False
+        if permission.isupper() and actual != 0:
+            return False
+    return True
+
+
+def type_matches(candidate: Path, requested: str) -> bool:
+    """Return whether candidate has the requested find-compatible file type."""
+    types = {
+        "b": stat.S_ISBLK,
+        "c": stat.S_ISCHR,
+        "d": stat.S_ISDIR,
+        "f": stat.S_ISREG,
+        "l": stat.S_ISLNK,
+        "p": stat.S_ISFIFO,
+        "s": stat.S_ISSOCK,
+    }
+    matcher = types.get(requested.lower())
+    return matcher is not None and matcher(candidate.lstat().st_mode)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="nearest",
+        description="Search upward for the nearest file or directory.",
+        epilog=(
+            "The path defaults to NEAREST when no path is supplied. "
+            "TYPE uses find-style letters: b, c, d, f, l, p, or s. "
+            "MODE accepts r, w, x (uppercase means absent) or octal."
+        ),
+    )
+    parser.add_argument(
+        "--version", "-V", action="version", version=f"nearest {VERSION}"
+    )
+    parser.add_argument("--type", "-t", dest="file_type", metavar="TYPE")
+    parser.add_argument(
+        "--lower", "-l", type=Path, metavar="PATH", help="Lower search boundary (default: current directory)"
+    )
+    parser.add_argument(
+        "--upper",
+        "-u",
+        "--root",
+        "-r",
+        dest="upper",
+        type=Path,
+        metavar="PATH",
+        help="Upper search boundary (default: filesystem root)",
+    )
+    parser.add_argument("--mode", "-m", metavar="MODE")
+    parser.add_argument("path", nargs="?", type=Path, help="Relative path to find")
+    long_value_options = {"--type", "--lower", "--upper", "--root", "--mode"}
+    for argument in sys.argv[1:]:
+        if argument == "--":
+            break
+        option = argument.split("=", maxsplit=1)[0]
+        if option in long_value_options and "=" not in argument:
+            parser.error(f"{option} requires the --option=value form")
+    args = parser.parse_args()
+    if args.path is None:
+        if not os.environ.get("NEAREST"):
+            parser.error("a path is required when NEAREST is not set")
+        args.path = Path(os.environ["NEAREST"])
+    if args.path.is_absolute():
+        parser.error("the search path must be relative")
+    if args.file_type is not None and args.file_type.lower() not in "bcdf lps".replace(
+        " ", ""
+    ):
+        parser.error("TYPE must be one find-style type letter: b, c, d, f, l, p, or s")
+    if args.mode is not None:
+        if not args.mode:
+            parser.error("MODE must not be empty")
+        if args.mode.isdigit():
+            try:
+                int(args.mode, 8)
+            except ValueError:
+                parser.error("octal MODE contains an invalid digit")
+        elif any(permission.lower() not in "rwx" for permission in args.mode):
+            parser.error("symbolic MODE may contain only r, w, x, R, W, and X")
+    return args
+
+
+args = parse_args()
+
+invocation_directory = Path.cwd().resolve()
+lower = (
+    invocation_directory
+    if args.lower is None
+    else args.lower.expanduser().resolve()
+)
+upper = (
+    Path(invocation_directory.anchor)
+    if args.upper is None
+    else args.upper.expanduser().resolve()
+)
+for name, boundary in (("lower", lower), ("upper", upper)):
+    if not boundary.is_dir():
+        raise SystemExit(f"nearest: {name} is not a directory: {boundary}")
+if upper not in (lower, *lower.parents):
+    raise SystemExit(
+        f"nearest: upper boundary {upper} does not contain lower boundary {lower}"
+    )
+
+for directory in (lower, *lower.parents):
+    candidate = directory / args.path
+    if os.path.lexists(candidate):
+        if args.file_type is not None and not type_matches(candidate, args.file_type):
+            pass
+        elif args.mode is not None and not mode_matches(candidate, args.mode):
+            pass
+        else:
+            print(candidate.resolve())
+            raise SystemExit(0)
+    if directory == upper:
+        break
+
+raise SystemExit(1)
