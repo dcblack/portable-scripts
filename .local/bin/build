@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.14
+BUILD_TOOL_VERSION=1.15
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
@@ -48,20 +48,20 @@ build - use cmake to build and optionally run, test, or install
 
 ```sh
 build -h|--help
-build --version
+build -V|--version
 build [-n] [-C DIR] [OPTIONS]
 build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
 ```
 
 ## Description
 
-This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects.  It assumes a proper CMakeLists.txt has been set up. Basically, all this does (roughly):
+This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects. It assumes a proper CMakeLists.txt has been set up. If no CMakeLists.txt is found while walking up from the current directory, but a Cargo.toml is found, it runs `cargo build` with the supplied arguments instead. Extension commands such as `build-LIBRARY` or `build-TOOL` take precedence. Basically, all this does (roughly):
 
 ```bash
 clean -a # OPTIONAL
-cmake -B BUILD -DCMAKE_BUILD_TYPE=Debug
-cmake --build BUILD --config Debug
-ctest --test-dir BUILD -C Debug -VV # OPTIONAL -OR- run
+cmake -B target -DCMAKE_BUILD_TYPE=Debug
+cmake --build target --config Debug
+ctest --test-dir target -C Debug -VV # OPTIONAL -OR- run
 ```
 If you're skeptical, just run with the `-n` option.
 
@@ -71,62 +71,64 @@ IMPORTANT: This should be run at the top of the project where the CMakeLists.txt
 
 | OPTION           | DESCRIPTION
 | ------           | -----------
-| -help            | Display this text (or -h)
-| -n               | Don not actually do anything except show commands that would have been done
-| -B BLD_DIR       | Name of the build directory -- defaults to \"BUILD\"
+| -h, -help        | Display this text
+| -n               | Do not actually do anything; only show commands that would have been run
+| -B BLD_DIR       | Name of the build directory -- defaults to \"target\"
 | -C DIR           | Change to specified directory before doing anything else
 | -clean           | Remove all build files and other output bits
 | -DVAR=VAL        | Specify a configuration definition (i.e., passed to cmake -B)
 | -G "GEN"         | Specify generator (defaults to Ninja if available)
-| -gcc             | Use GNU compiler chain (i.e., g++ and gcc)
+| -gcc, -gnu       | Use GNU compiler chain (i.e., g++ and gcc)
 | -gdb             | Run under gdb
 | -info            | Output information to help debug CMakeLists.txt etc.
 | -install [DIR]   | When done building, install in DIR or PREFIX directory
-| -list-extensions | See EXTENSIONS description following.
+| -list-extensions, -lx | See EXTENSIONS description following
 | -lldb            | Run under lldb
-| -llvm            | Use LLVM compiler chain (i.e., clang++ and clang)
-| --loadrc=FILE    | Load switches from FILE
+| -llvm, -clang    | Use LLVM compiler chain (i.e., clang++ and clang)
+| -loadrc=FILE, --loadrc=FILE | Load switches from FILE
+| -make            | Use Unix Makefiles as the generator
 | -noisy           | Some extra info is displayed
 | -norc            | Ignore .buildrc
+| -ninja           | Use Ninja as the generator
 | -norun           | Revert -run
 | -notest          | Revert -test
-| --prefix=DIR     | Specify installation directory
+| -prefix DIR, --prefix DIR | Specify installation directory
 | -quiet           | Remove verbosity when -test invoked
 | -quick           | Run only tests labeled as "quick"
 | -LE REGEX        | Skip tests with labels matching regular expression REGEX
 | -L REGEX         | Include only tests with labels matching regular expression REGEX
-| -P DIR           | Set WORKTREE_DIR. WORKTREE_DIR should contain .git/
+| -P DIR           | Set WORKTREE_DIR; warns if DIR does not contain .git/
 | -R REGEX         | Include only tests with names matching regular expression REGEX
 | -run             | When done building, run the executable
 | -S DIR           | Name of source directory -- defaults to \".\"
 | --saverc[=FILE]  | Save switches in FILE or ./.buildrc (overwrites existing)
 | -sq              | Squeeze out blank lines from test
 | -std=NN          | Specify C++ standard version
-| -t TGT           | Passed to cmake to specify the target (TGT) and limit ctest
-| -toolchain NAME  | Specify a toolchain for cmake (cmake/${NAME}-toolchain.cmake must exist)
-| -test            | When done building, run the tests verbosely unless -q supplied
+| -targets         | List built executable targets
+| -toolchain NAME, -tc NAME | Specify a CMake toolchain name or path
+| -test            | When done building, run the tests verbosely unless -quiet is supplied
 | -type BT         | Select the cmake build type with BT: Debug (default), RelWithDebInfo, Release, or MinSizeRel
 | -verbose         | Adds more information to output. Opposite of quiet.
-| -version         | Display version information
+| -V, -version, --version | Display version information
 | VAR=VAL          | Specify an environment variable
 
 ## Configuration
 
-Several variables are setup inside the script for the default locations.
+Several variables are set inside the script for the default locations.
 
 ## Extensions
 
-If the first command-line argument is a plain word (.e.g., systemc) and there exists build-LIBRARY or build-TOOL, then build will invoke that script as an alternative. All such scripts should have the general intent of build, but with a specific target of building a library or tool that is generally available on the Internet for download and installation.
+If the first command-line argument is a plain word (e.g., systemc) and there exists build-LIBRARY or build-TOOL, then build will invoke that script as an alternative. All such scripts should have the general intent of build, but with a specific target of building a library or tool that is generally available on the Internet for download and installation.
 
 For specifics on each build-TOOL or build-LIBRARY try \`build-COMMAND --help\`.
 
 ## DEFAULT OPTIONS
 
-If a the file `~/.buildrc` or `./.buildrc` exists, their contents will be used for initial command-line options.
+If the file `~/.buildrc` or `./.buildrc` exists, its contents will be used for initial command-line options.
 
 Comments (#) and blank lines are allowed and ignored.
 
-If the environment variable `BULDRC` exists, it will be used as command-line options following the above files.
+If the environment variable `BUILDRC` exists, it will be used as command-line options following the above files.
 
 Effectively, the above describes:
 
@@ -211,16 +213,6 @@ function Build()
     exit 0
   fi
 
-  # Did you really mean 'cargo build'?
-  for pdir in $(parents); do
-    if [[ -r "${pdir}/CMakeLists.txt" ]]; then break; fi
-    if [[ -r "${pdir}/Cargo.toml" ]]; then
-      printf "[1;96mWarning:[0m Assuming you meant: cargo %s\n" "$*"
-      cargo build "$@" && return 0 || return 1
-      return
-    fi
-  done
-
   export BUILD_TOOL_NAME SCRIPTS_DIR LOGFILE
   BUILD_TOOL_PATH="$(command -v "${BUILD_TOOL_NAME}")"
   BUILD_TOOL_DIR="$(dirname "${BUILD_TOOL_PATH}")"
@@ -292,7 +284,7 @@ function Build()
   local SRC_DIR BLD_DIR CLEAN DEBUG INSTALL PREFIX OPTS_SEP QUIET NOISY SQUEEZE HAS_NINJA
   SRC_DIR="."
   CMAKE_BUILD_TYPE="Debug"
-  BLD_DIR="BUILD"
+  BLD_DIR="target"
   SUBPROJ_DIR="$(pwd)"
   HAS_NINJA="$(command -v ninja)"
   if [[ -n "${HAS_NINJA}" ]]; then
@@ -326,7 +318,7 @@ function Build()
   # Scan for command-line options
   #------------------------------------------------------------------------------
   export WORKTREE_DIR
-  WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
+  WORKTREE_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
 
   local -a ORIG_ARGS=()
   ORIG_ARGS=( "$@" )
@@ -397,11 +389,14 @@ function Build()
         shift
       fi
     #...........................................................................
+    elif [[ "$1" =~ ^-{1,2}norc$ ]]; then
+      : # Already handled before parsing; do not pass it to Cargo or CMake.
+    #...........................................................................
     elif [[ "$1" =~ ^-D[a-zA-Z_][a-zA-Z_0-9]*=? ]]; then
       CONFIG_OPTS=("${CONFIG_OPTS[@]}" "$1")
     #...........................................................................
     elif [[ "$1" =~ ^[a-zA-Z_][a-zA-Z_0-9]*= ]]; then
-      eval "export $1"
+      export "${1?}"
     #...........................................................................
     elif [[ "$1" == "-make" ]]; then
       GENERATOR="Unix Makefiles"
@@ -410,8 +405,8 @@ function Build()
       GENERATOR="Ninja"
     #...........................................................................
     elif [[ "$1" == "-G" ]]; then
-      if [[ $# -lt 2 ]]; then
-        Report_fatal "-P requires a directory argument" ; exit 1
+      if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+        Report_fatal "-G requires a generator argument" ; exit 1
       else
         GENERATOR="$2"
         shift
@@ -421,7 +416,7 @@ function Build()
       ADD_CMAKE_PREFIX=1
     #...........................................................................
     elif [[ "$1" == "-P" ]]; then
-      if [[ $# -lt 2 ]]; then
+      if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
         Report_fatal "-P requires a directory argument" ; exit 1
       elif [[ ! -d "$2" ]]; then
         Report_fatal "'$2' is not a directory as required by -P" ; exit 1
@@ -613,6 +608,38 @@ function Build()
     shift
   done
 
+  # Did you really mean 'cargo build'? Check the selected directory as well as
+  # its parents; -C must be processed before project detection. A CMake
+  # project takes precedence over a Rust crate found farther up.
+  local SEARCH_DIR CARGO_DIR CMAKE_FOUND
+  SEARCH_DIR="$(pwd)"
+  CARGO_DIR=""
+  CMAKE_FOUND=0
+  while true; do
+    if [[ -r "${SEARCH_DIR}/CMakeLists.txt" ]]; then
+      CMAKE_FOUND=1
+      break
+    fi
+    if [[ -z "${CARGO_DIR}" && -r "${SEARCH_DIR}/Cargo.toml" ]]; then
+      CARGO_DIR="${SEARCH_DIR}"
+    fi
+    if [[ "${SEARCH_DIR}" == "/" ]]; then
+      break
+    fi
+    SEARCH_DIR="$(dirname "${SEARCH_DIR}")"
+  done
+  if [[ ${CMAKE_FOUND} == 0 && -n "${CARGO_DIR}" ]]; then
+    printf "\033[36m%% \033[34mcargo build"
+    if [[ ${#BUILD_OPTS[@]} -gt 0 ]]; then
+      printf " %s" "${BUILD_OPTS[*]}"
+    fi
+    if [[ ${#TEST_OPTS[@]} -gt 0 ]]; then
+      printf " %s" "${TEST_OPTS[*]}"
+    fi
+    printf "\033[0m\n"
+    cargo build "${BUILD_OPTS[@]}" "${TEST_OPTS[@]}" && return 0 || return 1
+  fi
+
   if [[ -z "${WORKTREE_DIR}" ]]; then
     WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
   fi
@@ -728,13 +755,20 @@ function Build()
   if [[ ${CLEAN} == 1 ]]; then
     # Preserve log
     local TEMP_LOG BLD_NAM="${BLD_DIR/\//_}"
-    TEMP_LOG="$(mktemp -t "${BLD_NAM}.XXXXXX.log")"
+    if [[ -z "${NOTREALLY}" ]]; then
+      TEMP_LOG="$(mktemp -t "${BLD_NAM}.XXXXXX.log")"
+    else
+      TEMP_LOG="${BLD_DIR}/${BUILD_LOG}.tmp"
+    fi
     Report_info -f "Cleaning ${SUBPROJ_DIR}"
-    _do -n rm -fr "${BLD_DIR}"
-    mv "${BLD_DIR}/${BUILD_LOG}" "${TEMP_LOG}"
-    rm -fr "${BLD_DIR}"
-    mkdir -p "${BLD_DIR}"
-    mv "${TEMP_LOG}" "${BLD_DIR}/${BUILD_LOG}"
+    if [[ -f "${BLD_DIR}/${BUILD_LOG}" || -n "${NOTREALLY}" ]]; then
+      _do mv "${BLD_DIR}/${BUILD_LOG}" "${TEMP_LOG}"
+    fi
+    _do rm -fr "${BLD_DIR}"
+    _do mkdir -p "${BLD_DIR}"
+    if [[ -f "${TEMP_LOG}" || -n "${NOTREALLY}" ]]; then
+      _do mv "${TEMP_LOG}" "${BLD_DIR}/${BUILD_LOG}"
+    fi
   fi
 
   if [[ -n "${CMAKE_PREFIX_PATH}" ]]; then
