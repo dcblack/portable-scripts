@@ -2,7 +2,7 @@
 #
 # Steps to build and install SystemC
 #
-#| For help on options use --help or examine utils.bash
+#| For help on options use --help.
 #
 TOOL_BRIEF="build-systemc - build and install SystemC from github source"
 TOOL_NAME="SystemC"
@@ -19,32 +19,16 @@ function Build_systemc()
     export TOOL_BRIEF TOOL_NAME TOOL_SRC TOOL_BASE TOOL_URL TOOL_INFO TOOL_VERS TOOL_CHECKOUT TOOL_PATCHES
     export SYSTEMC_HOME BUILD_DIR CLEAN CMAKE_INSTALL_PREFIX CMAKE_BUILD_TYPE CMAKE_APPLE_SILICON_PROCESSOR
 
-    # Search for the directory containing utils.bash
-    local SCRIPT_DIR
-    SCRIPT_DIR="$(Realpath "$(dirname "$1")"/../bin)"
-    if [[ ! -r "${SCRIPT_DIR}/utils.bash" ]]; then
-      SCRIPT_DIR="$(Realpath "${HOME}/.local/bin")"
-    fi
-    if [[ ! -r "${SCRIPT_DIR}/utils.bash" ]]; then
-      SCRIPT_DIR="$(Realpath "$(dirname "$1")")"
-    fi
-    if [[ ! -r "${SCRIPT_DIR}/utils.bash" ]]; then
-      printf "FATAL: Missing required source file '%s'\n" "${SCRIPT_DIR}/utils.bash"
-      exit 1
-    fi
     shift
-
-    export UTILS_VERSION
-    # shellcheck disable=SC2250,SC1091
-    source "${SCRIPT_DIR}/utils.bash"
 
     export LOGFILE
     SetupLogdir "$0"
     local SCRIPT_PATH
     SCRIPT_PATH="$(Realpath "$0")"
-    Report_info -cyn "Executing ${SCRIPT_PATH} with utils.bash v${UTILS_VERSION}"
+    Report_info -cyn "Executing ${SCRIPT_PATH} (stand-alone)"
 
     GetBuildOpts "$0" "$@"
+    TOOL_SRC="${SRC}"
     CMAKE_INSTALL_PREFIX="${SYSTEMC_HOME}"
     ConfirmBuildOpts || exit
 
@@ -54,14 +38,11 @@ function Build_systemc()
     Select_version "${TOOL_VERS}" || exit
 
     Report_info -grn "Building ${TOOL_NAME}"
-    # shellcheck disable=SC2119,SC2312
-    Configure_tool | Log
-    # shellcheck disable=SC2119,SC2312
-    Compile_tool   | Log
+    Configure_tool || exit 1
+    Compile_tool || exit 1
 
     if [[ -z "${NOINSTALL+x}" || "${NOINSTALL}" == "no" ]]; then
-      # shellcheck disable=SC2119,SC2312
-      Install_tool | Log
+      Install_tool || exit 1
 
       # Optional clean up
       if [[ "${CLEAN}" == 1 ]]; then
@@ -92,6 +73,237 @@ function Realpath() {
   if [[ $# == 0 ]]; then set - .; fi
   /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
 }
+
+function _C() {
+    COLOR_CODE=""
+    [[ ${NOCOLOR:-0} == 1 ]] && return 0
+    local color
+    color="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+    case "${color}" in
+      none|off|-) COLOR_CODE=$'\033[0m' ;;
+      bold) COLOR_CODE=$'\033[1m' ;;
+      red) COLOR_CODE=$'\033[91m' ;;
+      grn|green) COLOR_CODE=$'\033[92m' ;;
+      ylw|yellow) COLOR_CODE=$'\033[93m' ;;
+      blu|blue) COLOR_CODE=$'\033[94m' ;;
+      mag) COLOR_CODE=$'\033[95m' ;;
+      cyn|cyan) COLOR_CODE=$'\033[96m' ;;
+      *) return 0 ;;
+    esac
+}
+
+function Set_color() {
+    COLOR=""
+    local color
+    for color in "$@"; do
+      _C "${color}"
+      COLOR+="${COLOR_CODE}"
+    done
+}
+
+function Log() {
+    [[ -z "${LOGFILE:-}" || ${NOLOG:-0} == 1 ]] && return 0
+    if [[ "$1" == -n ]]; then shift; printf '%s' "$*" >>"${LOGFILE}"; else printf '%s\n' "$*" >>"${LOGFILE}"; fi
+}
+
+function Echo() {
+    if [[ "$1" == -n ]]; then shift; printf '%s' "$*"; Log -n "$*"; else printf '%s\n' "$*"; Log "$*"; fi
+}
+
+function _do() {
+    if [[ -n "${NOTREALLY:-}" ]]; then
+      Set_color bold red; local prefix="${COLOR}"
+      Set_color none; local reset="${COLOR}"
+      Set_color mag; local magenta="${COLOR}"
+      Echo "${prefix}#${reset} ${magenta}$*${reset}"
+      return 0
+    fi
+    Set_color cyn; local cyan="${COLOR}"
+    Set_color none; local reset="${COLOR}"
+    Set_color bold blu; local command_color="${COLOR}"
+    Echo "${cyan}%${reset}${command_color} $*${reset}"
+    if [[ -n "${LOGFILE:-}" ]]; then
+      local output_file command_status
+      output_file="$(mktemp)"
+      "$@" >"${output_file}" 2>&1
+      command_status=$?
+      tee -a "${LOGFILE}" <"${output_file}"
+      rm -f "${output_file}"
+      return "${command_status}"
+    fi
+    "$@"
+}
+
+function Report_info() {
+    local color=none
+    [[ "$1" == -* ]] && color="${1#-}" && shift
+    [[ ${VERBOSITY:-0} -lt 1 && ${color} == none ]] && return 0
+    Set_color "${color}"; local prefix="${COLOR}"
+    Set_color none; local reset="${COLOR}"
+    Echo "${prefix}$*${reset}"
+}
+
+function Report_warning() {
+    WARNINGS=$(( ${WARNINGS:-0} + 1 ))
+    Set_color bold ylw; local prefix="${COLOR}"
+    Set_color none; local reset="${COLOR}"
+    Echo "${prefix}Warning:${reset} $*${reset}" >&2
+}
+
+function Report_fatal() {
+    ERRORS=$(( ${ERRORS:-0} + 1 ))
+    Set_color bold red; local prefix="${COLOR}"
+    Set_color none; local reset="${COLOR}"
+    Echo "${prefix}Fatal:${reset} $*${reset}" >&2
+    return 1
+}
+
+function Step_Show() { [[ ${VERBOSITY:-0} != 0 ]] && Report_info "Step: $*"; }
+function Step_Next() { STEP_CURRENT=$(( ${STEP_CURRENT:-0} + 1 )); [[ -z "${STEP_MAX:-}" || ${STEP_CURRENT} -lt ${STEP_MAX} ]]; }
+
+function SetupLogdir() {
+    LOGDIR="${HOME}/logs"
+    mkdir -p "${LOGDIR}"
+    LOGFILE="${LOGDIR}/$(basename "${1:-build-systemc}").log"
+    : >"${LOGFILE}"
+    printf 'Logging to %s\n' "${LOGFILE}"
+}
+
+function ShowBuildOpts() {
+    printf 'Build options: source=%s install=%s version=%s builder=%s build-dir=%s\n' \
+      "${SRC}" "${CMAKE_INSTALL_PREFIX}" "${TOOL_VERS}" "${BUILDER}" "${BUILD_DIR}"
+}
+
+function ConfirmBuildOpts() {
+    [[ -n "${NOTREALLY:-}" || ${AUTO_CONFIRM:-0} == 1 ]] && return 0
+    ShowBuildOpts
+    local reply
+    while true; do
+      read -r -p "Confirm above options (y/n)? " reply
+      case "${reply}" in y|Y|yes) return 0 ;; n|N|no) return 1 ;; *) continue ;; esac
+    done
+}
+
+function HelpText() {
+    cat <<'EOF'
+Name
+----
+
+  build-systemc - build and install SystemC from GitHub source
+
+Synopsis
+--------
+
+  build-systemc [OPTIONS]
+
+Description
+-----------
+
+  Fetches the SystemC source, selects a version, configures it with CMake,
+  builds it, and (unless disabled) installs it under the selected prefix.
+
+Options
+-------
+
+  -h, --help          Display this help text.
+  -n, --notreally     Show commands without executing them.
+  -q, --quiet         Suppress informational output.
+  -v, --verbose       Show informational output.
+  -clean, --clean     Remove and fetch the source again.
+  -no-fetch            Do not fetch or update source.
+  -no-compile         Skip compilation.
+  -no-install          Skip installation.
+  -s DIR, --src=DIR   Source parent directory (default: ~/.local/src).
+  -i DIR, --install=DIR
+                      Installation prefix (default: ~/.local/apps).
+  -vers VERSION       Git branch, tag, or commit to check out.
+  --generator=NAME    CMake generator, such as Ninja.
+  --build-dir=DIR     CMake build directory.
+  --build-type=TYPE   CMake build type (default: RelWithDebInfo).
+  --clang, --gcc      Select the corresponding compiler pair.
+
+Dependencies
+------------
+
+  Bash, Git, CMake, a C++ compiler, make or Ninja, tee, date, and Perl for
+  portable path resolution. Network access is required unless `--no-fetch` is
+  used. Installation also requires write permission to the selected prefix.
+
+Notes
+-----
+
+  1. The script is self-contained.
+  2. A failed checkout, configure, compile, or install command may leave partial
+  source or build directories. Review the selected source and install paths
+  before confirming
+  3. `--clean` removes the existing source tree.
+
+EOF
+}
+
+function GetBuildOpts() {
+    local arg
+    shift
+    CMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD:-17}"
+    CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-RelWithDebInfo}"
+    SRC="${SRC:-${TOOL_SRC}}"
+    CMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX:-${HOME}/.local/apps}"
+    SYSTEMC_HOME="${SYSTEMC_HOME:-${CMAKE_INSTALL_PREFIX}/systemc}"
+    BUILDER="${BUILDER:-cmake}"
+    BUILD_DIR="${BUILD_DIR:-BUILD-${BUILDER}}"
+    NOFETCH="${NOFETCH:-no}"; NOCOMPILE="${NOCOMPILE:-no}"; NOINSTALL="${NOINSTALL:-no}"
+    while [[ $# -gt 0 ]]; do
+      arg="$1"
+      case "${arg}" in
+        -h|-help|--help) HelpText; exit 0 ;;
+        -n|--notreally|--not-really) NOTREALLY=-n ;;
+        -q|--quiet) VERBOSITY=0 ;;
+        -v|--verbose) VERBOSITY=1 ;;
+        -clean|--clean) CLEAN=1 ;;
+        -no-fetch|--no-fetch|--nofetch) NOFETCH=yes ;;
+        -no-compile|--no-compile|--nocompile) NOCOMPILE=yes ;;
+        -no-install|--no-install|--noinstall) NOINSTALL=yes ;;
+        --clang) CC=clang; CXX=clang++ ;;
+        --gcc) CC=gcc; CXX=g++ ;;
+        --generator=*) GENERATOR="${arg#*=}" ;;
+        --build-dir=*) BUILD_DIR="${arg#*=}" ;;
+        --build-type=*) CMAKE_BUILD_TYPE="${arg#*=}" ;;
+        --src=*) SRC="${arg#*=}" ;;
+        --install=*|--apps=*) CMAKE_INSTALL_PREFIX="${arg#*=}"; SYSTEMC_HOME="${CMAKE_INSTALL_PREFIX}/systemc" ;;
+        --version=*) TOOL_VERS="${arg#*=}" ;;
+        -bd|-bt|-bld|-gen|-i|-s|-sc|-vers)
+          [[ $# -gt 1 ]] || { Report_fatal "Need argument for ${arg}"; return 1; }
+          case "${arg}" in -bd) BUILD_DIR="$2";; -bt) CMAKE_BUILD_TYPE="$2";; -bld) BUILDER="$2";; -gen) GENERATOR="$2";; -i) CMAKE_INSTALL_PREFIX="$2";; -s) SRC="$2";; -sc) SYSTEMC_HOME="$2";; -vers) TOOL_VERS="$2";; *) return 1 ;; esac
+          shift ;;
+        *) ARGV+=("${arg}") ;;
+      esac
+      shift
+    done
+    export CC CXX
+    [[ -n "${CC:-}" ]] || { command -v clang >/dev/null 2>&1 && CC=clang || CC=gcc; }
+    [[ -n "${CXX:-}" ]] || { [[ "${CC}" == clang ]] && CXX=clang++ || CXX=g++; }
+    export CC CXX SRC CMAKE_INSTALL_PREFIX SYSTEMC_HOME BUILDER BUILD_DIR CMAKE_BUILD_TYPE GENERATOR NOFETCH NOCOMPILE NOINSTALL
+}
+
+function Create_and_Cd() { [[ $# == 1 ]] || return 1; _do mkdir -p "$1" && _do builtin cd "$1"; }
+
+function GetSource_and_Cd() {
+    local dir="$1" url="$2"
+    [[ ${CLEAN:-0} == 1 ]] && _do rm -rf "${dir}"
+    if [[ "${NOFETCH}" == yes ]]; then _do builtin cd "${dir}"; return; fi
+    if [[ -d "${dir}/.git" ]]; then _do git -C "${dir}" pull --no-edit; else _do git clone "${url}" "${dir}"; fi
+    _do builtin cd "${dir}"
+}
+
+function Select_version() { [[ -n "${1:-}" ]] && _do git checkout "$1" .; }
+function Configure_tool() {
+    _do rm -rf "${BUILD_DIR}"
+    local -a options=(-B "${BUILD_DIR}" -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}" -DCMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD}" -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+    [[ -n "${GENERATOR:-}" ]] && options+=(-G "${GENERATOR}")
+    _do cmake "${options[@]}"
+}
+function Compile_tool() { [[ "${NOCOMPILE}" == yes ]] && return 0; _do cmake --build "${BUILD_DIR}"; }
+function Install_tool() { [[ "${NOINSTALL}" == yes ]] && return 0; _do cmake --install "${BUILD_DIR}"; }
 
 Build_systemc "$0" "$@"
 
