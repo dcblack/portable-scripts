@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.15
+BUILD_TOOL_VERSION=1.16
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
@@ -55,7 +55,7 @@ build LIBRARY|TOOL [OPTIONS] #< see EXTENSIONS
 
 ## Description
 
-This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects. It assumes a proper CMakeLists.txt has been set up. If no CMakeLists.txt is found while walking up from the current directory, but a Cargo.toml is found, it runs `cargo build` with the supplied arguments instead. Extension commands such as `build-LIBRARY` or `build-TOOL` take precedence. Basically, all this does (roughly):
+This script was written to simplify using _cmake_ and educate along the way. It provides a single command to configure, compile, link, and run or test projects. It assumes a proper CMakeLists.txt has been set up. If no CMakeLists.txt is found while walking up from the current directory, but a Cargo.toml is found, it runs `cargo build` with the supplied arguments instead. Extension commands such as `build-LIBRARY` or `build-TOOL` take precedence. The logging and reporting functionality formerly supplied by `Essential-IO` is embedded in this script, so that file is no longer a dependency. Basically, all this does (roughly):
 
 ```bash
 clean -a # OPTIONAL
@@ -66,6 +66,14 @@ ctest --test-dir target -C Debug -VV # OPTIONAL -OR- run
 If you're skeptical, just run with the `-n` option.
 
 IMPORTANT: This should be run at the top of the project where the CMakeLists.txt file containing the project keyword exists.
+
+## Dependencies
+
+The CMake path requires Bash, CMake, CTest, Perl, Git, and either Ninja or Make. Some actions additionally require `find`, `tee`, `date`, and the selected debugger or executable. Rust fallback requires Cargo. Extension commands are separate executables named `build-NAME` and must be available on `PATH`.
+
+## Potential issues
+
+The script searches upward for a project file, so invoking it from a nested directory may select an ancestor project. The default build directory is `target/<configuration>`, and an existing build made with another generator may require confirmation or removal. Test, run, install, and debugger actions depend on the project layout and the corresponding external tools. `-n` avoids most commands, but parsing configuration files and project detection still occur; extension commands may also implement their own dry-run behavior.
 
 ## Options
 
@@ -154,6 +162,112 @@ END_HELP
   printf "%s%s" "${HELP_TEXT}" "${LICENSE}" | "${pager[@]}" -;
 }
 
+function _C()
+{
+  local arg escape="\033["
+  [[ ${NOCOLOR:-0} == 1 ]] && return 0
+  for arg in "$@"; do
+    case "${arg,,}" in
+      none|off|-) printf "%b" "${escape}0m" ;;
+      bold) printf "%b" "${escape}1m" ;;
+      dark) printf "%b" "${escape}2m" ;;
+      red) printf "%b" "${escape}91m" ;;
+      grn|green) printf "%b" "${escape}92m" ;;
+      ylw|yellow) printf "%b" "${escape}93m" ;;
+      blu|blue) printf "%b" "${escape}94m" ;;
+      mag) printf "%b" "${escape}95m" ;;
+      cyn|cyan) printf "%b" "${escape}96m" ;;
+      wht|white) printf "%b" "${escape}97m" ;;
+    esac
+  done
+}
+
+function Realpath()
+{
+  if builtin command -v realpath >/dev/null 2>&1; then
+    realpath -q "$@"
+  else
+    perl -MCwd=abs_path -le 'print abs_path(join(q( ), @ARGV)) if -e join(q( ), @ARGV)' "$*"
+  fi
+}
+
+function Logfile()
+{
+  local name="$1"
+  [[ -z "${name}" ]] && return 0
+  LOGFILE="$(Realpath .)/${name%.log}.log"
+  rm -f "${LOGFILE}"
+  printf '# Logfile for %s created on %s\n\n' "${name}" "$(date)" >>"${LOGFILE}"
+  printf 'Logging to %s\n' "${LOGFILE}"
+}
+
+function Log()
+{
+  [[ ${NOLOG:-0} == 1 || -z "${LOGFILE:-}" ]] && return 0
+  if [[ "$1" == "-n" ]]; then
+    shift
+    printf '%s' "$*" >>"${LOGFILE}"
+  else
+    printf '%s\n' "$*" >>"${LOGFILE}"
+  fi
+}
+
+function Echo()
+{
+  local newline=1
+  if [[ "$1" == "-n" ]]; then newline=0; shift; fi
+  if [[ ${newline} == 1 ]]; then
+    printf '%s\n' "$*"
+    Log "$*"
+  else
+    printf '%s' "$*"
+    Log -n "$*"
+  fi
+}
+
+function _do()
+{
+  local noexec=""
+  [[ -n "${NOTREALLY:-}" ]] && noexec="-"
+  if [[ "${noexec}" == "-" ]]; then
+    Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
+    return 0
+  fi
+  Echo "$(_C cyn)${noexec}%$(_C none bold blue) $*$(_C none)"
+  if [[ -z "${LOGFILE:-}" ]]; then
+    "$@"
+  else
+    "$@" 2>&1 | tee -a "${LOGFILE}"
+  fi
+}
+
+function Report_info()
+{
+  local force=0
+  if [[ "$1" == "-f" ]]; then force=1; shift; fi
+  if [[ ${force} == 0 && ${VERBOSITY:-1} -lt 1 ]]; then return 0; fi
+  Echo "$(_C grn)$(_C bold)Info: $(_C none)$*$(_C none)"
+}
+
+function Report_warning()
+{
+  WARNINGS=$(( ${WARNINGS:-0} + 1 ))
+  Echo "$(_C ylw)$(_C bold)Warning:$(_C none) $*$(_C none)" >&2
+}
+
+function Report_error()
+{
+  ERRORS=$(( ${ERRORS:-0} + 1 ))
+  Echo "$(_C bold red)Error #${ERRORS}:$(_C none red) $*$(_C none)" >&2
+  return 1
+}
+
+function Report_fatal()
+{
+  Echo "$(_C bold red)Fatal:$(_C none red) $*$(_C none)" >&2
+  return 1
+}
+
 function Confirm()
 {
   local REPLY
@@ -213,24 +327,7 @@ function Build()
     exit 0
   fi
 
-  export BUILD_TOOL_NAME SCRIPTS_DIR LOGFILE
-  BUILD_TOOL_PATH="$(command -v "${BUILD_TOOL_NAME}")"
-  BUILD_TOOL_DIR="$(dirname "${BUILD_TOOL_PATH}")"
-
-  # If not yet defined
-  if [[ -z "${SCRIPTS_DIR}" ]]; then
-    # Try the directory where the build script is located
-    SCRIPTS_DIR="$(dirname "${BUILD_TOOL_DIR}")/scripts"
-  fi
-  if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
-    # Try home installation
-    SCRIPTS_DIR=~/.local/scripts
-  fi
-  if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
-    Die "Unable to find Essential-IO in ${SCRIPTS_DIR}"
-  fi
-  # shellcheck disable=SC1090,SC1091
-  source "${SCRIPTS_DIR}/Essential-IO"
+  export BUILD_TOOL_NAME LOGFILE
 
   # Add .buildrc if present
   #------------------------------------------------------------------------------
