@@ -15,6 +15,8 @@ use English;
 use FindBin qw($RealBin $RealScript);
 use vars qw($exe);
 use File::Find qw(find);
+use File::Path qw(remove_tree);
+use File::Temp qw(tempdir);
 
 use Carp;
 use FileHandle;
@@ -25,54 +27,73 @@ STDERR->autoflush(1);
 ## BEGIN DOCUMENTATION #####################################################{{{
 ###############################################################################
 $exe = "$RealBin/$RealScript";
-exec "perldoc $exe" if "@ARGV" =~ m/^-+h(elp)?$/;
 =pod
 
 =head1 NAME
 
-B<systemc_version> - extracts & displays the version of systemc
+B<systemc-version> - extracts and displays the version of SystemC
 
 =head1 SYNOPSIS
 
-B<systemc_version> [I<OPTIONS>]
+B<systemc-version> [I<OPTIONS>]
 
 =head1 DESCRIPTION
 
-B<systemc_version> examines the SYSTEMC (or SYSTEMC_HOME) environment
-variable and then extracts the SystemC version number from a file within
-the SystemC include file hierarchy. The result is to print the version
-number in one of several formats.
+B<systemc-version> examines the SYSTEMC or SYSTEMC_HOME environment
+variable, then falls back to C<~/.local/src/systemc>, and extracts the
+SystemC version number from a file within the SystemC include hierarchy.
+With C<--cxx>, it instead compiles a small program against the installed
+SystemC API. The result is printed in one of several formats.
 
 =head1 OPTIONS
 
- --help       this text
- --us         use underscore
- --full       full version (all 3 parts)
- -D|--define  formated for gcc
- --int        integer format major*1e6+minor*1e3+bug
- --min #      require a minimum version #
- --sq         squeeze out non-alpha
- -q|--quiet   quiet, return appropriate exit status
- --sc PATH    specifies a path to search instead of environment variables
- --cxx        compile minimal program and utilize real API rather than search includes
- --nocxx      turns off -cxx
- --var        return a variable name suitable for #define
- --ieee       return IEEE version number (yyyyMMddL)
- --osci       return Accellera standard number (yyyyMMdd)
- --tlm2       include the TLM version
- -v|--verbose Includes the word SystemC at the beginning of the line
+ -h|--help     display help without requiring perldoc
+ -V|--version  display systemc-version 0.2.0
+ --us          use underscores instead of dots
+ --full        include all three version components
+ -D|--define   format the result for gcc
+ --int         integer format major*1e6+minor*1e3+patch
+ --min #       require a minimum version (default: 2.3.3)
+ --sq          remove separators from the version
+ -q|--quiet    print no version; return the requirement status
+ --sc PATH     search PATH instead of SYSTEMC or SYSTEMC_HOME
+ --cxx         compile a minimal program and use the installed API
+ --nocxx       disable C++ API detection
+ --var         return a variable name suitable for a #define
+ --ieee        return the IEEE 1666 version number
+ --osci        return the Accellera release number
+ --tlm2        include the TLM version
+ -v|--verbose  prefix the result with "SystemC"
 
 =head1 ENVIRONMENT
 
-B<SYSTEMC_VERSIONRC> can be used to supply default arguments.
+B<SYSTEMC_VERSIONRC> can supply default arguments. Its whitespace-separated
+arguments are prepended to the command-line arguments.
+
+=head1 DEPENDENCIES
+
+Perl 5.6 or newer and the Perl core modules C<FindBin>, C<File::Find>,
+C<File::Path>, C<File::Temp>, C<Cwd>, and C<English>. C<--cxx> additionally
+requires CMake, a C++ compiler, and an installed SystemC CMake package.
+The script does not source C<utils.bash>, C<Essential-IO>, or any other
+project-local script.
+
+=head1 LIMITATIONS AND ISSUES
+
+The default mode scans the include tree and can select the first matching
+C<sc_ver.h> when multiple SystemC installations are present. The selected
+installation must be readable. C<--cxx> creates a temporary build, may be
+slow, and depends on a working CMake package configuration; failed compiler
+or CMake commands are reported as an unavailable API result. Network access
+is not used by this script.
 
 =head1 EXAMPLES
 
  # Ensure version minimum
- systemc_version -min 2.1
+ systemc-version -min 2.1
 
  # Compile code ifdef'd on SystemC version
- gcc -D`systemc_version -D` top.cpp
+ gcc -D`systemc-version -D` top.cpp
 
 =head1 AUTHOR
 
@@ -96,6 +117,59 @@ distribution, use, or otherwise).
 
 package main;
 
+my $VERSION = '0.2.0';
+
+sub help_text {
+  print <<'HELP';
+systemc-version - extract and display the installed SystemC version
+
+SYNOPSIS
+  systemc-version [OPTIONS]
+
+DESCRIPTION
+  Finds SystemC version information under SYSTEMC or SYSTEMC_HOME, or in
+  ~/.local/src/systemc when neither variable is set. It prints the result
+  in the requested format. Use --cxx to compile a small program and query
+  the installed SystemC API instead of scanning headers.
+
+OPTIONS
+  -h, --help       Display this help text.
+  -V, --version    Display the program version.
+  -q, --quiet      Print no version; use the exit status for --min.
+  -v, --verbose    Prefix the result with "SystemC".
+  --sc PATH        Search PATH instead of the environment variables.
+  --min VERSION    Require at least VERSION (default: 2.3.3).
+  --full           Include the patch component.
+  --int            Print major*1e6 + minor*1e3 + patch.
+  --sq             Remove separators from the result.
+  --us             Use underscores instead of dots.
+  -D, --define     Format the result as a compiler definition.
+  --var            Prefix the result with SYSTEMC_V.
+  --ieee           Print the IEEE 1666 version number.
+  --osci           Print the Accellera release number.
+  --cxx            Query the API by compiling a temporary C++ program.
+  --nocxx          Disable API detection.
+  --tlm2           Include the TLM version in API mode.
+
+DEPENDENCIES
+  Perl and its core modules, plus File::Find, File::Temp, and File::Path.
+  API mode additionally requires CMake, a C++ compiler, and a SystemC
+  installation exporting a CMake package configuration.
+
+ISSUES AND LIMITATIONS
+  Header mode uses the first matching sc_ver.h under the selected include
+  directory, so multiple installations can be ambiguous. API mode creates
+  and removes a temporary build directory and can be slower; failed CMake
+  or compiler commands make the API version unavailable. No project-local
+  scripts are sourced, and the program does not fetch anything.
+
+ENVIRONMENT
+  SYSTEMC_VERSIONRC supplies whitespace-separated default arguments.
+  SYSTEMC or SYSTEMC_HOME identifies the SystemC installation. If neither
+  is set, ~/.local/src/systemc is used when that directory exists.
+HELP
+}
+
 our @FOUND;
 sub wanted {
   push @FOUND,$File::Find::name if m{\bsc_ver\.h\b}s;
@@ -116,7 +190,13 @@ my $SYSTEMC = '';
 unshift @ARGV,split(m/\s+/,$ENV{'SYSTEMC_VERSIONRC'}) if exists $ENV{'SYSTEMC_VERSIONRC'};
 while (@ARGV) {
   $arg = shift @ARGV;
-  if ($arg eq '_' or $arg =~ m{^-{1,2}us}) {
+  if ($arg eq '-h' or $arg =~ m{^--?help$}) {
+    help_text();
+    exit 0;
+  } elsif ($arg eq '-V' or $arg eq '--version') {
+    print "systemc-version $VERSION\n";
+    exit 0;
+  } elsif ($arg eq '_' or $arg =~ m{^-{1,2}us}) {
     $OPT{-us} = 1;
   } elsif ($arg =~ m{^-{1,2}DEBUG}) {
     $OPT{-DEBUG} = 1;
@@ -143,6 +223,7 @@ while (@ARGV) {
   } elsif ($arg =~ m{^-{1,2}int}) {
     $OPT{-int} = 1;
   } elsif ($arg =~ m{^-{1,2}min}) {
+    Die "--min must specify a version" unless @ARGV;
     $min = shift @ARGV;
     Die "Must be a dotted or underscore separated number!" 
       unless $min =~ m{^[1-9]\d*([._]\d+){0,2}};
@@ -166,9 +247,13 @@ while (@ARGV) {
   }#endif
 }#endwhile
 
-# Find location of SystemC
-$SYSTEMC = $ENV{'SYSTEMC'} if not defined $SYSTEMC or $SYSTEMC eq '';
-$SYSTEMC = $ENV{'SYSTEMC_HOME'} if not defined $SYSTEMC or $SYSTEMC eq '';
+# Find location of SystemC. Explicit settings take precedence over the
+# conventional local source-tree location.
+$SYSTEMC = $ENV{'SYSTEMC'} if $SYSTEMC eq '' and defined $ENV{'SYSTEMC'};
+$SYSTEMC = $ENV{'SYSTEMC_HOME'} if $SYSTEMC eq '' and defined $ENV{'SYSTEMC_HOME'};
+$SYSTEMC = "$ENV{'HOME'}/.local/src/systemc"
+  if $SYSTEMC eq '' and defined $ENV{'HOME'}
+  and -d "$ENV{'HOME'}/.local/src/systemc";
 &Die("SYSTEMC environment variable is undefined") if not defined $SYSTEMC or $SYSTEMC eq '';
 print "SYSTEMC=$SYSTEMC\n" if exists $OPT{-DEBUG};
 
@@ -184,13 +269,12 @@ my $api_version_file;
 if (exists $OPT{-cxx} and $OPT{-cxx}) {
   my $orig = getcwd();
   my $CXX = 'g++';
-  my $temp_dir = "/tmp/systemc_version.$$";
+  my $temp_dir = tempdir('systemc-version-XXXXXX', TMPDIR => 1, CLEANUP => 0);
   my $temp_cmake = "./CMakeLists.txt";
   my $temp_cpp = "./sc_version.cpp";
   my $temp_exe = "./build/sc_version";
-  mkdir $temp_dir,0700;
-  chdir $temp_dir;
-  open CMAKELISTS,">$temp_cmake";
+  chdir $temp_dir or Die "Unable to enter temporary directory $temp_dir";
+  open CMAKELISTS,">$temp_cmake" or Die "Unable to create $temp_cmake";
   print CMAKELISTS <<'.';
 #!cmake .
 cmake_minimum_required( VERSION 3.20 )
@@ -219,7 +303,7 @@ set( CMAKE_C_STANDARD_REQUIRED   ${USE_C_VERSION}   CACHE BOOL   "The CMAKE_CXX_
 set( CMAKE_CXX_EXTENSIONS NO )
 if( NOT DEFINED ENV{SYSTEMC_HOME} )
   # Attempt to find it
-  set( SYSTEMC_CANDIDATES "$ENV{HOME}/.local/apps/systemc;$ENV{HOME}/systemc" )
+  set( SYSTEMC_CANDIDATES "$ENV{HOME}/.local/apps/systemc;$ENV{HOME}/.local/src/systemc;$ENV{HOME}/systemc" )
   foreach( _dir ${SYSTEMC_CANDIDATES} )
     if( IS_DIRECTORY "${_dir}/include" )
       set( ENV{SYSTEMC_HOME} "${_dir}" )
@@ -240,7 +324,7 @@ add_executable( sc_version sc_version.cpp )
 add_test( NAME sc_version COMMAND sc_version )
 .
   close CMAKELISTS;
-  open SOURCE,">$temp_cpp";
+  open SOURCE,">$temp_cpp" or Die "Unable to create $temp_cpp";
   print SOURCE <<'.';
 #include <tlm>
 #include <iostream>
@@ -273,13 +357,14 @@ int sc_main(int argc, char* argv[]) {
 }
 .
   close SOURCE;
-  my $lib = join(" -L",glob("$SYSTEMC/lib-*"));
-  my $cmd = "cmake -B build >config.log 2>&1; cmake --build build >build.log 2>&1";
-  printf "%% %s\n",$cmd if exists $OPT{-verbose};
-  system($cmd);
+  my $configure_status = system('cmake', '-B', 'build');
+  Die "CMake configuration failed" if $configure_status != 0;
+  my $build_status = system('cmake', '--build', 'build');
+  Die "CMake build failed" if $build_status != 0;
+  printf "%% cmake -B build; cmake --build build\n" if exists $OPT{-verbose};
   printf "%% %s\n",$temp_exe if exists $OPT{-verbose};
 
-  open EXE,"$temp_exe 2>&1 |";
+  open EXE,"-|",$temp_exe or Die "Unable to run $temp_exe";
   while (<EXE>) {
     chomp;
     next unless m/^api_version = /;
@@ -288,7 +373,7 @@ int sc_main(int argc, char* argv[]) {
   close EXE;
 
   if( exists $OPT{-tlm}) {
-    open EXE,"$temp_exe --tlm 2>&1 |";
+    open EXE,"-|",$temp_exe,'--tlm' or Die "Unable to run $temp_exe --tlm";
     while (<EXE>) {
       chomp;
       next unless m/^tlm_version = /;
@@ -298,7 +383,7 @@ int sc_main(int argc, char* argv[]) {
   }
 
   if( exists $OPT{-cci}) {
-    open EXE,"$temp_exe --cci 2>&1 |";
+    open EXE,"-|",$temp_exe,'--cci' or Die "Unable to run $temp_exe --cci";
     while (<EXE>) {
       chomp;
       next unless m/^cci_version = /;
@@ -307,8 +392,8 @@ int sc_main(int argc, char* argv[]) {
     close EXE;
   }
 
-  chdir $orig;
-  system("rm -fr $temp_dir") unless exists $OPT{-DEBUG};;
+  chdir $orig or Die "Unable to return to $orig";
+  remove_tree($temp_dir) unless exists $OPT{-DEBUG};
   $api_version =~ m{^\d+\.\d+\.\d+};
   ($api_version,$api_extra) = ($&,$');
 } else {
