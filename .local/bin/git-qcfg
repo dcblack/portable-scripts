@@ -2,22 +2,25 @@
 #
 # git-qcfg - quick configure git
 
+VERSION='0.1.0'
+
 export EDITOR
 export EXERCISES
 
-function Realpath()
+function Report_error()
 {
-  if [[ $# == 0 ]]; then set - .; fi
-  /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+  printf 'ERROR: %s\n' "$*" >&2
 }
-SCRIPT="$(Realpath "$0")"
-SCRIPT="$(dirname "${SCRIPT}")/utils.bash"
-if [[ -r "${SCRIPT}" ]]; then
-  # shellcheck source=~/.local/bin/utils.bash disable=SC1090
-  source "${SCRIPT}" "$0"
-else
-  echo "Error: Missing ${SCRIPT}" 1>&2; exit 1
-fi
+
+function Report_warning()
+{
+  printf 'WARNING: %s\n' "$*" >&2
+}
+
+function Report_info()
+{
+  printf '%s\n' "$*"
+}
 
 #-------------------------------------------------------------------------------
 function Read()
@@ -138,6 +141,20 @@ Sets ups three area for git when you`re in a hurry:
 
 If no options are given, the user is prompted for name and email before proceeding.
 
+DEPENDENCIES
+------------
+
+Requires Bash and Git. No project-local scripts are sourced. The configured
+aliases may invoke Perl later, when those aliases are used.
+
+ISSUES AND LIMITATIONS
+----------------------
+
+This command changes the selected Git configuration scope and may overwrite
+values when `--force` is used. User name and email removal always targets the
+global scope. The default operation is interactive; use the non-interactive
+options when running it from automation. Existing aliases are not backed up.
+
 The standard configure items are:
 
 | Item                    | Value        |
@@ -155,6 +172,8 @@ OPTIONS
 
 | Option        | Alternative   |  Action
 | ------------- | ------------- | -------
+| --help        | -h            | Display this help text
+| --version     | -V            | Display the program version
 | --force       |               | Override pre-existing values
 | --list        |               | List all the current settings
 | --no-name     |               | Don't set or update name & email
@@ -213,6 +232,10 @@ function Git_configure()
     shift
     case "${ARG}" in
       --help|-h)   Help_configure
+        return 0
+        ;;
+      --version|-V)
+        printf 'git-qcfg %s\n' "${VERSION}"
         return 0
         ;;
       # Simple flags

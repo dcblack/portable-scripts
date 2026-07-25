@@ -218,7 +218,7 @@ Options
                       Installation prefix (default: ~/.local/apps).
   -vers VERSION       Git branch, tag, or commit to check out.
   --generator=NAME    CMake generator, such as Ninja.
-  --build-dir=DIR     CMake build directory.
+  --build-dir=DIR     CMake build directory (default: target).
   --build-type=TYPE   CMake build type (default: RelWithDebInfo).
   --clang, --gcc      Select the corresponding compiler pair.
 
@@ -250,7 +250,7 @@ function GetBuildOpts() {
     CMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX:-${HOME}/.local/apps}"
     SYSTEMC_HOME="${SYSTEMC_HOME:-${CMAKE_INSTALL_PREFIX}/systemc}"
     BUILDER="${BUILDER:-cmake}"
-    BUILD_DIR="${BUILD_DIR:-BUILD-${BUILDER}}"
+    BUILD_DIR="${BUILD_DIR:-target}"
     NOFETCH="${NOFETCH:-no}"; NOCOMPILE="${NOCOMPILE:-no}"; NOINSTALL="${NOINSTALL:-no}"
     while [[ $# -gt 0 ]]; do
       arg="$1"

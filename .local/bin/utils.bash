@@ -714,7 +714,7 @@ function GetBuildOpts()
     BUILDER=cmake
   fi
   if [[ -z "${BUILD_DIR}" ]]; then
-    BUILD_DIR="BUILD-${BUILDER}-${CC/*\//}"
+    BUILD_DIR="target"
   fi
   if [[ -z "${CMAKE_BUILD_TYPE}" ]]; then
     CMAKE_BUILD_TYPE="RelWithDebInfo"
