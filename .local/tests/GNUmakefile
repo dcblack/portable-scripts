@@ -29,7 +29,19 @@ help:
 all: all-short all-long
 
 # Quick tests
-all-short: 
+all-short: test-build test-build-systemc test-git-qcfg test-systemc-version
+
+test-build:
+	@./test-build
+
+test-build-systemc:
+	@./test-build-systemc
+
+test-git-qcfg:
+	@./test-git-qcfg
+
+test-systemc-version:
+	@./test-systemc-version
 
 # Long running tests (i.e., installation of large tools that require long compilations)
 all-long:
