@@ -741,6 +741,17 @@ function Build()
     WORKTREE_DIR="$(git rev-parse --show-toplevel)" || Die "Not in git repo"
   fi
 
+  #------------------------------------------------------------------------------
+  # Validate environment before creating any build output
+  #------------------------------------------------------------------------------
+  if [[ ! -r CMakeLists.txt ]]; then
+    Report_fatal "Missing CMakeLists.txt!" ; exit 1
+  elif ! grep '^cmake_minimum_required' CMakeLists.txt; then
+    Report_fatal "CMakeLists.txt missing cmake_minimum_required directive -- are you in the right directory?" ; exit 1
+  elif ! grep '^project' CMakeLists.txt; then
+    Report_fatal "CMakeLists.txt missing project directive -- are you in the right directory?" ; exit 1
+  fi
+
   if [[ ${QUIET} == 0 ]]; then
     CTEST_OPTS=(-VV "${CTEST_OPTS[@]}")
   fi
@@ -799,17 +810,6 @@ function Build()
   Log "# Executing $0 $*"
   _do pwd
 
-
-  #-------------------------------------------------------------------------------
-  # Validate environment
-  #-------------------------------------------------------------------------------
-  if [[ ! -r CMakeLists.txt ]]; then
-    Report_fatal "Missing CMakeLists.txt!" ; exit 1
-  elif ! grep '^cmake_minimum_required' CMakeLists.txt; then
-    Report_fatal "CMakeLists.txt missing cmake_minimum_required directive -- are you in the right directory?" ; exit 1
-  elif ! grep '^project' CMakeLists.txt; then
-    Report_fatal "CMakeLists.txt missing project directive -- are you in the right directory?" ; exit 1
-  fi
 
   #-------------------------------------------------------------------------------
   # Locate cmake modules that we assume

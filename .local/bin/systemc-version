@@ -20,153 +20,92 @@ use File::Temp qw(tempdir);
 
 use Carp;
 use FileHandle;
-use Cwd;
+use Cwd qw(abs_path getcwd);
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
-## BEGIN DOCUMENTATION #####################################################{{{
-###############################################################################
 $exe = "$RealBin/$RealScript";
-=pod
-
-=head1 NAME
-
-B<systemc-version> - extracts and displays the version of SystemC
-
-=head1 SYNOPSIS
-
-B<systemc-version> [I<OPTIONS>]
-
-=head1 DESCRIPTION
-
-B<systemc-version> examines the SYSTEMC or SYSTEMC_HOME environment
-variable, then falls back to C<~/.local/src/systemc>, and extracts the
-SystemC version number from a file within the SystemC include hierarchy.
-With C<--cxx>, it instead compiles a small program against the installed
-SystemC API. The result is printed in one of several formats.
-
-=head1 OPTIONS
-
- -h|--help     display help without requiring perldoc
- -V|--version  display systemc-version 0.2.0
- --us          use underscores instead of dots
- --full        include all three version components
- -D|--define   format the result for gcc
- --int         integer format major*1e6+minor*1e3+patch
- --min #       require a minimum version (default: 2.3.3)
- --sq          remove separators from the version
- -q|--quiet    print no version; return the requirement status
- --sc PATH     search PATH instead of SYSTEMC or SYSTEMC_HOME
- --cxx         compile a minimal program and use the installed API
- --nocxx       disable C++ API detection
- --var         return a variable name suitable for a #define
- --ieee        return the IEEE 1666 version number
- --osci        return the Accellera release number
- --tlm2        include the TLM version
- -v|--verbose  prefix the result with "SystemC"
-
-=head1 ENVIRONMENT
-
-B<SYSTEMC_VERSIONRC> can supply default arguments. Its whitespace-separated
-arguments are prepended to the command-line arguments.
-
-=head1 DEPENDENCIES
-
-Perl 5.6 or newer and the Perl core modules C<FindBin>, C<File::Find>,
-C<File::Path>, C<File::Temp>, C<Cwd>, and C<English>. C<--cxx> additionally
-requires CMake, a C++ compiler, and an installed SystemC CMake package.
-The script does not source C<utils.bash>, C<Essential-IO>, or any other
-project-local script.
-
-=head1 LIMITATIONS AND ISSUES
-
-The default mode scans the include tree and can select the first matching
-C<sc_ver.h> when multiple SystemC installations are present. The selected
-installation must be readable. C<--cxx> creates a temporary build, may be
-slow, and depends on a working CMake package configuration; failed compiler
-or CMake commands are reported as an unavailable API result. Network access
-is not used by this script.
-
-=head1 EXAMPLES
-
- # Ensure version minimum
- systemc-version -min 2.1
-
- # Compile code ifdef'd on SystemC version
- gcc -D`systemc-version -D` top.cpp
-
-=head1 AUTHOR
-
-David C. Black <dcblack@hldwizard.com>
-
-=head1 COPYRIGHT
-
-Copyright (C) 2003-2011,2023 David C Black
-
-=head1 LICENSE
-
-This software, B<systemc_version>, is a copyrighted work. The GNU
-GPL version 2 describes the conditions under which the software may
-be copied, modified and distributed. No fee may be charged for this
-software or any derivative work (whether in exchange for copying,
-distribution, use, or otherwise).
-
-=cut
-
-##}}}
-
 package main;
 
-my $VERSION = '0.2.0';
+my $VERSION = '0.3.0';
 
 sub help_text {
   print <<'HELP';
-systemc-version - extract and display the installed SystemC version
+# `systemc-version` - extract and display the installed SystemC version
 
-SYNOPSIS
-  systemc-version [OPTIONS]
+## SYNOPSIS
 
-DESCRIPTION
-  Finds SystemC version information under SYSTEMC or SYSTEMC_HOME, or in
-  ~/.local/src/systemc when neither variable is set. It prints the result
-  in the requested format. Use --cxx to compile a small program and query
-  the installed SystemC API instead of scanning headers.
+```text
+systemc-version [OPTIONS]
+```
 
-OPTIONS
-  -h, --help       Display this help text.
-  -V, --version    Display the program version.
-  -q, --quiet      Print no version; use the exit status for --min.
-  -v, --verbose    Prefix the result with "SystemC".
-  --sc PATH        Search PATH instead of the environment variables.
-  --min VERSION    Require at least VERSION (default: 2.3.3).
-  --full           Include the patch component.
-  --int            Print major*1e6 + minor*1e3 + patch.
-  --sq             Remove separators from the result.
-  --us             Use underscores instead of dots.
-  -D, --define     Format the result as a compiler definition.
-  --var            Prefix the result with SYSTEMC_V.
-  --ieee           Print the IEEE 1666 version number.
-  --osci           Print the Accellera release number.
-  --cxx            Query the API by compiling a temporary C++ program.
-  --nocxx          Disable API detection.
-  --tlm2           Include the TLM version in API mode.
+## DESCRIPTION
 
-DEPENDENCIES
-  Perl and its core modules, plus File::Find, File::Temp, and File::Path.
-  API mode additionally requires CMake, a C++ compiler, and a SystemC
-  installation exporting a CMake package configuration.
+Finds SystemC version information under `SYSTEMC` or `SYSTEMC_HOME`, or in
+`~/.local/src/systemc` when neither variable is set. It prints the result in
+the requested format. Use `--cxx` to compile a small program and query the
+installed SystemC API instead of scanning headers.
 
-ISSUES AND LIMITATIONS
-  Header mode uses the first matching sc_ver.h under the selected include
-  directory, so multiple installations can be ambiguous. API mode creates
-  and removes a temporary build directory and can be slower; failed CMake
-  or compiler commands make the API version unavailable. No project-local
-  scripts are sourced, and the program does not fetch anything.
+## OPTIONS
 
-ENVIRONMENT
-  SYSTEMC_VERSIONRC supplies whitespace-separated default arguments.
-  SYSTEMC or SYSTEMC_HOME identifies the SystemC installation. If neither
-  is set, ~/.local/src/systemc is used when that directory exists.
+- `-h`, `--help` — Display this help text.
+- `-V`, `--version` — Display the program version.
+- `-s`, `--show-path` — Append the resolved SystemC installation path to the result.
+- `-q`, `--quiet` — Print no version; use the exit status for `--min`.
+- `-v`, `--verbose` — Prefix the result with `SystemC`.
+- `--sc PATH` — Search `PATH` instead of the environment variables.
+- `--min VERSION` — Require at least `VERSION` (default: `2.3.3`).
+- `--full` — Include the patch component.
+- `--int` — Print `major*1e6 + minor*1e3 + patch`.
+- `--sq` — Remove separators from the result.
+- `--us` — Use underscores instead of dots.
+- `-D`, `--define` — Format the result as a compiler definition.
+- `--var` — Prefix the result with `SYSTEMC_V`.
+- `--ieee` — Print the IEEE 1666 version number.
+- `--osci` — Print the Accellera release number.
+- `--cxx` — Query the API by compiling a temporary C++ program.
+- `--nocxx` — Disable API detection.
+- `--tlm2` — Include the TLM version in API mode.
+
+## DEPENDENCIES
+
+Perl and its core modules, plus `File::Find`, `File::Temp`, and `File::Path`.
+API mode additionally requires CMake, a C++ compiler, and a SystemC
+installation exporting a CMake package configuration.
+
+## ISSUES AND LIMITATIONS
+
+Header mode uses the first matching `sc_ver.h` under the selected include
+directory, so multiple installations can be ambiguous. API mode creates and
+removes a temporary build directory and can be slower; failed CMake or compiler
+commands make the API version unavailable. No project-local scripts are
+sourced, and the program does not fetch anything.
+
+## ENVIRONMENT
+
+`SYSTEMC_VERSIONRC` supplies whitespace-separated default arguments.
+`SYSTEMC` or `SYSTEMC_HOME` identifies the SystemC installation. If neither
+is set, `~/.local/src/systemc` is used when that directory exists.
+
+## EXAMPLES
+
+Print the default version followed by the resolved installation path:
+
+```shell
+systemc-version -s
+```
+
+Print all version components followed by the resolved installation path:
+
+```shell
+systemc-version --full --show-path
+```
+
+Print the IEEE version followed by the resolved installation path:
+
+```shell
+systemc-version -ieee -s
+```
 HELP
 }
 
@@ -196,6 +135,8 @@ while (@ARGV) {
   } elsif ($arg eq '-V' or $arg eq '--version') {
     print "systemc-version $VERSION\n";
     exit 0;
+  } elsif ($arg eq '-s' or $arg eq '--show-path') {
+    $OPT{-show_path} = 1;
   } elsif ($arg eq '_' or $arg =~ m{^-{1,2}us}) {
     $OPT{-us} = 1;
   } elsif ($arg =~ m{^-{1,2}DEBUG}) {
@@ -255,6 +196,7 @@ $SYSTEMC = "$ENV{'HOME'}/.local/src/systemc"
   if $SYSTEMC eq '' and defined $ENV{'HOME'}
   and -d "$ENV{'HOME'}/.local/src/systemc";
 &Die("SYSTEMC environment variable is undefined") if not defined $SYSTEMC or $SYSTEMC eq '';
+$SYSTEMC = abs_path($SYSTEMC) or &Die("Unable to resolve SystemC installation path");
 print "SYSTEMC=$SYSTEMC\n" if exists $OPT{-DEBUG};
 
 my $rel_version = '?';
@@ -429,8 +371,9 @@ int sc_main(int argc, char* argv[]) {
 $api_version = $OPT{-test} if defined $OPT{-test};
 
 print "api_version=$api_version\n" if exists $OPT{-DEBUG} or exists $OPT{-api};
-print "SYSTEMC_VERSION=$rel_version\n" if exists $OPT{-osci};
-print "IEEE_1666_SYSTEMC=$std_version\n" if exists $OPT{-ieee};
+my $path_suffix = exists $OPT{-show_path} ? " from $SYSTEMC" : '';
+print "SYSTEMC_VERSION=$rel_version$path_suffix\n" if exists $OPT{-osci};
+print "IEEE_1666_SYSTEMC=$std_version$path_suffix\n" if exists $OPT{-ieee};
 
 $api_version =~ s/\./_/g;
 
@@ -460,5 +403,6 @@ exit $exit if defined $OPT{-quit};
 printf "ERROR: " if $exit;
 printf "%s",$api_version if not ( exists $OPT{-api} || exists $OPT{-osci} || exists $OPT{-ieee} );
 printf " does not meet minimum requirement of %s\n",$min if $exit;
+printf "%s",$path_suffix if not ( exists $OPT{-api} || exists $OPT{-osci} || exists $OPT{-ieee} );
 print "\n";
 exit $exit;

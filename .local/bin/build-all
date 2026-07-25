@@ -1,14 +1,54 @@
 #!/usr/bin/env bash
 #
 # This script runs all the tool build/install scripts
-#
-echo 2>&1 "Status: Currently INCOMPLETE and UNTESTED!"
 
-cd
-build-cmake
-build-ninja
-build-ag
-build-clang
-build-systemc
-build-vim
-git-setup
+function Confirm()
+{
+  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+    echo '[96;1m
+Syntax: Confirm "Prompt"[0m
+'
+    exit 1
+  fi
+  if [[ $# == 0 ]]; then
+    Report_error "Confirm need to have a prompt"
+    return 1
+  fi
+  local ANS PROMPT
+  while [[ -z "${ANS}" ]]; do
+    PROMPT="$*"
+    if [[ ! ( "${PROMPT}" =~ [:?]$ ) ]]; then
+      PROMPT="${PROMPT}?"
+    fi
+    if [[ -n "${ZSH_VERSION}" ]]; then
+      read -r "ANS?${PROMPT} "
+    else
+      read -r -p "${PROMPT} " ANS
+    fi
+    case "${ANS}" in
+       y|Y|yes)             return 0;;
+        n|N|no)             return 1;;
+       q|quit|exit|x|abort) return 2;;
+       *) Report_warning "Please answer with any of: y|n|yes|no|quit|abort";;
+    esac
+  done
+}
+
+
+echo 2>&1 "Status: Currently INCOMPLETE and UNTESTED!"
+Confirm "Build all tools" || exit 1
+sleep 10
+
+function Build_all()
+{
+  cd
+  build-cmake
+  build-ninja
+  build-ag
+  build-clang
+  build-systemc
+  build-vim
+  git-setup
+}
+
+Build_all "$@"
