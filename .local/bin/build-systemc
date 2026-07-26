@@ -42,6 +42,7 @@ function Build_systemc()
     Compile_tool || exit 1
 
     if [[ -z "${NOINSTALL+x}" || "${NOINSTALL}" == "no" ]]; then
+      Check_registry_conflicts || exit 1
       Install_tool || exit 1
 
       # Optional clean up
@@ -85,6 +86,7 @@ function _C() {
       red) COLOR_CODE=$'\033[91m' ;;
       grn|green) COLOR_CODE=$'\033[92m' ;;
       ylw|yellow) COLOR_CODE=$'\033[93m' ;;
+      bg-yellow) COLOR_CODE=$'\033[43m' ;;
       blu|blue) COLOR_CODE=$'\033[94m' ;;
       mag) COLOR_CODE=$'\033[95m' ;;
       cyn|cyan) COLOR_CODE=$'\033[96m' ;;
@@ -158,6 +160,42 @@ function Report_fatal() {
     return 1
 }
 
+function Systemc_version_from_tree() {
+    local tree="$1" header
+    header="$(find "${tree}" -type f -name sc_ver.h -print -quit 2>/dev/null)"
+    [[ -r "${header}" ]] || return 1
+    awk '/SC_VERSION_MAJOR/ { major=$NF } /SC_VERSION_MINOR/ { minor=$NF } /SC_VERSION_PATCH/ { patch=$NF } END { if (major != "" && minor != "" && patch != "") print major "." minor "." patch }' "${header}"
+}
+
+function Registry_version() {
+    local directory="$1"
+    local config="${directory}/SystemCLanguageConfigVersion.cmake"
+    [[ -r "${config}" ]] || return 1
+    sed -n 's/^[[:space:]]*set(PACKAGE_VERSION[[:space:]]*"\([0-9][0-9.]*\)".*$/\1/p' "${config}" | head -n 1
+}
+
+function Check_registry_conflicts() {
+    local registry="${HOME}/.cmake/packages/SystemCLanguage" entry registered version target
+    [[ -d "${registry}" ]] || return 0
+    target="$(Systemc_version_from_tree "${PWD}")"
+    [[ -n "${target}" ]] || return 0
+    for entry in "${registry}"/*; do
+      [[ -f "${entry}" ]] || continue
+      registered="$(<"${entry}")"
+      [[ -n "${registered}" && -d "${registered}" ]] || continue
+      version="$(Registry_version "${registered}")"
+      [[ -n "${version}" && "${version}" != "${target}" ]] || continue
+      Set_color bold red bg-yellow; local alert="${COLOR}"
+      Set_color none; local reset="${COLOR}"
+      Echo "${alert}Warning: SystemC ${version} registry entry conflicts with incoming SystemC ${target}: ${registered}${reset}" >&2
+      if [[ "${STOP_ON_CONFLICT:-0}" == 1 ]]; then
+        Echo "${alert}Stopped before installation because --stop-on-conflict was requested.${reset}" >&2
+        return 1
+      fi
+      rm -f "${entry}"
+    done
+}
+
 function Step_Show() { [[ ${VERBOSITY:-0} != 0 ]] && Report_info "Step: $*"; }
 function Step_Next() { STEP_CURRENT=$(( ${STEP_CURRENT:-0} + 1 )); [[ -z "${STEP_MAX:-}" || ${STEP_CURRENT} -lt ${STEP_MAX} ]]; }
 
@@ -221,6 +259,8 @@ Options
   --build-dir=DIR     CMake build directory (default: target).
   --build-type=TYPE   CMake build type (default: RelWithDebInfo).
   --clang, --gcc      Select the corresponding compiler pair.
+  --stop-on-conflict  Stop before installation if the CMake SystemC registry
+                      contains a different SystemC version.
 
 Dependencies
 ------------
@@ -263,6 +303,7 @@ function GetBuildOpts() {
         -no-fetch|--no-fetch|--nofetch) NOFETCH=yes ;;
         -no-compile|--no-compile|--nocompile) NOCOMPILE=yes ;;
         -no-install|--no-install|--noinstall) NOINSTALL=yes ;;
+        --stop-on-conflict) STOP_ON_CONFLICT=1 ;;
         --clang) CC=clang; CXX=clang++ ;;
         --gcc) CC=gcc; CXX=g++ ;;
         --generator=*) GENERATOR="${arg#*=}" ;;

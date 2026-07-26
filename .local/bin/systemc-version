@@ -119,6 +119,46 @@ sub Die {
   exit 1;
 };
 
+sub registry_version {
+  my ($directory) = @_;
+  my $file = "$directory/SystemCLanguageConfigVersion.cmake";
+  return unless -r $file;
+  open my $config, '<', $file or return;
+  while (my $line = <$config>) {
+    return $1 if $line =~ m{^\s*set\(PACKAGE_VERSION\s+"([0-9]+(?:\.[0-9]+){2,})"}i;
+  }
+  close $config;
+  return;
+}
+
+sub warn_registry_conflicts {
+  my ($reported) = @_;
+  my $registry = "$ENV{HOME}/.cmake/packages/SystemCLanguage";
+  return unless -d $registry;
+  my ($reported_base) = $reported =~ m{^(\d+\.\d+\.\d+)};
+  return unless defined $reported_base;
+  opendir my $directory, $registry or return;
+  while (my $entry = readdir $directory) {
+    next if $entry =~ m{^\.\.?$};
+    my $entry_file = "$registry/$entry";
+    next unless -f $entry_file;
+    open my $registered_path, '<', $entry_file or next;
+    my $path = <$registered_path>;
+    close $registered_path;
+    next unless defined $path;
+    chomp $path;
+    my $registered = registry_version($path);
+    next unless defined $registered;
+    my ($registered_base) = $registered =~ m{^(\d+\.\d+\.\d+)};
+    next unless defined $registered_base && $registered_base ne $reported_base;
+    my $red = $ENV{NOCOLOR} ? '' : "\e[91m";
+    my $yellow = $ENV{NOCOLOR} ? '' : "\e[93m";
+    my $reset = $ENV{NOCOLOR} ? '' : "\e[0m";
+    print STDERR "${red}${yellow}Warning:${reset} SystemC registry version ${registered_base} at ${path} conflicts with reported version ${reported_base}\n";
+  }
+  closedir $directory;
+}
+
 my %OPT;
 
 # Parse command-line
@@ -369,6 +409,8 @@ int sc_main(int argc, char* argv[]) {
 }
 
 $api_version = $OPT{-test} if defined $OPT{-test};
+
+warn_registry_conflicts($api_version);
 
 print "api_version=$api_version\n" if exists $OPT{-DEBUG} or exists $OPT{-api};
 my $path_suffix = exists $OPT{-show_path} ? " from $SYSTEMC" : '';

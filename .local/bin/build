@@ -26,6 +26,31 @@ limitations under the License.
 
 function Die() { echo "FAILED to build! $*" 1>&2; exit 1; }
 
+function Registry_version() {
+  local directory="$1"
+  local config="${directory}/SystemCLanguageConfigVersion.cmake"
+  [[ -r "${config}" ]] || return 1
+  sed -n 's/^[[:space:]]*set(PACKAGE_VERSION[[:space:]]*"\([0-9][0-9.]*\)".*$/\1/p' "${config}" | head -n 1
+}
+
+function Remove_conflicting_systemc_registry_entries() {
+  local registry="${HOME}/.cmake/packages/SystemCLanguage" installed entry registered version
+  [[ -d "${SYSTEMC_HOME:-}" && -d "${registry}" ]] || return 0
+  installed="$("$(dirname "${BASH_SOURCE[0]}")/systemc-version" --sc "${SYSTEMC_HOME}" --full 2>/dev/null)"
+  installed="$(printf '%s' "${installed}" | sed -n 's/^\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/p')"
+  [[ -n "${installed}" ]] || return 0
+  for entry in "${registry}"/*; do
+    [[ -f "${entry}" ]] || continue
+    registered="$(<"${entry}")"
+    [[ -n "${registered}" && -d "${registered}" ]] || continue
+    version="$(Registry_version "${registered}")"
+    version="$(printf '%s' "${version}" | sed -n 's/^\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/p')"
+    [[ -n "${version}" && "${version}" != "${installed}" ]] || continue
+    Report_warning "Removing conflicting SystemC registry entry (${version} at ${registered}); installed version is ${installed}."
+    _do rm -f "${entry}"
+  done
+}
+
 function Build_help()
 {
   declare -a pager
@@ -84,6 +109,7 @@ The script searches upward for a project file, so invoking it from a nested dire
 | -B BLD_DIR       | Name of the build directory -- defaults to \"target\"
 | -C DIR           | Change to specified directory before doing anything else
 | -clean           | Remove all build files and other output bits
+| --bypass-registry | Disable CMake's user package registry during configuration
 | -DVAR=VAL        | Specify a configuration definition (i.e., passed to cmake -B)
 | -G "GEN"         | Specify generator (defaults to Ninja if available)
 | -gcc, -gnu       | Use GNU compiler chain (i.e., g++ and gcc)
@@ -391,6 +417,7 @@ function Build()
   fi
   ADD_CMAKE_PREFIX=0
   APPS=~/.local/apps
+  BYPASS_REGISTRY=0
   CLEAN=0
   DEBUG=""
   QUIET=0
@@ -544,6 +571,8 @@ function Build()
     #...........................................................................
     elif [[ "$1" =~ ^-{1,2}clean$ ]]; then
       CLEAN=1;
+    elif [[ "$1" == "--bypass-registry" ]]; then
+      BYPASS_REGISTRY=1
     #...........................................................................
     elif [[ "$1" =~ ^-{1,2}info$ ]]; then
       DEBUG="--debug-output";
@@ -850,6 +879,7 @@ function Build()
   # Optionally start with a clean slate
   #------------------------------------------------------------------------------
   if [[ ${CLEAN} == 1 ]]; then
+    Remove_conflicting_systemc_registry_entries
     # Preserve log
     local TEMP_LOG BLD_NAM="${BLD_DIR/\//_}"
     if [[ -z "${NOTREALLY}" ]]; then
@@ -872,6 +902,9 @@ function Build()
     CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
   fi
   CONFIG_OPTS=("${CONFIG_OPTS[@]}" "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+  if [[ ${BYPASS_REGISTRY} == 1 ]]; then
+    CONFIG_OPTS+=("-DCMAKE_FIND_USE_PACKAGE_REGISTRY=FALSE")
+  fi
 
   #------------------------------------------------------------------------------
   Report_info -f "Configuring ${SUBPROJ_DIR}"
