@@ -8,7 +8,7 @@ TOOL_BRIEF="build-systemc - build and install SystemC from github source"
 TOOL_NAME="SystemC"
 TOOL_INFO='Go to <https://accellera.org/downloads/standards/systemc> for more information.'
 # ${TOOL_SRC}/${TOOL_BASE} for full path to source
-TOOL_SRC=~/.local/src
+TOOL_SRC=~/.portable-scripts/src
 TOOL_BASE="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS='master' # latest or 3.0 or 2.3.4
@@ -24,7 +24,7 @@ function Realpath() {
 
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../bin)"
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
-  SCRIPTDIR="$(Realpath ~/.local/bin)"
+  SCRIPTDIR="$(Realpath ~/.portable-scripts/bin)"
 fi
 if [[ ! -r "${SCRIPTDIR}/utils.bash" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"

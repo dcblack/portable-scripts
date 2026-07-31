@@ -40,7 +40,7 @@ ifndef SYSTEMC_HOME
   ifdef SYSTEMC
     SYSTEMC_HOME := ${SYSTEMC}
   else
-    SYSTEMC_HOME := $(firstword $(wildcard $(addsuffix apps/systemc,${HOME}/.local/ ${HOME}/ /)))
+    SYSTEMC_HOME := $(firstword $(wildcard $(addsuffix apps/systemc,${HOME}/.portable-scripts/ ${HOME}/ /)))
   endif
 endif
 $(info INFO: Using SYSTEMC_HOME=${SYSTEMC_HOME})

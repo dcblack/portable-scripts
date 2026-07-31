@@ -21,12 +21,12 @@ if [[ -d ~/bin ]]; then
   chmod a+rx ~/bin
 fi
 
-if [[ -d "${HOME}/.local" ]]; then
-  mkdir -p "${HOME}/.local/bin"
+if [[ -d "${HOME}/.portable-scripts" ]]; then
+  mkdir -p "${HOME}/.portable-scripts/bin"
 fi
 
-if [[ -d "${HOME}/.local/bin" ]]; then
-  Prepend_path PATH "${HOME}/.local/bin"
+if [[ -d "${HOME}/.portable-scripts/bin" ]]; then
+  Prepend_path PATH "${HOME}/.portable-scripts/bin"
   Prepend_path PATH "${HOME}/bin" # Allow user overrides
   MANPATH=~/man:"${PORTABLE_SCRIPTS_HOME}/man:/usr/local/share/man:/usr/share/man"
 fi

@@ -221,7 +221,7 @@ function Build()
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     # Try home installation
-    SCRIPTS_DIR=~/.local/scripts
+    SCRIPTS_DIR=~/.portable-scripts/scripts
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     Die "Unable to find Essential-IO in ${SCRIPTS_DIR}"
@@ -290,7 +290,7 @@ function Build()
     GENERATOR="Unix Makefiles"
   fi
   ADD_CMAKE_PREFIX=0
-  APPS=~/.local/apps
+  APPS=~/.portable-scripts/apps
   CLEAN=0
   DEBUG=""
   QUIET=0
@@ -332,7 +332,7 @@ function Build()
       if [[ $# -gt 1 && "${2}" =~ ^[a-zA-Z] ]]; then
         shift
         local TOOLCHAIN="${1}-toolchain" TOOLDIR TOOLPATH
-        local -a TOOLDIRS=("." "${WORKTREE_DIR}/cmake" "${HOME}/.local/apps/cmake")
+        local -a TOOLDIRS=("." "${WORKTREE_DIR}/cmake" "${HOME}/.portable-scripts/apps/cmake")
         if [[ "${1}" =~ / ]]; then
           TOOLDIRS=("$(dirname "${1}")" "${TOOLDIRS[@]}")
           TOOLCHAIN="$(basename "${1}" ".cmake")"

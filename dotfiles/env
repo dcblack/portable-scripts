@@ -74,7 +74,7 @@ function portable-env() {
   Prepend_path PATH "/opt/homebrew/opt/zip/bin"
   Prepend_path PATH "/opt/homebrew/sbin"
   Prepend_path PATH "/opt/homebrew/bin"
-  Prepend_path PATH "${HOME}/.local/bin"
+  Prepend_path PATH "${HOME}/.portable-scripts/bin"
   Prepend_path PATH "${HOME}/.portable-scripts/bin"
   Prepend_path PATH "${APPSBIN}"
   Prepend_path PATH "${DOTBIN}"

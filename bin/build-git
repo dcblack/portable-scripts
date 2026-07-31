@@ -69,9 +69,9 @@ export HOME USER
 USER="$(whoami)"
 HOME="$(getent passwd "${USER}" | cut -d: -f6 || true)"
 cd ~ || Die "Unable to cd to ${HOME}"
-mkdir -p .local/src
-cd .local/src
-export CMAKE_INSTALL_PREFIX="${HOME}/.local"
+mkdir -p .portable-scripts/src
+cd .portable-scripts/src
+export CMAKE_INSTALL_PREFIX="${HOME}/.portable-scripts"
 
 sudo yum install dh-autoreconf curl-devel expat-devel gettext-devel openssl-devel perl-devel zlib-devel
 sudo yum install asciidoc xmlto docbook2X
@@ -103,8 +103,8 @@ else
   echo "% cd cmake-ERSION"
   cd cmake-ERSION
   echo "Configuring cmake"
-  echo "% ./bootstrap --prefix=${HOME}/.local"
-  ./bootstrap --prefix=${HOME}/.local || exit 1
+  echo "% ./bootstrap --prefix=${HOME}/.portable-scripts"
+  ./bootstrap --prefix=${HOME}/.portable-scripts || exit 1
   echo "Building  cmake"
   echo "% make -j$(nproc)"
   make -j$(nproc) || exit 1

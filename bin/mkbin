@@ -50,11 +50,11 @@ OPTION                | DESCRIPTION
 -LANGUAGE             | Select a language: bash (default), csh, lua, make, perl, python2, python3, zsh
 --bin\-b              | Place in $HOME/bin
 -dir=_DIRECTORY_      | Place EXECUTABLE under DIRECTORY
---doulos\-d           | Place in $HOME/.local/doulos/bin
+--doulos\-d           | Place in $HOME/.portable-scripts/doulos/bin
 --edit[=_EDITOR_\|-e  | Enter the specified EDITOR after creation
 --extern              | Place in $WORKTREE_DIR/extern/bin, where WORKTREE_DIR is the git working directory
 --help\|-h            | Display this text
---local\-l            | Place in $HOME/.local/bin
+--local\-l            | Place in $HOME/.portable-scripts/bin
 --mkdir\-m            | Make missing directories
 --noedit|-ne          | Don't edit
 --noraw               | Not raw
@@ -267,7 +267,7 @@ function Mkbin()
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}d(oulos)?$ ]]; then
       # --doulos
-      TARGET_DIR="${HOME}/.local/doulos/bin"
+      TARGET_DIR="${HOME}/.portable-scripts/doulos/bin"
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d "${TARGET_DIR}" ]]; then
           DIRECTORY="${TARGET_DIR}" 
@@ -301,7 +301,7 @@ function Mkbin()
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}l(ocal)?$ ]]; then
       # --local
-      TARGET_DIR="${HOME}/.local/bin"
+      TARGET_DIR="${HOME}/.portable-scripts/bin"
       if [[ -z "${DIRECTORY}" ]]; then
         if [[ -d "${TARGET_DIR}" ]]; then
           DIRECTORY="${TARGET_DIR}"
@@ -311,13 +311,13 @@ function Mkbin()
         else
           Report_error "Unable to determine where the bin directory is located!"; return 1
         fi
-      elif [[ -d "${DIRECTORY}/.local/bin" ]]; then
+      elif [[ -d "${DIRECTORY}/.portable-scripts/bin" ]]; then
         DIRECTORY="${TARGET_DIR}"
       elif [[ ${MKDIR} == 1 ]]; then
         DIRECTORY="${TARGET_DIR}"
         mkdir -p "${DIRECTORY}"
       else
-        Report_error "Missing ${DIRECTORY}/.local/bin ?!"; return 1
+        Report_error "Missing ${DIRECTORY}/.portable-scripts/bin ?!"; return 1
       fi
     elif [[ "${OPTION}" =~ ^-{1,2}s(cript)?$ ]]; then
       # --script
@@ -329,8 +329,8 @@ function Mkbin()
         elif [[ ${MKDIR} == 1 ]]; then
           DIRECTORY="${TARGET_DIR}"
           mkdir -p "${DIRECTORY}"
-        elif [[ -d ${HOME}/.local/scripts ]]; then
-          DIRECTORY="${HOME}/.local/scripts"
+        elif [[ -d ${HOME}/.portable-scripts/scripts ]]; then
+          DIRECTORY="${HOME}/.portable-scripts/scripts"
         else
           Report_error "Unable to determine where the scripts directory is located!" ; return 1
         fi
@@ -493,7 +493,7 @@ function Mkbin()
           -->   local -a REQUIRED=( Essential-IO Essential-manip )
           -->   SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
           -->   if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
-          -->     SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+          -->     SCRIPTDIR="$(Realpath "${HOME}"/.portable-scripts/scripts)"
           -->   fi
           -->   if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
           -->     SCRIPTDIR="$(Realpath "$(dirname "$0")")"

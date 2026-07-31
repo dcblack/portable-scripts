@@ -32,7 +32,7 @@ ASSUMPTIONS
 Portable scripts contains:
 
 ```
-${HOME}/.local/
+${HOME}/.portable-scripts/
 ├── apps/
 │   ├── cmake/
 │   └── templates/

@@ -83,7 +83,7 @@ function Git_ci()
   # Using Essential-IO
   local HDIR DIR SCRIPT_DIR
   HDIR="$(Realpath ~)"
-  for DIR in "$0/../scripts" "${HDIR}/.local/scripts" "$0"; do
+  for DIR in "$0/../scripts" "${HDIR}/.portable-scripts/scripts" "$0"; do
     SCRIPT_DIR="$(Realpath "${DIR}")"
     if [[ -r "${SCRIPT_DIR}/Essential-IO" ]]; then
       break

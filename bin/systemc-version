@@ -42,7 +42,7 @@ systemc-version [OPTIONS]
 ## DESCRIPTION
 
 Finds SystemC version information under `SYSTEMC` or `SYSTEMC_HOME`, or in
-`~/**/.local/src/systemc` when neither variable is set. It prints the result in
+`~/**/.portable-scripts/src/systemc` when neither variable is set. It prints the result in
 the requested format. Use `--cxx` to compile a small program and query the
 installed SystemC API instead of scanning headers.
 
@@ -85,7 +85,7 @@ sourced, and the program does not fetch anything.
 
 `SYSTEMC_VERSIONRC` supplies whitespace-separated default arguments.
 `SYSTEMC` or `SYSTEMC_HOME` identifies the SystemC installation. If neither
-is set, `~/**/.local/src/systemc` is used when that directory exists.
+is set, `~/**/.portable-scripts/src/systemc` is used when that directory exists.
 
 ## EXAMPLES
 
@@ -240,11 +240,10 @@ if (defined $ENV{'HOME'} ) {
   warn "HOME not set!?";
 }
 my @CANDIDATES = ( # listed in order of preference (i.e., first found is best)
-  "$HOME/.portable-scripts/.local/src/systemc",
-  "$HOME/portable-scripts/.local/src/systemc",
-  "$HOME/.local/src/systemc",
-  "$HOME/.local/apps/systemc",
-  "$HOME/.local/systemc",
+  "$HOME/.portable-scripts/src/systemc",
+  "$HOME/.portable-scripts/src/systemc",
+  "$HOME/.portable-scripts/apps/systemc",
+  "$HOME/.portable-scripts/systemc",
 );
 
 for my $candidate (@CANDIDATES) {
@@ -301,7 +300,7 @@ set( CMAKE_C_STANDARD_REQUIRED   ${USE_C_VERSION}   CACHE BOOL   "The CMAKE_CXX_
 set( CMAKE_CXX_EXTENSIONS NO )
 if( NOT DEFINED ENV{SYSTEMC_HOME} )
   # Attempt to find it
-  set( SYSTEMC_CANDIDATES "$ENV{HOME}/.local/apps/systemc;$ENV{HOME}/.local/src/systemc;$ENV{HOME}/systemc" )
+  set( SYSTEMC_CANDIDATES "$ENV{HOME}/.portable-scripts/apps/systemc;$ENV{HOME}/.portable-scripts/src/systemc;$ENV{HOME}/systemc" )
   foreach( _dir ${SYSTEMC_CANDIDATES} )
     if( IS_DIRECTORY "${_dir}/include" )
       set( ENV{SYSTEMC_HOME} "${_dir}" )

@@ -86,7 +86,7 @@ add_test( NAME "${Target}_test" COMMAND "${Target}" )
 ```bash
 # Setup environment
 source "$(git rev-parse --show-toplevel)/setup.profile"
-DEFS="CMAKE_PREFIX_PATH='$(pwd);${HOME}/.local/apps'"
+DEFS="CMAKE_PREFIX_PATH='$(pwd);${HOME}/.portable-scripts/apps'"
 cmake -B build -D"${DEFS}" -S .        ;# Configure
 cmake --build build                    ;# Compile & link
 ctest --test-dir build -V              ;# Execute

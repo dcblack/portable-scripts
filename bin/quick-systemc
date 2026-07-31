@@ -41,9 +41,9 @@ function Quick_SystemC()
   # Defaults - adjust below as needed
   local  SYSTEMC_LOG="${HOME}/logs/quick-systemc${SUFFIX}.log"
   local  SYSTEMC_URL="https://github.com/accellera-official/systemc.git"
-  local  SYSTEMC_SRC="${HOME}/.local/src/systemc${SUFFIX}"
+  local  SYSTEMC_SRC="${HOME}/.portable-scripts/src/systemc${SUFFIX}"
   local  SYSTEMC_BLD="${SYSTEMC_SRC}/build-cmake${CTYPE}"
-  export SYSTEMC_HOME="${HOME}/.local/share/systemc${SUFFIX}"
+  export SYSTEMC_HOME="${HOME}/.portable-scripts/share/systemc${SUFFIX}"
 
   # Clean, fetch, configure, compile, link, test & install
   if [[ ${UPDATE} == 0 ]]; then

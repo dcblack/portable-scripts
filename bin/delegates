@@ -142,7 +142,7 @@ if( exists $OPT{-doall} ) {
   printf DOALL <<'EOT' if exists $OPT{-doall};
 #!/usr/bin/env bash
 
-source "${HOME}/.local/scripts/Essential-IO"
+source "${HOME}/.portable-scripts/scripts/Essential-IO"
 function Report_info() {
   local ESC
   ESC=$(perl -le "print chr(27)")

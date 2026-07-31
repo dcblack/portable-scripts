@@ -47,7 +47,7 @@ function Project_setup()
     Report_info -f "Sourcing $1"
   fi
 
-  APPS="${HOME}/.local/apps" ;# Defaut location
+  APPS="${HOME}/.portable-scripts/apps" ;# Defaut location
   local OPT FLAG=0
   for OPT in "$@"; do
     case "${OPT}" in
@@ -82,8 +82,8 @@ function Project_setup()
     source "${PROJECT_DIR}/extern/scripts/Essential-manip"
 
     SYSTEMC_HOME="${APPS}/systemc"
-    LD_LIBRARY_PATH="${HOME}/.local/apps/systemc/lib"
-    DYLD_LIBRARY_PATH="${HOME}/.local/apps/systemc/lib"
+    LD_LIBRARY_PATH="${HOME}/.portable-scripts/apps/systemc/lib"
+    DYLD_LIBRARY_PATH="${HOME}/.portable-scripts/apps/systemc/lib"
     Prepend_path PATH "${PROJECT_BIN}"
 
     export ACTION APPS PROJECT_NAME SETUP_PATH PROJECT_DIR

@@ -23,25 +23,25 @@ exec "$(dirname "$0")/setup-migration" "$@"
 #| 
 #| $HOME/
 #|      |-- .agignore
-#|      |-- .aliases@ -------> portable-scripts/.local/dotfiles/aliases
-#|      |-- .astylerc@ ------> portable-scripts/.local/dotfiles/astylerc
-#|      |-- .bash_aliases@ --> portable-scripts/.local/dotfiles/bash_aliases
-#|      |-- .zsh_aliases@ ---> portable-scripts/.local/dotfiles/zsh_aliases
-#|      |-- .clang-format@ --> portable-scripts/.local/dotfiles/clang-format
-#|      |-- .lessfilter@ ----> portable-scripts/.local/dotfiles/lessfilter
-#|      |-- .local@ ---------> portable-scripts/.local/ (**)
-#|      |-- .vim@ -----------> portable-scripts/.local/dotfiles/vim/
-#|      |-- .vimrc@ ---------> portable-scripts/.local/dotfiles/vimrc
+#|      |-- .aliases@ -------> ~/.portable-scripts/dotfiles/aliases
+#|      |-- .astylerc@ ------> ~/.portable-scripts/dotfiles/astylerc
+#|      |-- .bash_aliases@ --> ~/.portable-scripts/dotfiles/bash_aliases
+#|      |-- .zsh_aliases@ ---> ~/.portable-scripts/dotfiles/zsh_aliases
+#|      |-- .clang-format@ --> ~/.portable-scripts/dotfiles/clang-format
+#|      |-- .lessfilter@ ----> ~/.portable-scripts/dotfiles/lessfilter
+#|      |-- .portable-scripts/ -> ~/.portable-scripts/ (**)
+#|      |-- .vim@ -----------> ~/.portable-scripts/dotfiles/vim/
+#|      |-- .vimrc@ ---------> ~/.portable-scripts/dotfiles/vimrc
 #|      |-- portable-scripts/
 #|
-#| ** if $HOME/.local already exists, then links will be placed under it if possible
+#| ** if $HOME/.portable-scripts already exists, then links will be placed under it if possible
 #|
 #|OPTIONS
 #|-------
 #|
 #| -c  only check installation (aka --check)
 #| -h  or --help provides this text (aka --help)
-#| -l  or --local followed by a simple name specifies and alternate to .local
+#| -l  or --local followed by a simple name specifies and alternate to .portable-scripts
 #| -u  update to latest version via git pull (aka --update)
 #| -v  verbose output (aka --verbose)
 #| -nc no color disables use of ANSI color codes (aka --nocolor)
@@ -110,7 +110,7 @@ fi
 # Wrap body in function to allow local variables to avoid problems in case this script is sourced.
 function portable-setup() {
   local PORTABLE_DIR TIMESTAMP VERBOSE CHECK UPDATE
-  LOCAL=".local"
+  LOCAL=".portable-scripts"
   TIMESTAMP="$(date +%y%m%d-%H%M%S)";
   VERBOSE=0;
   CHECK=0
@@ -162,17 +162,17 @@ function portable-setup() {
   if [[ ! -d "${PORTABLE_DIR}" ]]; then # local directory absent
     if [[ ${CHECK} != 0 ]]; then
       Report_error "Missing '${PORTABLE_DIR}'"
-    elif [[ -d "${PORTABLE_ROOT_DIR}/.local" ]]; then
-      bash -v -c "ln -s ${HOME}/portable-scripts/.local ${PORTABLE_DIR}"
+    elif [[ -d "${PORTABLE_ROOT_DIR}" ]]; then
+      bash -v -c "ln -s ${HOME}/.portable-scripts ${PORTABLE_DIR}"
     else
-      Report_error "Unable to find ${PORTABLE_ROOT_DIR}/.local to link as ${PORTABLE_DIR}! Please link manually."
+      Report_error "Unable to find ${PORTABLE_ROOT_DIR} to link as ${PORTABLE_DIR}! Please link manually."
       return
     fi
   elif [[ -L "${PORTABLE_DIR}" ]]; then # hopefully it's our links
     local PORTABLE_PATH
     PORTABLE_PATH="$(Realpath "${PORTABLE_DIR}")"
     if [[ ${CHECK} != 0 ]]; then
-      if [[ "${PORTABLE_ROOT_DIR}/.local" == "${PORTABLE_PATH}" ]]; then
+      if [[ "${PORTABLE_ROOT_DIR}" == "${PORTABLE_PATH}" ]]; then
         if [[ ${VERBOSE} == 1 ]]; then
           Report_info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
         fi
@@ -189,12 +189,12 @@ function portable-setup() {
         if [[ ${CHECK} != 0 ]]; then # check-only
           Report_error "Missing '${PORTABLE_DIR}/${REQD}'"
         else
-          bash -v -c "ln -s '${HOME}/portable-scripts/.local/${REQD}' ${PORTABLE_DIR}/${REQD}"
+          bash -v -c "ln -s '${HOME}/.portable-scripts/${REQD}' ${PORTABLE_DIR}/${REQD}"
         fi
       else # warn if it does reference corresponding portable root directory
         local PORTABLE_PATH
         PORTABLE_PATH="$(Realpath "${PORTABLE_DIR}/${REQD}")"
-        if [[ "${PORTABLE_ROOT_DIR}/.local/${REQD}" == "${PORTABLE_PATH}" ]]; then
+        if [[ "${PORTABLE_ROOT_DIR}/${REQD}" == "${PORTABLE_PATH}" ]]; then
           if [[ ${VERBOSE} == 1 ]]; then
             Report_info -grn "'${PORTABLE_DIR}' -> '${PORTABLE_ROOT_DIR}'"
           fi
@@ -202,7 +202,7 @@ function portable-setup() {
           Report_warning "'${PORTABLE_DIR}/${REQD}' does NOT reference '${PORTABLE_ROOT_DIR}/${REQD}'"
         fi
       fi
-    done <"${PORTABLE_ROOT_DIR}/.local/REQUIRED.txt"
+    done <"${PORTABLE_ROOT_DIR}/REQUIRED.txt"
   fi
   
   # Add symbolic links for a minimal set of selected "dot" files
@@ -288,7 +288,7 @@ function Unique_path() {
 
 function portable-env() {
   # Environment
-  PORTABLE_DIR="${HOME}/.local"
+  PORTABLE_DIR="${HOME}/.portable-scripts"
   APPS="${PORTABLE_DIR}/apps"
   DOTBIN="${PORTABLE_DIR}/bin"
   APPSBIN="${PORTABLE_DIR}/apps/bin"

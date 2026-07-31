@@ -2,7 +2,7 @@
 #
 #| NAME
 #|
-#| get-local - get files from the specified corresponding remote directory (default $HOME/.local)
+#| get-local - get files from the specified corresponding remote directory (default $HOME/.portable-scripts)
 #|
 #| SYNOPSYS
 #|
@@ -39,7 +39,7 @@ function Get-local()
     MasterDir="$1"
     shift
   else
-    MasterDir="${HOME}/.local/${LocalDir}"
+    MasterDir="${HOME}/.portable-scripts/${LocalDir}"
   fi
   for LocalFile in "$@"; do
     MasterFile="${MasterDir}/${LocalFile}"

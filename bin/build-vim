@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Script to build Vim from github and installs under ~/.local/.
+# Script to build Vim from github and installs under ~/.portable-scripts/.
 TOOL_NAME="Vi Improved (vim/gvim)"
 TOOL_INFO="Go to 'https://vim.org' for more information."
 TOOL_SRC="vim"
@@ -39,18 +39,18 @@ Cleanup_Source "${TOOL_SRC}"
 
 IMPLEMENTATION=<<'EOF'
 -------------------------------------------------------------------------------
-+ Built Vim under ${HOME}/.local/src/vim.
-+ Installed Vim under ${HOME}/.local
-+ To use, prepend ${HOME}/.local/bin to your path appropriately.
-+ For bash modify `.bashrc` by adding: `PATH="${HOME}/.local/bin:$PATH"`
++ Built Vim under ${HOME}/.portable-scripts/src/vim.
++ Installed Vim under ${HOME}/.portable-scripts
++ To use, prepend ${HOME}/.portable-scripts/bin to your path appropriately.
++ For bash modify `.bashrc` by adding: `PATH="${HOME}/.portable-scripts/bin:$PATH"`
 + When satisfied, you may:
 
-  1. Clean-up the build directly with `cd ${HOME}/.local/src/vim && make clean`
+  1. Clean-up the build directly with `cd ${HOME}/.portable-scripts/src/vim && make clean`
   - OR -
-  2. Remove Vim entirely with `rm -fr ${HOME}/.local/src/vim`
+  2. Remove Vim entirely with `rm -fr ${HOME}/.portable-scripts/src/vim`
 
-+ To share with others: `chmod a+x ${HOME} && chmod a+rx ${HOME}/.local`, and let
-  them know to add to `${HOME}/.local/bin` to their paths.
++ To share with others: `chmod a+x ${HOME} && chmod a+rx ${HOME}/.portable-scripts`, and let
+  them know to add to `${HOME}/.portable-scripts/bin` to their paths.
 -------------------------------------------------------------------------------
 
 EOF

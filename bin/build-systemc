@@ -8,7 +8,7 @@ TOOL_BRIEF="build-systemc - build and install SystemC from github source"
 TOOL_NAME="SystemC"
 TOOL_INFO='Go to <https://accellera.org/downloads/standards/systemc> for more information.'
 # ${TOOL_SRC}/${TOOL_BASE} for full path to source
-TOOL_SRC=${HOME}/.local/src
+TOOL_SRC=${HOME}/.portable-scripts/src
 TOOL_BASE="systemc"
 TOOL_URL="https://github.com/accellera-official/systemc.git"
 TOOL_VERS='main' # latest or 3.0 or 2.3.4
@@ -251,9 +251,9 @@ Options
   -no-fetch            Do not fetch or update source.
   -no-compile         Skip compilation.
   -no-install          Skip installation.
-  -s DIR, --src=DIR   Source parent directory (default: ~/.local/src).
+  -s DIR, --src=DIR   Source parent directory (default: ~/.portable-scripts/src).
   -i DIR, --install=DIR
-                      Installation prefix (default: ~/.local/apps).
+                      Installation prefix (default: ~/.portable-scripts/apps).
   -vers VERSION       Git branch, tag, or commit to check out.
   --generator=NAME    CMake generator, such as Ninja.
   --build-dir=DIR     CMake build directory (default: target).
@@ -287,7 +287,7 @@ function GetBuildOpts() {
     CMAKE_CXX_STANDARD="${CMAKE_CXX_STANDARD:-17}"
     CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-RelWithDebInfo}"
     SRC="${SRC:-${TOOL_SRC}}"
-    CMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX:-${HOME}/.local/apps}"
+    CMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX:-${HOME}/.portable-scripts/apps}"
     SYSTEMC_HOME="${SYSTEMC_HOME:-${CMAKE_INSTALL_PREFIX}/systemc}"
     BUILDER="${BUILDER:-cmake}"
     BUILD_DIR="${BUILD_DIR:-target}"

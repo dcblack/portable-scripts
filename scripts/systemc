@@ -55,7 +55,7 @@ function systemc()
       # Change to selected version
       #-------------------------------------------------------------------------
       local VERSION="$1"
-      local DIR=~/.local/apps
+      local DIR=~/.portable-scripts/apps
       DIR="$(Realpath "${DIR}")"
       if [[ -n "${SYSTEMC_HOME}" ]]; then
         DIR="$(dirname "${SYSTEMC_HOME}")"
@@ -79,7 +79,7 @@ function systemc()
       #-------------------------------------------------------------------------
       # Use default
       #-------------------------------------------------------------------------
-      local DIR=~/.local/apps
+      local DIR=~/.portable-scripts/apps
       DIR="$(Realpath "${DIR}")"
       if [[ -n "${SYSTEMC_HOME}" ]]; then
         DIR="$(dirname "${SYSTEMC_HOME}")"
@@ -102,7 +102,7 @@ function systemc()
       #-------------------------------------------------------------------------
       # List available versions
       #-------------------------------------------------------------------------
-      local DIR=~/.local/apps
+      local DIR=~/.portable-scripts/apps
       DIR="$(Realpath "${DIR}")"
       if [[ -n "${SYSTEMC_HOME}" ]]; then
         DIR="$(dirname "${SYSTEMC_HOME}")"

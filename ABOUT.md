@@ -16,7 +16,7 @@ git clone https://github.com/dcblack/portable-scripts ~/.portable-scripts
 
 The setup command supports `--help`, `--version`, `--check`, and `--dry-run`.
 On an existing installation, run the legacy checkout's `setup --dry-run` if it
-is still exposed through `~/.local`, then run the command to migrate it.
+is still exposed through `~/.portable-scripts`, then run the command to migrate it.
 After migration, use `~/.portable-scripts/setup` for repeat installations.
 
 Background
@@ -29,18 +29,18 @@ Description
 
 This project contains scripts used to setup a familiar environment on new Linux hosts and build favorite tools. These should be useful to Doulos instructors. These should work on almost any `*nix` installation including AWS, CoCalc and Docker. They are designed to work when you do not have `sudo` or `root` privileges.
 
-The Git checkout belongs at `~/.portable-scripts`. The directory `~/.local` is
+The Git checkout belongs at `~/.portable-scripts`. The directory `~/.portable-scripts` is
 an ordinary XDG user directory and is not a portable-scripts checkout. Setup may
-create `~/.local/bin` and add selected command links, but it never replaces or
-relocates `~/.local/share`, `~/.local/state`, or `~/.local/cache`.
+create `~/.portable-scripts/bin` and add selected command links, but it never replaces or
+relocates `~/.portable-scripts/share`, `~/.portable-scripts/state`, or `~/.portable-scripts/cache`.
 
 Set `PORTABLE_SCRIPTS_HOME` when testing an alternate checkout. Home dotfiles are
 backed up before they are linked to sources under the repository. The backup
 directory contains `MIGRATION.txt` with the source, destination, timestamp, and
 rollback guidance.
 
-Before migration, inspect `~/.local/bin`, `~/.local/share`, `~/.local/state`,
-`~/.local/cache`, Snap data, Junie data, and application-specific symlinks. Only
+Before migration, inspect `~/.portable-scripts/bin`, `~/.portable-scripts/share`, `~/.portable-scripts/state`,
+`~/.portable-scripts/cache`, Snap data, Junie data, and application-specific symlinks. Only
 directories containing an empty `MOVEALL` marker are moved, and their complete
 contents are preflighted for collisions before transfer.
 
@@ -59,7 +59,7 @@ setup ───────────────── migration and installa
 ├── apps/ ────────────── application and template sources
 │   ├── cmake/ ───────── use with cmake esp. for SystemC
 │   ├── sc_templates/ ── use with cmake esp. for SystemC (see `bin/new` script for more information)
-│   └── src/ ─────────── shared source for development (also possible for builds, but prefer .local/src)
+│   └── src/ ─────────── shared source for development (also possible for builds, but prefer .portable-scripts/src)
 ├── bin/ ─────────────── utilities (esp. scripts to build tools from source)
 ├── dotfiles/ ────────── replacements for .bashrc, .vimrc, etc.
 ├── lib/ ─────────────── library stuff (e.g., for Perl)

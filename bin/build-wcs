@@ -38,7 +38,7 @@ function Realpath ()
 # Using Essential-IO
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath ~/.local/scripts)"
+  SCRIPTDIR="$(Realpath ~/.portable-scripts/scripts)"
 fi
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
@@ -66,7 +66,7 @@ function Build_wcs()
   REPO_NAME="$(basename "${GIT_URL}" .git)"
   REPO_DIR="${INSTALL_DIR}/${REPO_NAME}"
 
-  if [[ -d "${WORKTREE_DIR}/.local" ]]; then
+  if [[ -d "${WORKTREE_DIR}/.portable-scripts" ]]; then
     Report_warning "Installation not under project"
   fi
 

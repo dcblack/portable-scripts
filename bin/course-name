@@ -52,7 +52,7 @@ SCRIPT_PATH="$(Realpath "$0")"
 PORTABLE_ROOT_DIR="$(git -C "$(dirname "${SCRIPT_PATH}")" rev-parse --show-toplevel)"
 
 # shellcheck source=../scripts/Essential-IO
-source "${PORTABLE_ROOT_DIR}/.local/scripts/Essential-IO"
+source "${PORTABLE_ROOT_DIR}/scripts/Essential-IO"
 
 
 function Main() {

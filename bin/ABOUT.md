@@ -1,4 +1,4 @@
-About .local/bin
+About .portable-scripts/bin
 ================
 
 These are useful small scripts for a variety of purposes; however, not all of these are completed yet. Below is a table describing current (out-of-date) status.

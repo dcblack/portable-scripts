@@ -41,7 +41,7 @@ my $Realdir;
 BEGIN {
   $Realdir = $RealBin;
   $Realdir =~ s{/[^/]+/?$}{}; # Remove tail
-  $Realdir = "$ENV{HOME}/.local";
+  $Realdir = "$ENV{HOME}/.portable-scripts";
 }
 use lib "$Realdir/lib";
 use Envv qw{&envvopt &expand_path &reduce};

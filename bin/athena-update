@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#$Info: athena-update - Push .local/bin & .local/scripts to athena. $
+#$Info: athena-update - Push .portable-scripts/bin & .portable-scripts/scripts to athena. $
 
 function Realpath ()
 {
@@ -10,7 +10,7 @@ function Realpath ()
 # Using Essential-IO
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+  SCRIPTDIR="$(Realpath "${HOME}"/.portable-scripts/scripts)"
 fi
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
@@ -23,5 +23,5 @@ fi
 source "$SCRIPTDIR/Essential-IO"
 
 for d in bin scripts; do
-  _do rsync -auvP "${HOME}/.local/$d/" "athena:.local/$d/"
+  _do rsync -auvP "${HOME}/.portable-scripts/$d/" "athena:.portable-scripts/$d/"
 done

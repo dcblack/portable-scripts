@@ -338,7 +338,7 @@ function Load()
     echo "
 NAME
 ----
-Load - source scripts from \~/.local/scripts directory
+Load - source scripts from \~/.portable-scripts/scripts directory
 
 SYNOPSIS
 --------

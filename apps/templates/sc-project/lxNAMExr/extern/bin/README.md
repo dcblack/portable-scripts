@@ -13,7 +13,7 @@ Here is a brief description of the files contained:
 ├── build-fmt ─────── downloads, compiles and installs the std::format alternative fmt::format for pre-C++20 under extern/
 ├── build-gsl ─────── downloads and installs the C++ Core Guidelines Support Library found on cppreference.com under extern/include
 ├── build-gtest ───── downloads, compiles and installs the GoogleTest and GoogleMock framework under extern/
-├── build-systemc ─── downloads, compiles and installs Accellera SystemC into ${HOME}/.local/apps/systemc
+├── build-systemc ─── downloads, compiles and installs Accellera SystemC into ${HOME}/.portable-scripts/apps/systemc
 └── utils.bash ────── BASH support functions
 ```
 

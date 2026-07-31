@@ -116,7 +116,7 @@ HOME="$(getent passwd "${USER}" | cut -d: -f6 || true)"
 if [[ -v APPS ]]; then
   SRC="${APPS}/src"
 elif [[ "${HOME}" == "$(pwd)" ]]; then
-  SRC="${HOME}/.local/src"
+  SRC="${HOME}/.portable-scripts/src"
 else
   SRC="$(pwd)/src"
 fi

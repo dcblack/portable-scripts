@@ -9,7 +9,7 @@ include( policy )
 
 if( NOT DEFINED ENV{SYSTEMC_HOME} )
   # Attempt to find it
-  set( SYSTEMC_CANDIDATES "$ENV{HOME}/.local/apps/systemc;$ENV{HOME}/systemc" )
+  set( SYSTEMC_CANDIDATES "$ENV{HOME}/.portable-scripts/apps/systemc;$ENV{HOME}/systemc" )
   foreach( _dir ${SYSTEMC_CANDIDATES} )
     if( IS_DIRECTORY "${_dir}/include" )
       set( ENV{SYSTEMC_HOME} "${_dir}" )

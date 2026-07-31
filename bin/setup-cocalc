@@ -59,12 +59,12 @@ and file layout of this project.
 
 ```
 /home/user/
-├── .bash_aliases@ -> /home/$USER/.local/dotfiles/bash_aliases
+├── .bash_aliases@ -> /home/$USER/.portable-scripts/dotfiles/bash_aliases
 ├── .bash_profile@ -> /home/$USER/.bashrc
-├── .lessfilter@ -> /home/$USER/.local/dotfiles/lessfilter
-├── .local/@ -> /home/$USER/portable-scripts/.local/
-├── .vim/@ -> /home/$USER/.local/dotfiles/vim/
-├── .vimrc@ -> /home/$USER/.local/dotfiles/vimrc
+├── .lessfilter@ -> /home/$USER/.portable-scripts/dotfiles/lessfilter
+├── .portable-scripts/@ -> /home/$USER/.portable-scripts/
+├── .vim/@ -> /home/$USER/.portable-scripts/dotfiles/vim/
+├── .vimrc@ -> /home/$USER/.portable-scripts/dotfiles/vimrc
 ├── ABOUT.md@ -> /home/$USER/TRAINING-INFO/ABOUT-TOP-LEVEL.md
 ├── ARCHIVES/ -- archived files
 │   ├── ZIP/
@@ -109,7 +109,7 @@ Note: The Instructors' Code is similar to the Pirates Code. They are
       the LOST_N_FOUND directory.
 2. If you edit the bashrc and other configuration files,
    you are setting it up for all your colleagues.
-   1. Dotfiles (including vim) are located under ${HOME}/.local/dotfiles
+   1. Dotfiles (including vim) are located under ${HOME}/.portable-scripts/dotfiles
    2. Dotfiles are revision controlled under Vim
    3. You may create your own branch and then modify them to your liking
    4. If it appears confused, you can get back to the basics by checking

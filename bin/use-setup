@@ -54,7 +54,7 @@ DOTFILES=.bash_profile .bashrc .vim .vimrc
 if [[ $LEADER == $USER ]]; then
   chmod a+x $HOME # make home accessible (but not readable to outsiders)
   chmod a+rx $DOTFILES # make explicit files readable
-  DOTDIRS=$HOME/.vim $HOME/.local
+  DOTDIRS=$HOME/.vim $HOME/.portable-scripts
   chmod -R a+r $DOTDIRS # ensure resources are readable
   find $DOTDIRS -type d -exec chmod g+rx {} ';'
 else

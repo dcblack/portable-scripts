@@ -56,7 +56,7 @@ function read_into_array() {
 PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
 SCRIPTDIR="${PORTABLE_SCRIPTS_HOME}/scripts"
 #if [[ "$0" == /bin/bash ]]; then
-#  SCRIPTDIR="${HOME}/.local/scripts"
+#  SCRIPTDIR="${HOME}/.portable-scripts/scripts"
 #else
 #  SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 #fi
@@ -100,7 +100,7 @@ cwd - list current directory's closest match
 Synopsis
 --------
 
-source "${HOME}/.local/bin/wd" -init # at login
+source "${HOME}/.portable-scripts/bin/wd" -init # at login
 wd -init
 swd [SET] [DIR]
 lwd [OPTIONS] [SET]
@@ -188,7 +188,7 @@ function Wd_parse() # internal
     shift
     case "${arg}" in
       -init)
-        # shellcheck source=$HOME/.local/bin/wd disable=SC2250,SC1091
+        # shellcheck source=$HOME/.portable-scripts/bin/wd disable=SC2250,SC1091
         source "${PORTABLE_SCRIPTS_HOME}/bin/wd" -init
         ;;
       -h|-help|--help)   Wd_help ;;

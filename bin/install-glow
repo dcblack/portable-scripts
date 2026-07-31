@@ -35,9 +35,9 @@ Install_glow() {
         mkdir /tmp/glow$$
         tar -C /tmp/glow$$ -xzf "${TEMP_TGZ}"
         if [[ -f /tmp/glow$$/glow ]]; then
-            mkdir -p "${HOME}"/.local/bin
-            cp /tmp/glow$$/glow "${HOME}"/.local/bin/glow
-            chmod 755 "${HOME}"/.local/bin/glow
+            mkdir -p "${HOME}"/.portable-scripts/bin
+            cp /tmp/glow$$/glow "${HOME}"/.portable-scripts/bin/glow
+            chmod 755 "${HOME}"/.portable-scripts/bin/glow
         fi
         rm -f "${TEMP_TGZ}"
         rm -rf /tmp/glow$$
@@ -76,6 +76,6 @@ else
     AUTH_HEADER=
 fi
 
-export PATH="${HOME}/bin:${HOME}/.local/bin:${PATH}"
+export PATH="${HOME}/bin:${HOME}/.portable-scripts/bin:${PATH}"
 Install_glow
 

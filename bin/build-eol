@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
 
-cd ~/.local/src
+cd ~/.portable-scripts/src
 git clone https://github.com/dcblack/eol
 cd eol
 export CXX=g++ CC=gcc
 build
-mv build/debug/eol ~/.local/bin/
+mv build/debug/eol ~/.portable-scripts/bin/

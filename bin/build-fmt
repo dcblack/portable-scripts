@@ -122,7 +122,7 @@ HELPTEXT
   # Using Essential-IO
   SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
   if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-    SCRIPTDIR="$(Realpath ~/.local/scripts)"
+    SCRIPTDIR="$(Realpath ~/.portable-scripts/scripts)"
   fi
   if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
     SCRIPTDIR="$(Realpath "$(dirname "$0")")"

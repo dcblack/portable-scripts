@@ -81,7 +81,7 @@ function Same_files()
   local -a REQUIRED=( Essential-IO Essential-manip )
   SCRIPTDIR="$(Realpath "$(dirname "${EXEC}")"/../scripts)"
   if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
-    SCRIPTDIR="$(Realpath "${HOME}"/.local/scripts)"
+    SCRIPTDIR="$(Realpath "${HOME}"/.portable-scripts/scripts)"
   fi
   if [[ ! -r "${SCRIPTDIR}/${REQUIRED[0]}" ]]; then
     SCRIPTDIR="$(Realpath "$(dirname "${EXEC}")")"

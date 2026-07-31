@@ -120,7 +120,7 @@ function Realpath()
 # Using Essential-IO
 SCRIPTDIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
-  SCRIPTDIR="$(Realpath ~/.local/scripts)"
+  SCRIPTDIR="$(Realpath ~/.portable-scripts/scripts)"
 fi
 if [[ ! -r "${SCRIPTDIR}/Essential-IO" ]]; then
   SCRIPTDIR="$(Realpath "$(dirname "$0")")"
@@ -295,7 +295,7 @@ function GetBuildOpts()
 #|  --cleanup          |  -cleanup         | remove source after installation
 #|  --cxx=CPP_COMPILER |  CXX=CPP_COMPILER | chooses C++ compiler executable (e.g., g++ or clang++)
 #|  --debug            |  -d               | developer use
-#|  --default          |                   | quick -i=$HOME/.local -src=$HOME/.local/src
+#|  --default          |                   | quick -i=$HOME/.portable-scripts -src=$HOME/.portable-scripts/src
 #|  --gcc              |                   | quick --cc=gcc --cxx=g++
 #|  --generator=GEN    |                   | generator (for cmake)
 #|  --home             |                   | quick -i $HOME -s $HOME/src
@@ -353,7 +353,7 @@ function GetBuildOpts()
 #| - $TOOL_BASE base directory name for tool source
 #| - $TOOL_NAME fancy name for display
 #| - $TOOL_PATCHES
-#| - $TOOL_SRC usually ${HOME}/.local/src
+#| - $TOOL_SRC usually ${HOME}/.portable-scripts/src
 #| - $TOOL_URL
 #| - $TOOL_VERS
 #| - $WORKTREE_DIR
@@ -494,8 +494,8 @@ function GetBuildOpts()
       DEBUG=1;
       ;;
     --default)
-      APPS=~.local/apps
-      SRC=~/.local/src
+      APPS=~.portable-scripts/apps
+      SRC=~/.portable-scripts/src
       ;;
     --doxy)
       BUILD_SOURCE_DOCUMENTATION=on
@@ -679,7 +679,7 @@ function GetBuildOpts()
   #-------------------------------------------------------------------------------
   # Defaults if not set
   if [[ -z "${APPS}" || ! -d "${APPS}" ]]; then
-    APPS=~/.local/apps
+    APPS=~/.portable-scripts/apps
   fi
   if [[ -z "${SYSTEMC_HOME}" ]]; then
     SYSTEMC_HOME="${APPS}/systemc"
@@ -720,7 +720,7 @@ function GetBuildOpts()
     elif [[ "${APPS}" != '' ]]; then
       SRC="$(dirname "${APPS}")/src"
     elif [[ ~ == "$(pwd||true)" ]]; then
-      SRC=~/.local/src
+      SRC=~/.portable-scripts/src
     else
       SRC="$(pwd)/src"
     fi

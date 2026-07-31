@@ -20,7 +20,7 @@
 #| -------
 #| 
 #| ```sh
-#| # update files in bin with names that match files in ~/.local/bin
+#| # update files in bin with names that match files in ~/.portable-scripts/bin
 #| cd bin && local-update
 #|
 #| cd . && local-update
@@ -58,7 +58,7 @@ function Update-local()
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     # Try home installation
-    SCRIPTS_DIR="${HOME}/.local/scripts"
+    SCRIPTS_DIR="${HOME}/.portable-scripts/scripts"
   fi
   if [[ ! -f "${SCRIPTS_DIR}/Essential-IO" ]]; then
     Report_fatal "Unable to find Essential-IO in ${SCRIPTS_DIR}"
@@ -126,7 +126,7 @@ function Update-local()
     return 1
   fi
   if [[ ${#Sources} == 0 ]]; then
-    Sources+=("${HOME}/.local/${LocalDir}")
+    Sources+=("${HOME}/.portable-scripts/${LocalDir}")
   fi
   if [[ ${#Targets} == 0 ]]; then
     Targets+=(".")

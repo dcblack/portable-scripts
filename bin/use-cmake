@@ -3,7 +3,7 @@
 # source this file: . use-cmake
 
 export NEW_LD_LIBRARY_PATH=/usr/local/lib64:/usr/NX/lib
-export NEW_SYSTEMC_HOME=/home/courseleader1/.local/apps/systemc
+export NEW_SYSTEMC_HOME=/home/courseleader1/.portable-scripts/apps/systemc
 
 if [[ "${SYSTEMC_HOME}" =~ ^/home ]]; then
   export LD_LIBRARY_PATH="${OLD_LD_LIBRARY_PATH}"
