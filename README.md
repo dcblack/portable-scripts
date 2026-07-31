@@ -1,3 +1,3 @@
-See [`.local/ABOUT.md`](https://github.com/dcblack/portable-scripts/blob/main/.local/ABOUT.md).
+See ABOUT.md
 
-*IMPORTANT:* Do NOT move, rename or delete this directory unless you understand the full implications of such an action.
+IMPORTANT: This project is alpha quality. Use at your own risk.

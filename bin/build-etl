@@ -90,7 +90,7 @@ fi
 
 _do cd "${REPO_DIR}" || Report_fatal "Trying to enter repo"
 _do cmake -B build
-_do cmake --install build --prefix "$(realpath ..)"
+_do cmake --install build --prefix "$(realpath -q ..)"
 Report_info "Successfully built ${LIBNAME}"
 
 # vim:nospell

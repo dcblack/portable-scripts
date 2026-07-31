@@ -42,7 +42,7 @@ systemc-version [OPTIONS]
 ## DESCRIPTION
 
 Finds SystemC version information under `SYSTEMC` or `SYSTEMC_HOME`, or in
-`~/.local/src/systemc` when neither variable is set. It prints the result in
+`~/**/.local/src/systemc` when neither variable is set. It prints the result in
 the requested format. Use `--cxx` to compile a small program and query the
 installed SystemC API instead of scanning headers.
 
@@ -85,7 +85,7 @@ sourced, and the program does not fetch anything.
 
 `SYSTEMC_VERSIONRC` supplies whitespace-separated default arguments.
 `SYSTEMC` or `SYSTEMC_HOME` identifies the SystemC installation. If neither
-is set, `~/.local/src/systemc` is used when that directory exists.
+is set, `~/**/.local/src/systemc` is used when that directory exists.
 
 ## EXAMPLES
 
@@ -214,7 +214,7 @@ while (@ARGV) {
   } elsif ($arg eq '-q' or $arg =~ m{^-{1,2}quiet}) {
     $OPT{-quit} = 1;
   } elsif ($arg eq '-v' or $arg =~ m{^-{1,2}verbose}) {
-    $OPT{-verbose} = 1;
+    $OPT{-verbose} += 1;
   } elsif ($arg =~ m{^-{1,2}sc}) {
     Die "-sc must specify a directory" unless @ARGV and -d $ARGV[0];
     $SYSTEMC = shift @ARGV;
@@ -230,14 +230,30 @@ while (@ARGV) {
 
 # Find location of SystemC. Explicit settings take precedence over the
 # conventional local source-tree location.
-$SYSTEMC = $ENV{'SYSTEMC'} if $SYSTEMC eq '' and defined $ENV{'SYSTEMC'};
-$SYSTEMC = $ENV{'SYSTEMC_HOME'} if $SYSTEMC eq '' and defined $ENV{'SYSTEMC_HOME'};
-$SYSTEMC = "$ENV{'HOME'}/.local/src/systemc"
-  if $SYSTEMC eq '' and defined $ENV{'HOME'}
-  and -d "$ENV{'HOME'}/.local/src/systemc";
-&Die("SYSTEMC environment variable is undefined") if not defined $SYSTEMC or $SYSTEMC eq '';
-$SYSTEMC = abs_path($SYSTEMC) or &Die("Unable to resolve SystemC installation path");
+$SYSTEMC = $ENV{'SYSTEMC'} if ($SYSTEMC eq '' or not -d $SYSTEMC) and defined $ENV{'SYSTEMC'};
+$SYSTEMC = $ENV{'SYSTEMC_HOME'} if ($SYSTEMC eq '' or not -d $SYSTEMC) and defined $ENV{'SYSTEMC_HOME'};
+
+my $HOME='.';
+if (defined $ENV{'HOME'} ) {
+  $HOME = $ENV{'HOME'};
+} else {
+  warn "HOME not set!?";
+}
+my @CANDIDATES = ( # listed in order of preference (i.e., first found is best)
+  "$HOME/.portable-scripts/.local/src/systemc",
+  "$HOME/portable-scripts/.local/src/systemc",
+  "$HOME/.local/src/systemc",
+  "$HOME/.local/apps/systemc",
+  "$HOME/.local/systemc",
+);
+
+for my $candidate (@CANDIDATES) {
+  last if -d $SYSTEMC;
+  $SYSTEMC = $candidate;
+}
+
 print "SYSTEMC=$SYSTEMC\n" if exists $OPT{-DEBUG};
+$SYSTEMC = abs_path($SYSTEMC) or &Die("Unable to resolve SystemC installation path");
 
 my $rel_version = '?';
 my $std_version = '?';

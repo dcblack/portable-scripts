@@ -2,7 +2,7 @@
 #
 # A script to test Require
 
-BINDIR="$(realpath $(dirname "$0")/../bin)"
+BINDIR="$(realpath -q $(dirname "$0")/../bin)"
 UTILS_BASH="${BINDIR}/utils.bash"
 if [[ -f "${UTILS_BASH}" ]]; then
   # shellcheck source ../bin/utils.bash

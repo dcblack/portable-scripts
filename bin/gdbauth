@@ -3,9 +3,9 @@
 #$Info: gdbauth - Add specified directory (current) to authorized locations for `.gdbinit`. $
 
 if [[ $# == 0 ]]; then
-  GDB_DIR="$(realpath .)"
+  GDB_DIR="$(realpath -q .)"
 elif [[ $# == 1 ]]; then
-  GDB_DIR="$(realpath "$1")"
+  GDB_DIR="$(realpath -q "$1")"
 else
   Report_fatal "Syntax: $0 [dir]"
 fi

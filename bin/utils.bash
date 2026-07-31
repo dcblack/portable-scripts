@@ -82,6 +82,7 @@ export APPS ARGV BUILD_SOURCE_DOCUMENTATION CC   \
 #NOW="$(date '+%m%d%H%M%Y.%S')"
 #TIMESTAMP="$(date +%s)"
 TMP="$(mktemp /tmp/Save-XXXX)"
+# shellcheck disable=SC2329 # invoked indirectly by the EXIT trap
 Cleanup() {
     rm -f "${TMP}"
 }
@@ -101,10 +102,12 @@ function Realpath()
 }
 
 # Using Essential-IO
-local SCRIPT_DIR
+export PORTABLE_SCRIPTS_HOME
+PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
+SCRIPT_DIR=
 SCRIPT_DIR="$(Realpath "$(dirname "$0")"/../scripts)"
 if [[ ! -r "${SCRIPT_DIR}/Essential-IO" ]]; then
-  SCRIPT_DIR="$(Realpath ~/.local/scripts)"
+  SCRIPT_DIR="$(Realpath "${PORTABLE_SCRIPTS_HOME}/scripts")"
 fi
 if [[ ! -r "${SCRIPT_DIR}/Essential-IO" ]]; then
   SCRIPT_DIR="$(Realpath "$(dirname "$0")")"
@@ -517,8 +520,8 @@ function GetBuildOpts()
       DEBUG=1;
       ;;
     --default)
-      APPS=~.local/apps
-      SRC=~/.local/src
+      APPS="${PORTABLE_SCRIPTS_HOME}/apps"
+      SRC="${PORTABLE_SCRIPTS_HOME}/src"
       ;;
     --doxy)
       BUILD_SOURCE_DOCUMENTATION=on
@@ -702,7 +705,7 @@ function GetBuildOpts()
   #-------------------------------------------------------------------------------
   # Defaults if not set
   if [[ -z "${APPS}" || ! -d "${APPS}" ]]; then
-    APPS=~/.local/apps
+    APPS="${PORTABLE_SCRIPTS_HOME}/apps"
   fi
   if [[ -z "${SYSTEMC_HOME}" ]]; then
     SYSTEMC_HOME="${APPS}/systemc"
@@ -743,7 +746,7 @@ function GetBuildOpts()
     elif [[ "${APPS}" != '' ]]; then
       SRC="$(dirname "${APPS}")/src"
     elif [[ ~ == "$(pwd||true)" ]]; then
-      SRC=~/.local/src
+      SRC="${PORTABLE_SCRIPTS_HOME}/src"
     else
       SRC="$(pwd)/src"
     fi
@@ -1086,6 +1089,7 @@ function Install_tool()
   NOLOG=0
 }
 
+# shellcheck disable=SC2329 # invoked indirectly by the EXIT trap
 function Cleanup()
 {
   declare -a ARGV

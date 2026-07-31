@@ -17,19 +17,27 @@
 #
 # shellcheck disable=SC2312
 
+#-------------------------------------------------------------------------------
 if builtin command -v "realpath" 1>/dev/null; then
   # Faster version in Linux
   function Realpath ()
   {
-    realpath "$@"
+    #@ Output the realpath name treating all arguments as a single filename specification
+    #| Realpath FILENAME_SPECIFICATION
+    if [[ $# == 0 ]]; then set - .; fi
+    realpath -q "$@"
   }
 else
   function Realpath ()
   {
-    /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+    #@ Output the realpath name treating all arguments as a single filename specification
+    #| Realpath FILENAME_SPECIFICATION
+    if [[ $# == 0 ]]; then set - .; fi
+    perl -MCwd=abs_path -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
   }
 fi
 
+#-------------------------------------------------------------------------------
 function Firstreal() {
   if [[ -n "${ZSH_VERSION}" ]]; then set -o shwordsplit; fi
   /usr/bin/perl -le 'for(@ARGV){for my $p (split(qq{[\n\t ]+})){next unless -e $p;print $p;exit 0;}}' "$@"
@@ -45,7 +53,8 @@ function read_into_array() {
     done < <(eval "${cmd}")
 }
 
-SCRIPTDIR="${HOME}/.local/scripts"
+PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
+SCRIPTDIR="${PORTABLE_SCRIPTS_HOME}/scripts"
 #if [[ "$0" == /bin/bash ]]; then
 #  SCRIPTDIR="${HOME}/.local/scripts"
 #else
@@ -180,7 +189,7 @@ function Wd_parse() # internal
     case "${arg}" in
       -init)
         # shellcheck source=$HOME/.local/bin/wd disable=SC2250,SC1091
-        source "${HOME}/.local/bin/wd" -init
+        source "${PORTABLE_SCRIPTS_HOME}/bin/wd" -init
         ;;
       -h|-help|--help)   Wd_help ;;
       -l|-list|--list)

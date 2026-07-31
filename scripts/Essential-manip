@@ -269,7 +269,7 @@ function FindScript() # SCRIPT(S)
   #-----------------------------------------------------------------------------
   if [[ -z "${SCRIPTDIRS}" ]]; then
     # Missing SCRIPTDIRS! Attempt default locations.
-    for DIR in ../scripts ~/scripts ~/.local/scripts ; do
+    for DIR in "${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}/scripts" ~/scripts ; do
       Append_path SCRIPTDIRS "${DIR}"
     done
   fi
@@ -414,7 +414,7 @@ function Reload()
   FUNCS=$(declare -f | /usr/bin/perl -lane 'next unless m-^[[:alpha:]]{2,} *\(\) ?[\{]-;print $F[0]')
   if [[ -z "${SCRIPTDIRS+x}" ]]; then
     # Missing SCRIPTDIRS! Attempt default locations.
-    for DIR in ~/scripts ~/.local/scripts ; do
+    for DIR in "${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}/scripts" ~/scripts ; do
       if [[ -d "${DIR}" ]]; then
         if [[ "${SCRIPTDIRS}" =~ : ]]; then
           SCRIPTDIRS="${SCRIPTDIRS}:${DIR}"
@@ -497,24 +497,25 @@ function Prepend_path() # only if 2nd arg does not exist in first
   fi
 }
 
-#-----------------------------------------------------------
-#@ Output the realpath name treating all arguments as a single filename specification
-#| Realpath FILENAME_SPECIFICATION
+#-------------------------------------------------------------------------------
 if builtin command -v "realpath" 1>/dev/null; then
   # Faster version in Linux
   function Realpath ()
   {
+    #@ Output the realpath name treating all arguments as a single filename specification
+    #| Realpath FILENAME_SPECIFICATION
     if [[ $# == 0 ]]; then set - .; fi
-    realpath "$@"
+    if [[ -e "$*" ]]; then realpath -q "$@"; else echo ""; fi
   }
 else
   function Realpath ()
   {
+    #@ Output the realpath name treating all arguments as a single filename specification
+    #| Realpath FILENAME_SPECIFICATION
     if [[ $# == 0 ]]; then set - .; fi
-    /usr/bin/perl '-MCwd(abs_path)' -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
+    perl -MCwd=abs_path -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
   }
 fi
-
 
 #-----------------------------------------------------------
 function Remove_missing()

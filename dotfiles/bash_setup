@@ -3,9 +3,9 @@
 # FILE: .bash_profile
 
 # This script sources bashrc and ensure the home directory is setup properly.
-export HOME USER
-USER="$(whoami)"
-HOME="$(getent passwd "${USER}" | cut -d: -f6 || true)"
+export HOME USER PORTABLE_SCRIPTS_HOME
+USER="${USER:-$(whoami)}"
+PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
 
 # Get the aliases and functions
 if [[ -f ~/.bashrc ]]; then
@@ -21,17 +21,13 @@ if [[ -d ~/bin ]]; then
   chmod a+rx ~/bin
 fi
 
-if [[ "${HOME}" == "${LEAD}" && ! -d "${LEAD}/.local/bin" ]]; then
-  # Leader needs to have accessible .local
-  chmod g+s  "${LEAD}/.local"
-  mkdir -p   "${LEAD}/.local/bin" "${LEAD}/.local/dotfiles"
-  chmod a+rx "${LEAD}/.local/bin" "${LEAD}/.local/dotfiles"
-  chmod a+x  "${LEAD}"
+if [[ -d "${HOME}/.local" ]]; then
+  mkdir -p "${HOME}/.local/bin"
 fi
 
-if [[ -n "${LEAD}" ]]; then
-  prepend_path PATH "${LEAD}/.local/bin"
-  prepend_path PATH ~/bin # Allow user overrides
-  MANPATH=~/man:"${LEAD}/.local/man:${LEAD}/.local/share/man:/usr/local/share/man:/usr/share/man"
+if [[ -d "${HOME}/.local/bin" ]]; then
+  Prepend_path PATH "${HOME}/.local/bin"
+  Prepend_path PATH "${HOME}/bin" # Allow user overrides
+  MANPATH=~/man:"${PORTABLE_SCRIPTS_HOME}/man:/usr/local/share/man:/usr/share/man"
 fi
 export MANPATH

@@ -1,6 +1,8 @@
 #!/bin/bash
 
 export CDPATH
+export PORTABLE_SCRIPTS_HOME
+PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
 function SetupPaths() {
 
   #-----------------------------------------------------------------------------
@@ -23,7 +25,7 @@ function SetupPaths() {
     /opt/local/share/man \
     /usr/local/share/man \
     /ext/linux/Ubuntu-20.04/usr/share/man \
-    ~/.local/man \
+    "${PORTABLE_SCRIPTS_HOME}/man" \
     ~/man \
     ./man \
   ; do

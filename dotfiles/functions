@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------
 # Essential building blocks
 #-------------------------------------------------------------------------------
-LOCAL=~/.local
+LOCAL="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
 # shellcheck disable=SC1091
 source "${LOCAL}/scripts/Essential-IO"
 # shellcheck disable=SC1091
@@ -36,7 +36,7 @@ source "${LOCAL}/scripts/dotfile"
 
 function use-cmake() {
   # shellcheck disable=SC1091
-  source "${LOCAL}/.local/bin/use-cmake"
+  source "${LOCAL}/bin/use-cmake"
 }
 
 # shellcheck disable=SC1091

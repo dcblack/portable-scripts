@@ -8,7 +8,7 @@ VERBOSITY=0
 cat <<'EOD' >/dev/null
 
 There's more than aliases here and we invoke some other files under found under
-~/.local/dotfiles in the following order:
+the portable-scripts repository in the following order:
 
 1. bash_debug -- if executable
 2. functions -- sets functions for use in scripting
@@ -18,6 +18,10 @@ There's more than aliases here and we invoke some other files under found under
 
 EOD
 #-------------------------------------------------------------------------------
+export PORTABLE_SCRIPTS_HOME
+PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
+PORTABLE_DOTFILES="${PORTABLE_SCRIPTS_HOME}/dotfiles"
+PORTABLE_SCRIPTS="${PORTABLE_SCRIPTS_HOME}/scripts"
 #  #####  #####  ##### #     #    # ####   #####                                 
 #  #    # #    # #     #     #    # #   #  #                                     
 #  #    # #    # #     #     #    # #    # #                                     
@@ -26,23 +30,23 @@ EOD
 #  #      #   #  #     #     #    # #   #  #                                     
 #  #      #    # ##### #####  ####  ####   #####                                 
 #-------------------------------------------------------------------------------
-if [[ -z "${ALIAS_SCRIPT}" && -n "${script}" ]]; then
+if [[ -z "${ALIAS_SCRIPT:-}" && -n "${script:-}" ]]; then
   export ALIAS_SCRIPT
   ALIAS_SCRIPT="${script}"
 fi
 
 export SCRIPT_NAME SCRIPT_PATH
 # shellcheck source=/dev/null
-source ~/.local/scripts/Essential-IO
+source "${PORTABLE_SCRIPTS}/Essential-IO"
 for SCRIPT_NAME in "bash_debug" "functions" "env"; do
-  SCRIPT_PATH=~/.local/dotfiles/${SCRIPT_NAME}
+  SCRIPT_PATH="${PORTABLE_DOTFILES}/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
     if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090
     source "${SCRIPT_PATH}"
   fi
-  SCRIPT_PATH=~/.${SCRIPT_NAME}-local
+  SCRIPT_PATH="${HOME}/.${SCRIPT_NAME}-local"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     # shellcheck disable=SC2154
     if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
@@ -58,7 +62,7 @@ if [[ -r ~/.dircolors ]]; then
 fi
 
 # shellcheck source=/dev/null
-source ~/.local/dotfiles/aliases
+source "${PORTABLE_DOTFILES}/aliases"
 
 #-------------------------------------------------------------------------------
 #  #####   ####   ####  #######    #    #     # #####  #     #####               
@@ -72,7 +76,7 @@ source ~/.local/dotfiles/aliases
 # shellcheck disable=SC2043
 for SCRIPT_NAME in bash_paths; do
   # shellcheck source=/dev/null
-  SCRIPT_PATH=~/.local/dotfiles/"${SCRIPT_NAME}"
+  SCRIPT_PATH="${PORTABLE_DOTFILES}/${SCRIPT_NAME}"
   if [[ -x "${SCRIPT_PATH}" ]]; then
     if [[ "${BASH_DEBUG}" == 1 ]]; then Report_debug "source ${SCRIPT_PATH}"; fi
     # shellcheck disable=SC1090

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+exec "$(dirname "$0")/setup-migration" "$@"
 #
 #-------------------------------------------------------------------------------
 # The following is formatted for use with -help

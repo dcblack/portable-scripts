@@ -210,10 +210,13 @@ function _C()
 
 function Realpath()
 {
+  #@ Output the realpath name treating all arguments as a single filename specification
+  #| Realpath FILENAME_SPECIFICATION
+  if [[ $# == 0 ]]; then set - .; fi
   if builtin command -v realpath >/dev/null 2>&1; then
     realpath -q "$@"
   else
-    perl -MCwd=abs_path -le 'print abs_path(join(q( ), @ARGV)) if -e join(q( ), @ARGV)' "$*"
+    perl -MCwd=abs_path -le '$p=abs_path(join(q( ),@ARGV));print $p if -e $p' "$*"
   fi
 }
 

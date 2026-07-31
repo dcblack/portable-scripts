@@ -6,10 +6,11 @@ if [[ ${SOURCED} == 0 ]]; then
   exit 1
 fi
 
-# Must source ~/.local/dotfiles/functions first
+# Must source the repository's dotfiles/functions first
 export DID_FUNCTIONS
-if [[ ${DID_FUNCTIONS} != 1 ]]; then
-  TRY=~/.local/dotfiles/functions
+if [[ ${DID_FUNCTIONS:-0} != 1 ]]; then
+  PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
+  TRY="${PORTABLE_SCRIPTS_HOME}/dotfiles/functions"
   # shellcheck source=/dev/null
   if [[ -r "${TRY}" ]]; then
     source "${TRY}"
@@ -42,9 +43,9 @@ function portable-env() {
     TEMPLATEPATH\
 
 
-  mkdir -p ~/.local
   ORIGPATH="${PATH}"
-  PSCR="$(Realpath ~/.local)"
+  PORTABLE_SCRIPTS_HOME="${PORTABLE_SCRIPTS_HOME:-${HOME}/.portable-scripts}"
+  PSCR="$(Realpath "${PORTABLE_SCRIPTS_HOME}")"
   APPS="$(Realpath "${PSCR}/apps")"
   DOTBIN="$(Realpath "${PSCR}/bin")"
   DOULOSBIN="$(Realpath "${PSCR}/Doulos/bin")"
@@ -73,17 +74,18 @@ function portable-env() {
   Prepend_path PATH "/opt/homebrew/opt/zip/bin"
   Prepend_path PATH "/opt/homebrew/sbin"
   Prepend_path PATH "/opt/homebrew/bin"
-  Prepend_path PATH "${HOME}/.local/usr/local/bin"
+  Prepend_path PATH "${HOME}/.local/bin"
+  Prepend_path PATH "${HOME}/.portable-scripts/bin"
   Prepend_path PATH "${APPSBIN}"
   Prepend_path PATH "${DOTBIN}"
   Prepend_path PATH "${DOULOSBIN}"
   Prepend_path PATH "${HOME}/bin"
-  Append_path LD_LIBRARY_PATH "${HOME}/.local/usr/local/lib"
-  Append_path LD_LIBRARY_PATH "${HOME}/.local/lib"
+  Append_path LD_LIBRARY_PATH "${PSCR}/usr/local/lib"
+  Append_path LD_LIBRARY_PATH "${PSCR}/lib"
   Append_path PERL5LIB "${PSCR}/lib"
   Append_path TEMPLATEPATH "${HOME}/templates"
-  Append_path TEMPLATEPATH "${HOME}/.local/templates"
-  Append_path TEMPLATEPATH "${HOME}/.local/apps/templates"
+  Append_path TEMPLATEPATH "${PSCR}/templates"
+  Append_path TEMPLATEPATH "${PSCR}/apps/templates"
 
   Unique_path PATH
   Unique_path LD_LIBRARY_PATH

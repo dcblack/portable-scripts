@@ -14,13 +14,14 @@ CVS
 RCS
 
 # Special directories
-include
-lib
-share
-scratch
-src
-systemc
-tmp
+include/
+lib/
+share/
+scratch/
+src/
+systemc/
+tmp/
+target/
 
 # Special files
 GNUmakefile
