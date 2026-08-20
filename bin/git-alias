@@ -88,7 +88,7 @@ function Shift() { # Shift an array left
 function Git_alias()
 {
   local -a ARGS
-  read -ra ARGS <<<"$*"
+  read -ra ARGS <<<"$*" #>>>
   local ACTION="-list" ;#< default action
   local OUT ALIAS OPT ARG1 ARG2
   if [[ ${#ARGS[@]} == 0 ]]; then

@@ -23,7 +23,7 @@ SYNOPSIS
 git-tags --help
 git-tags [-#]|--depth=#
 git-tags --hash TAG
-git-tags [--verbose|--quiet] --refs TAG
+git-tags [--verbose|-v|--quiet|-q] --refs TAG
 ```
 '
   export ERRORS=0 VERBOSITY=0 DEBUG=0
@@ -173,7 +173,7 @@ END {
   # shellcheck disable=SC2312
   git for-each-ref --count=30 \
                    --sort='-authordate' \
-                   --format='%(objectname:short) %(refname) %(authorname) %(subject) %(authordate)' \
+                   --format='%(objectname:short) %(*refname) %(authorname) %(*subject) %(*authordate:short)' \
                    refs/tags/* \
                    | perl -ne "${perlscript}" \
     | head -n "${1}"
