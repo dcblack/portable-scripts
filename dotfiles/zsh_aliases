@@ -390,7 +390,14 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   alias powerpoint="open -a 'Microsoft PowerPoint'"
   alias parallels="open -a 'Parallels Desktop'"
   alias eclipse="open -a eclipse"
-  alias gls='/usr/local/bin/gls ${LS_OPTS} --color';
+  function rg.() { rg --max-depth=1 "$@" "${HOME}"/*(.D) }
+  if GLS="$(builtin command -v gls)"; then
+    export GLS
+    GLS="$(builtin command -v gls)"
+    alias gls="${GLS}"' ${LS_OPTS} --color';
+  else
+    alias gls=ls
+  fi
   alias ls='ls ${LS_OPTS}G';
   alias la='ls ${LS_OPTS}AG';
   export LSUSB='/usr/local/bin/lsusb'
