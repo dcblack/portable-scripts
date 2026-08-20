@@ -8,7 +8,6 @@
 --indent-cases
 --indent-namespaces
 --indent-labels
---indent-preprocessor
 --indent-col1-comments
 --pad-oper
 --unpad-paren
@@ -20,9 +19,7 @@
 --align-pointer=type
 --lineend=linux
 #-lineend=windows
---add-brackets
 --break-blocks
---break-closing-brackets
 
 # Styles: allman, java, kr, stroustrup, whitesmith, banner, gnu, linux,
 #         horstmann, 1tbs, google, pico, lisp
