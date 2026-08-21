@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.16
+BUILD_TOOL_VERSION=1.16.1
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
@@ -267,6 +267,8 @@ function _do()
     "$@"
   else
     "$@" 2>&1 | tee -a "${LOGFILE}"
+    local command_status=${PIPESTATUS[0]}
+    return "${command_status}"
   fi
 }
 
@@ -912,9 +914,15 @@ function Build()
   #------------------------------------------------------------------------------
   Report_info -f "Configuring ${SUBPROJ_DIR}"
   if [[ -z "${DEBUG}" ]]; then
-    _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" || exit 1
+    if ! _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}"; then
+      Report_fatal "Please fix errors above and try again"
+      exit 1
+    fi
   else
-    _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" "${DEBUG}" || exit 1
+    if ! _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" "${DEBUG}"; then
+      Report_fatal "Please fix errors above and try again"
+      exit 1
+    fi
   fi
 
   #------------------------------------------------------------------------------
@@ -923,7 +931,8 @@ function Build()
   _do cmake --build "${BLD_DIR}" --config "${CMAKE_BUILD_TYPE}" "${BUILD_OPTS[@]}"
   # shellcheck disable=SC2181
   if [[ $? != 0 ]]; then
-    exit 1;
+    Report_fatal "Please fix errors above and try again"
+    exit 1
   fi
 
   local -a TARGETS=()
@@ -1000,6 +1009,11 @@ function Build()
     | perl -pe "${BLANKLINE_FILTER}" \
     | perl -pe "${HIGHLIGHT_FILTER}" \
     | tee "${BLD_DIR}/${TEST_LOG}"
+    local TEST_STATUS=${PIPESTATUS[0]}
+    if [[ ${TEST_STATUS} != 0 ]]; then
+      Report_fatal "Please fix errors above and try again"
+      exit 1
+    fi
   elif [[ -x "${BLD_DIR}/${EXECUTABLE}" ]]; then
     if grep -q add_test CMakeLists.txt; then
       Report_info -f "Executable is in ${BLD_DIR}/${EXECUTABLE} -- HINT: Next time try adding -test but in the meantime try:"

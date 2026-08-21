@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+#$Info: build-nothing - Echo nothing. $
+
+echo "Built nothing"

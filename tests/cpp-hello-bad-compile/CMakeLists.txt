@@ -4,9 +4,9 @@
 
 cmake_minimum_required( VERSION 3.20 )
 
-project( cpp-hello-bad-compile
+project( "cpp-hello-bad-compile"
   VERSION 0.1
-  DESCRIPTION "C++ hello world"
+  DESCRIPTION "C++ hello world bad code"
   LANGUAGES CXX
 )
 
@@ -26,9 +26,9 @@ set( WORKTREE_DIR "${_dir}" CACHE PATH "Contains cmake/${defaults}.cmake" )
 list( PREPEND CMAKE_MODULE_PATH "${WORKTREE_DIR}/cmake" )
 include( "${defaults}" )
 
-set_target( cpp-hello )
+set_target( "${PROJECT_NAME}" )
 add_executable( "${Target}" )
 target_sources( "${Target}" PRIVATE cpp-hello.cpp )
-add_test( NAME test-"${Target}" COMMAND "${Target}" )
+add_test( NAME "${Target}" COMMAND "${Target}" )
 
 # vim:syntax=cmake:nospell
