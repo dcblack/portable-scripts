@@ -4,6 +4,54 @@
 
 function Install_brew()
 {
+  local TOOL_NAME="build-brew" VERSION=0.1.0 HELP_TEXT='
+Name
+----
+
+build-brew -- installs brew on macOS or Linux
+
+Synopsis
+--------
+
+```bash
+build-brew --help
+build-brew --version
+build-brew [--force]
+```
+
+'
+  local FORCE=0
+  for arg in "$@"; do
+    case "${arg}" in
+      --help|-h)
+        if builtin command -v glow 1>/dev/null 2>&1; then
+          glow -p <<<"${HELP_TEXT}" #>>>
+        elif builtin command -v less 1>/dev/null 2>&1; then
+          less -X <<<"${HELP_TEXT}" #>>>
+        else
+          cat <<<"${HELP_TEXT}"
+        fi
+        return 0
+        ;;
+      --version|-V)
+        echo "${TOOL_NAME} version ${VERSION}"
+        return 0
+        ;;
+      --force)
+        FORCE=1
+        ;;
+      *)
+        echo "ERROR: Unknown option: ${arg}"
+        return 1
+        ;;
+    esac
+  done
+  if builtin command -v brew 1>/dev/null 2>&1; then
+    if [[ ${FORCE} != 1 ]]; then
+      echo "Already installed. Use --force to reinstall"
+      return 1
+    fi
+  fi
   local OS REV
   OS="$(uname -s)"
   REV="$(uname -r)"
