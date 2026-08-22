@@ -21,7 +21,7 @@ function Install_brew()
         eval "$(/opt/homebrew/bin/brew shellenv)"
       fi
       ;;
-    Linux*WSL2) # Assume Linux
+    Linux*WSL2) # Assume Linux on WSL2
       sudo apt update -y
       sudo apt install -y build-essential procps curl file git
       sudo apt autoremove -y
@@ -29,6 +29,13 @@ function Install_brew()
       sudo bash -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf'
       sudo bash -c 'echo "[network]" >> /etc/wsl.conf'
       sudo bash -c 'echo "generateResolvConf = false" >> /etc/wsl.conf'
+      #shellcheck disable=2312
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      ;;
+    Linux*) # Assume Linux on WSL2
+      sudo apt update -y
+      sudo apt install -y build-essential procps curl file git
+      sudo apt autoremove -y
       #shellcheck disable=2312
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       ;;
