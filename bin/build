@@ -267,6 +267,7 @@ function _do()
   fi
   if [[ "$1" == "-n" ]]; then
     noexec="-"
+    shift
   fi
   if [[ "${noexec}" == "-" ]]; then
     # shellcheck disable=SC2312,SC2311
