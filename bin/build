@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vim:syntax=bash
 #
-BUILD_TOOL_VERSION=1.16.1
+BUILD_TOOL_VERSION=1.16.2
 BUILD_TOOL_NAME="build"
 export BUILD_TOOL_NAME
 export BUILDRC
@@ -30,6 +30,7 @@ function Registry_version() {
   local directory="$1"
   local config="${directory}/SystemCLanguageConfigVersion.cmake"
   [[ -r "${config}" ]] || return 1
+  # shellcheck disable=SC2312
   sed -n 's/^[[:space:]]*set(PACKAGE_VERSION[[:space:]]*"\([0-9][0-9.]*\)".*$/\1/p' "${config}" | head -n 1
 }
 
@@ -43,6 +44,7 @@ function Remove_conflicting_systemc_registry_entries() {
     [[ -f "${entry}" ]] || continue
     registered="$(<"${entry}")"
     [[ -n "${registered}" && -d "${registered}" ]] || continue
+    # shellcheck disable=SC2311
     version="$(Registry_version "${registered}")"
     version="$(printf '%s' "${version}" | sed -n 's/^\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/p')"
     [[ -n "${version}" && "${version}" != "${installed}" ]] || continue
@@ -204,6 +206,7 @@ function _C()
       mag) printf "%b" "${escape}95m" ;;
       cyn|cyan) printf "%b" "${escape}96m" ;;
       wht|white) printf "%b" "${escape}97m" ;;
+      *) ;;
     esac
   done
 }
@@ -224,8 +227,10 @@ function Logfile()
 {
   local name="$1"
   [[ -z "${name}" ]] && return 0
+  # shellcheck disable=SC2311
   LOGFILE="$(Realpath .)/${name%.log}.log"
   rm -f "${LOGFILE}"
+  # shellcheck disable=SC2312
   printf '# Logfile for %s created on %s\n\n' "${name}" "$(date)" >>"${LOGFILE}"
   printf 'Logging to %s\n' "${LOGFILE}"
 }
@@ -257,15 +262,23 @@ function Echo()
 function _do()
 {
   local noexec=""
-  [[ -n "${NOTREALLY:-}" ]] && noexec="-"
+  if [[ -n "${NOTREALLY:-}" ]]; then
+    noexec="-"
+  fi
+  if [[ "$1" == "-n" ]]; then
+    noexec="-"
+  fi
   if [[ "${noexec}" == "-" ]]; then
+    # shellcheck disable=SC2312,SC2311
     Echo "$(_C bold red)#$(_C none) $(_C mag)$*$(_C none)"
     return 0
   fi
+  # shellcheck disable=SC2312,SC2311
   Echo "$(_C cyn)${noexec}%$(_C none bold blue) $*$(_C none)"
   if [[ -z "${LOGFILE:-}" ]]; then
     "$@"
   else
+    # shellcheck disable=SC2312
     "$@" 2>&1 | tee -a "${LOGFILE}"
     local command_status=${PIPESTATUS[0]}
     return "${command_status}"
@@ -277,24 +290,28 @@ function Report_info()
   local force=0
   if [[ "$1" == "-f" ]]; then force=1; shift; fi
   if [[ ${force} == 0 && ${VERBOSITY:-1} -lt 1 ]]; then return 0; fi
+  # shellcheck disable=SC2312,SC2311
   Echo "$(_C grn)$(_C bold)Info: $(_C none)$*$(_C none)"
 }
 
 function Report_warning()
 {
   WARNINGS=$(( ${WARNINGS:-0} + 1 ))
+  # shellcheck disable=SC2312,SC2311
   Echo "$(_C ylw)$(_C bold)Warning:$(_C none) $*$(_C none)" >&2
 }
 
 function Report_error()
 {
   ERRORS=$(( ${ERRORS:-0} + 1 ))
+  # shellcheck disable=SC2312,SC2311
   Echo "$(_C bold red)Error #${ERRORS}:$(_C none red) $*$(_C none)" >&2
   return 1
 }
 
 function Report_fatal()
 {
+  # shellcheck disable=SC2312,SC2311
   Echo "$(_C bold red)Fatal:$(_C none red) $*$(_C none)" >&2
   return 1
 }
@@ -472,6 +489,7 @@ function Build()
           TOOLCHAIN="${1}-toolchain"
         fi
         for TOOLDIR in "${TOOLDIRS[@]}"; do
+          # shellcheck disable=SC2311
           TOOLPATH="$(Realpath "${TOOLDIR}/${TOOLCHAIN}.cmake")"
           echo "Debug: trying TOOLPATH=${TOOLDIR}/${TOOLCHAIN}.cmake"
           if [[ -n "${TOOLPATH}" ]]; then break; fi
@@ -805,31 +823,31 @@ function Build()
     # Check for consistency
     if [[ -r "${BLD_DIR}/build.ninja" ]]; then
       if [[ "${GENERATOR}" != "Ninja" ]]; then
-        # shellcheck disable=SC2312
+        # shellcheck disable=SC2312,SC2311
         Report_warning "Pre-existing Ninja build does not match specified generator: $(_C red)${GENERATOR}"
         # shellcheck disable=SC2310
         if Confirm "Use specified generator?"; then
           rm -fr "${BLD_DIR}"
-          # shellcheck disable=SC2312
+          # shellcheck disable=SC2312,SC2311
           Report_info -f "Using specified generator: $(_C grn)${GENERATOR}"
         else
           GENERATOR="Ninja"
-          # shellcheck disable=SC2312
+          # shellcheck disable=SC2312,SC2311
           Report_info -f "Using previous generator: $(_C grn)${GENERATOR}"
         fi
       fi
     elif [[ -r "${BLD_DIR}/Makefile" ]]; then
       if [[ "${GENERATOR}" != "Unix Makefiles" ]]; then
-        # shellcheck disable=SC2312
+        # shellcheck disable=SC2312,SC2311
         Report_warning "Pre-existing Makefile build does not match specified generator: $(_C red)${GENERATOR}"
         # shellcheck disable=SC2310
         if Confirm "Use specified generator?"; then
           rm -fr "${BLD_DIR}"
-          # shellcheck disable=SC2312
+          # shellcheck disable=SC2312,SC2311
           Report_info -f "Using specified generator: $(_C grn)${GENERATOR}"
         else
           GENERATOR="Unix Makefiles"
-          # shellcheck disable=SC2312
+          # shellcheck disable=SC2312,SC2311
           Report_info -f "Using previous generator: $(_C grn)${GENERATOR}"
         fi
       fi
@@ -852,6 +870,7 @@ function Build()
     export CMAKE_PREFIX_PATH
     CMAKE_PREFIX_PATH=
     for CDIR in "${SUBPROJ_DIR}" "${WORKTREE_DIR}" "${WORKTREE_DIR}/extern" "${APPS}" "${APPS}/lib"; do
+      # shellcheck disable=SC2311
       CDIR="$(Realpath "${CDIR}")"
       if [[ ! -d "${CDIR}" ]]; then
         continue;
@@ -914,11 +933,13 @@ function Build()
   #------------------------------------------------------------------------------
   Report_info -f "Configuring ${SUBPROJ_DIR}"
   if [[ -z "${DEBUG}" ]]; then
+    # shellcheck disable=SC2310
     if ! _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}"; then
       Report_fatal "Please fix errors above and try again"
       exit 1
     fi
   else
+    # shellcheck disable=SC2310
     if ! _do cmake -G "${GENERATOR}" -S "${SRC_DIR}" -B "${BLD_DIR}" "${CONFIG_OPTS[@]}" "${DEBUG}"; then
       Report_fatal "Please fix errors above and try again"
       exit 1
