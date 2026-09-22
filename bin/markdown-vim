@@ -11,9 +11,17 @@ use strict;
 use warnings;
 use English;
 
+# Use color by default
+our ($RED, $red, $NONE) = ("[91;1m", "[22;91m", "[0m");
+sub Color {
+  ($RED, $red, $NONE) = ("[91;1m", "[22;91m", "[0m");
+}
+sub NoColor {
+  ($RED, $red, $NONE) = ("", "", "");
+}
+
 our $errors = 0;
 sub Error {
-  my ($RED, $red, $NONE) = ("[91;1m", "[22;91m", "[0m");
   my ($tag,$fatal) = ('Error',0);
   if ($_[0] eq 'fatal') {
     shift @_;
@@ -36,30 +44,38 @@ my $hr12 = ($hour==0)?12:($hour>12)?$hour-12:$hour;
 my $time = sprintf("%02d:%02d %s",$hr12,$min,$ampm);
 
 # Set up variables related to front-matter
-my $date = "$year-".$months[$mon]."-$mday";
-my $title   = '{:TITLE:}';
+our $date = "$year-".$months[$mon]."-$mday";
+our $title   = '{:TITLE:}';
 $title = $ENV{TITLE} if exists $ENV{TITLE};
-my $subject = '{:SUBJECT:}';
+our $subject = '{:SUBJECT:}';
 $subject = $ENV{SUBJECT} if exists $ENV{SUBJECT};
-my $author = '';
+our $author = '';
 $author = $ENV{AUTHOR_NAME} if $author eq '' and exists $ENV{AUTHOR_NAME};
 $author = $ENV{AUTHOR}      if $author eq '' and exists $ENV{AUTHOR};
 $author = $ENV{NAME}        if $author eq '' and exists $ENV{NAME};
 $author = $ENV{USER}        if $author eq '' and exists $ENV{USER};
 $author = '{:AUTHOR:}' if $author eq '';
-my $email = '';
+our $email = '';
 $email = $ENV{HOME_EMAIL} if $email eq '' and exists $ENV{HOME_EMAIL};
 $email = $ENV{WORK_EMAIL} if $email eq '' and exists $ENV{WORK_EMAIL};
 $email = $ENV{EMAIL}      if $email eq '' and exists $ENV{EMAIL};
-$email   = '{:EMAIL:}'    if $email eq '';
+#$email   = '{:EMAIL:}'    if $email eq '';
 
 # Parse command-line options
 while ( $ARGV[0] =~ m{^-} ) {
   my $opt = shift @ARGV;
-  if ( $opt =~ m{^-{1,2}t(itle)?\b}   ) { if ( $opt =~ m{=} ) { $title   = $'; } else { $title   = shift @ARGV; } continue }
-  if ( $opt =~ m{^-{1,2}s(ubject)?\b} ) { if ( $opt =~ m{=} ) { $subject = $'; } else { $subject = shift @ARGV; } continue }
-  if ( $opt =~ m{^-{1,2}a(uthor)?\b}  ) { if ( $opt =~ m{=} ) { $author  = $'; } else { $author  = shift @ARGV; } continue }
-  if ( $opt =~ m{^-{1,2}e(mail)?\b}   ) { if ( $opt =~ m{=} ) { $email   = $'; } else { $email   = shift @ARGV; } continue }
+  if ( $opt =~ m{^-{1,2}t(itle)?\b}   ) { if ( $opt =~ m{=} ) { $title   = $'; } else { $title   = shift @ARGV; } next }
+  if ( $opt =~ m{^-{1,2}s(ubject)?\b} ) { if ( $opt =~ m{=} ) { $subject = $'; } else { $subject = shift @ARGV; } next }
+  if ( $opt =~ m{^-{1,2}a(uthor)?\b}  ) { if ( $opt =~ m{=} ) { $author  = $'; } else { $author  = shift @ARGV; } next }
+  if ( $opt =~ m{^-{1,2}e(mail)?\b}   ) { if ( $opt =~ m{=} ) { $email   = $'; } else { $email   = shift @ARGV; } next }
+  if ( $opt =~ m{^-{1,2}nocolor} ) {
+    &NoColor;
+    next
+  }
+  if ( $opt =~ m{^-{1,2}color} ) {
+    &Color;
+    next
+  }
   if ( $opt =~ m{^-{1,2}h(elp)?\b} ) {
     printf "%s\n", '
 Name
@@ -82,7 +98,7 @@ Error("Bad title '$title' - possibly option syntax") if $title =~ m{^-+};
 Error("Bad subject '$subject' - possibly option syntax") if $subject =~ m{^-+};
 Error("Bad author '$author' - possibly option syntax") if $author =~ m{^-+};
 Error("Bad email '$email' - possibly option syntax") if $email =~ m{^-+};
-Error("Bad email '$email' - pattern") unless $email =~ m{^[[:alpha:]][-.[:word:]]+@[[:alpha:]][-.[:word:]]*[.][[:alpha:]]{2,3}$};
+Error("Bad email '$email' - pattern") unless $email eq '' or $email =~ m{^[[:alpha:]][-.[:word:]]+@[[:alpha:]][-.[:word:]]*[.][[:alpha:]]{2,3}$};
 Error("Missing FILENAME") unless scalar @ARGV;
 Error('fatal', "Please fix above errors and retry") if $errors > 0;
 
@@ -91,7 +107,9 @@ my $yaml =
 title: ${title}
 subject: ${subject}
 author: ${author}
-contacts: ${email}
+email: ${email}
+header: 
+footer: 
 ---
 [Updated ${date} ${time}]
 [Version 0.1.0]
@@ -118,7 +136,9 @@ while ( @ARGV ) {
     $_ = $yaml.$_ if $INPUT_LINE_NUMBER < 3 and s{^\[(frontmatter|yaml|yml)\]}{};
     # Look for timestamp lines matching specific patterns
     s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:][0-9A-Za-z]+}{[$1 ${date}}i;
-    s{\[((Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+) \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${time}}i;
+    s{\[(Timestamp|Edited|Revised|Modified|Updated) \S+[-/:]\S+[-/:]\S+ \d{1,2}:\d\d( ?(AM|PM))?}{[$1 ${date} ${time}}i;
+    s{\[(Date:?) \S+[-/]\S+[-/][^\]]+}{[$1 ${date}]}i;
+    s{\[(Time:?) \d{1,2}:\d\d ?(AM|PM)?[%^\]]*]}{[$1 ${time}]}i;
     if(m{\[(Version |v)(\d+)[.](\d+)}i) {
       my ($tag,$maj,$min) = ($1,$2,$3);
       ++$min;

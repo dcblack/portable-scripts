@@ -33,7 +33,7 @@ Displays the git config user.name and user.email in an easy to understand format
 
 HELP_TEXT
 )
-  if [[ "$1" =~ ^-{1,2}h(elp)?$ ]]; then
+  if [[ "$*" =~ -{1,2}h(elp)? ]]; then
     if builtin command -v glow; then
       glow -p <<<"${HELP_TEXT}" #>>>
     elif builtin command -v less; then

@@ -164,7 +164,7 @@ END {
     $m1 = length($1) if length($1)>$m1;
     $m2 = length($2) if length($2)>$m2;
   }
-  for $_ (@a) {
+  for $_ (reverse  @a) {
     $_ =~ s/^([^ ]+) +([^ ]+) +//;
     printf "%-${m1}s %-${m2}s %s\n", $1, $2, $_;
   }
