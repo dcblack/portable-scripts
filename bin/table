@@ -10,16 +10,15 @@ require 5.0;
 use English;
 use FindBin qw($RealBin $RealScript);
 use vars qw($exe);
-use pscr qw(%OPT &Version);
 #use strict;
 
 ###############################################################################
 $exe = "$RealBin/$RealScript";
-exec "perldoc $exe" if "@ARGV" =~ m/^-{1,2}help$/;
+exec "perldoc $exe" if "@ARGV" =~ m/^-{1,2}h(elp)?$/;
 # Initialization <<<
 #------------------------------------------------------------------------------
 our $auth = 'David C Black <dcblack@mac.com>';
-our ($tool,$revn,$TOOL,$Tool) = &Version('@(#)$Id: table 1167 2011-04-22 08:15:47Z dcblack $');
+our ($tool,$revn,$TOOL,$Tool) = qw(table 2.0 TABLE Table);
 
 our $ISEP = qr{\s+};
 our $SEP  = ' ';
@@ -41,6 +40,9 @@ ARGV: {
         $OPT{-debug} = 1;
       } elsif ($arg eq '-v') {
         $OPT{-v} = $arg;
+      } elsif ($arg eq '-V' or $arg =~ m{^-{1,2}version$}) {
+        printf "$Tool version $revn\n";
+        exit 0;
       } elsif ($arg eq '-squeeze') {
         $OPT{-squeeze} = $arg;
       } elsif ($arg eq '-90') {
@@ -434,6 +436,10 @@ Number of separators between columns.
 Separator string used between columns.
 
 =item B<-tail> I<str>
+
+=item B<-version>
+
+Display the version
 
 =back
 
